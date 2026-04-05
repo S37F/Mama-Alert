@@ -1,0 +1,180 @@
+{
+  "sos": {
+    "title": "MamaAlert",
+    "greeting": "नमस्ते, {{name}}",
+    "weeks": "{{n}} सप्ताह की गर्भावस्था",
+    "button": "आपातकालीन सहायता के लिए दबाएँ",
+    "sending": "अलर्ट भेजा जा रहा है...",
+    "sent": "मदद आ रही है",
+    "helpMessage": "{{volunteerName}} आपकी ओर आ रहे हैं",
+    "offline": "कोई सिग्नल नहीं — आपका अलर्ट कतार में है",
+    "offlineSubtext": "जब सिग्नल मिलेगा तो यह स्वतः भेजा जाएगा",
+    "language": "Language",
+    "needPhone": "Add your phone number below so we can find your record.",
+    "phoneLabel": "Your phone number",
+    "phonePlaceholder": "e.g. +15551230000",
+    "savePhone": "Save",
+    "sentDetail": "Volunteers and your clinic are being notified.",
+    "error": "Could not send. Try again.",
+    "networkOfflineHint": "आप ऑफ़लाइन हैं — नेटवर्क वापस आने तक अलर्ट कतार में रहेंगे।"
+  },
+  "volunteer": {
+    "title": "स्वयंसेवक डैशबोर्ड",
+    "activeAlert": "आपातकालीन अलर्ट",
+    "minutesAgo": "{{n}} मिनट पहले",
+    "distance": "आपसे {{km}} किमी",
+    "accept": "हाँ, मैं जा रहा/रही हूँ",
+    "decline": "नहीं",
+    "pastAlerts": "पिछले अलर्ट",
+    "watching": "Watching for alerts...",
+    "directionsSent": "Directions sent to your phone.",
+    "enterPhone": "Enter the phone number you registered with.",
+    "savePhone": "Save and continue",
+    "phoneLabel": "Your volunteer phone"
+  },
+  "hospital": {
+    "title": "आने वाला अलर्ट",
+    "eta": "लगभग {{n}} मिनट में",
+    "ready": "हम तैयार हैं",
+    "moreInfo": "और जानकारी चाहिए",
+    "idLabel": "Hospital ID (UUID)",
+    "countBadge": "{{n}} active",
+    "empty": "No pre-alerts right now.",
+    "volunteerTransport": "Volunteer: {{name}}",
+    "awaitingVolunteer": "Awaiting volunteer assignment"
+  },
+  "register": {
+    "title": "मरीज़ पंजीकरण",
+    "sections": {
+      "identity": "पहचान",
+      "location": "स्थान",
+      "pregnancy": "गर्भावस्था विवरण",
+      "risks": "जोखिम चिह्न",
+      "contacts": "आपातकालीन संपर्क"
+    },
+    "submit": "मरीज़ पंजीकृत करें",
+    "success": "मरीज़ सफलतापूर्वक पंजीकृत",
+    "patientId": "Patient ID",
+    "statusLink": "Family status link",
+    "another": "Register another patient",
+    "locationRequired": "Capture your current location before submitting.",
+    "captureLocation": "Capture my current location",
+    "validation": {
+      "required": "Required"
+    },
+    "fields": {
+      "name": "Full name",
+      "age": "Age",
+      "language": "Language",
+      "phonePrimary": "Primary phone",
+      "phoneSecondary": "Secondary phone",
+      "village": "Village or area",
+      "landmark": "Landmark",
+      "weeksPregnant": "Weeks pregnant",
+      "dueDate": "Due date",
+      "prevPregnancies": "Previous pregnancies",
+      "prevBirths": "Previous births",
+      "prevCsection": "Previous C-section",
+      "lastAnc": "Last ANC visit",
+      "bloodType": "Blood type",
+      "medicationName": "Medication name",
+      "contactName": "Name",
+      "contactPhone": "Phone",
+      "relationship": "Relationship"
+    },
+    "risks": {
+      "pre_eclampsia": "Pre-eclampsia",
+      "placenta_previa": "Placenta previa",
+      "severe_anaemia": "Severe anaemia",
+      "gestational_diabetes": "Gestational diabetes",
+      "multiple_pregnancy": "Multiple pregnancy",
+      "obstructed_labour_history": "Obstructed labour history",
+      "hiv_positive": "HIV positive",
+      "on_medication": "On medication"
+    },
+    "relationship": {
+      "husband": "Husband",
+      "mother": "Mother",
+      "sister": "Sister",
+      "neighbour": "Neighbour",
+      "other": "Other"
+    },
+    "contact": {
+      "n": "Contact {{n}}"
+    }
+  },
+  "family": {
+    "title": "MamaAlert स्थिति",
+    "alertReceived": "अलर्ट प्राप्त",
+    "volunteerResponding": "{{name}} रास्ते में हैं",
+    "atFacility": "{{hospital}} पहुँचे",
+    "resolved": "सब सुरक्षित",
+    "lastUpdate": "अंतिम अपडेट {{time}} पहले",
+    "findingHelp": "Finding help...",
+    "enRouteClinic": "En route to clinic (waiting...)",
+    "carePending": "Care in progress or pending",
+    "invalidToken": "Missing status link.",
+    "notFound": "We could not load this status page."
+  },
+  "admin": {
+    "title": "ज़ोन प्रशासक",
+    "patients": "मरीज़",
+    "volunteers": "स्वयंसेवक",
+    "alerts": "अलर्ट इतिहास",
+    "mapTab": "Map",
+    "healthWorker": "Health worker",
+    "atRiskAnc": "ANC overdue",
+    "skills": "Skills",
+    "vehicle": "Vehicle",
+    "radius": "Radius",
+    "lastResponse": "Last response",
+    "active": "Active",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "avgResponse": "Average response time (resolved): ~{{n}} min",
+    "triggeredAt": "Triggered",
+    "responseTime": "Response time",
+    "volunteer": "Volunteer",
+    "outcome": "Outcome",
+    "mapLegend": "Red: patients · Green: volunteers · Blue: hospitals · Large red: active alerts"
+  },
+  "demo": {
+    "title": "डेमो प्रवाह",
+    "step1": "Step 1: Patient Priya triggers SOS from the MamaAlert home screen.",
+    "step2": "Step 2: SMS goes to volunteers within 5 km.",
+    "step3": "Step 3: Ravi replies YES by SMS or the volunteer dashboard.",
+    "step4": "Step 4: Priya gets a confirmation SMS.",
+    "step5": "Step 5: PHC Demo Clinic receives a pre-alert.",
+    "step6": "Step 6: Family opens the secure status link.",
+    "prev": "Previous",
+    "next": "Next",
+    "stepCounter": "Step {{current}} / {{total}}",
+    "autoAdvance": "Auto-advance every 4 seconds",
+    "sosPreviewTitle": "लाइव पूर्वावलोकन: मरीज़ SOS होम स्क्रीन",
+    "triggerReal": "Trigger real demo SOS",
+    "seedHint": "Uses seed patient phone {{phone}} (Supabase seed + API must be running)."
+  },
+  "auth": {
+    "required": "साइन इन आवश्यक",
+    "adminRequired": "प्रशासक पहुँच आवश्यक",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "signOut": "Sign out"
+  },
+  "status": {
+    "active": "सक्रिय",
+    "volunteer_responding": "स्वयंसेवक प्रतिक्रिया",
+    "at_facility": "केन्द्र पर",
+    "resolved": "हल",
+    "cancelled": "रद्द",
+    "none": "No recent alert"
+  },
+  "common": {
+    "loading": "लोड हो रहा है...",
+    "error": "कुछ गलत हुआ",
+    "retry": "फिर कोशिश करें",
+    "save": "सहेजें",
+    "cancel": "रद्द करें"
+  }
+}

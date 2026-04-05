@@ -1,0 +1,180 @@
+{
+  "sos": {
+    "title": "MamaAlert",
+    "greeting": "Habari, {{name}}",
+    "weeks": "Uja uzito wa wiki {{n}}",
+    "button": "Bonyeza kwa msaada wa dharura",
+    "sending": "Inatuma tahadhari...",
+    "sent": "Msaada unakuja",
+    "helpMessage": "{{volunteerName}} anakuja kwako",
+    "offline": "Hakuna mtandao — tahadhari yako imepangwa",
+    "offlineSubtext": "Itatumwa kiotomatiki unapopata mtandao",
+    "language": "Language",
+    "needPhone": "Add your phone number below so we can find your record.",
+    "phoneLabel": "Your phone number",
+    "phonePlaceholder": "e.g. +15551230000",
+    "savePhone": "Save",
+    "sentDetail": "Volunteers and your clinic are being notified.",
+    "error": "Could not send. Try again.",
+    "networkOfflineHint": "Huna mtandao — tahadhari zitatulia kwenye foleni hadi mtandao urudi."
+  },
+  "volunteer": {
+    "title": "Dashibodi ya wahamasishaji",
+    "activeAlert": "Tahadhari ya dharura",
+    "minutesAgo": "Dakika {{n}} zilizopita",
+    "distance": "Km {{km}} kutoka kwako",
+    "accept": "Ndiyo, naja",
+    "decline": "Hapana",
+    "pastAlerts": "Tahadhari za zamani",
+    "watching": "Watching for alerts...",
+    "directionsSent": "Directions sent to your phone.",
+    "enterPhone": "Enter the phone number you registered with.",
+    "savePhone": "Save and continue",
+    "phoneLabel": "Your volunteer phone"
+  },
+  "hospital": {
+    "title": "Tahadhari inayoingia",
+    "eta": "Muda ~{{n}} dakika",
+    "ready": "Tuko tayari",
+    "moreInfo": "Tunahitaji maelezo zaidi",
+    "idLabel": "Hospital ID (UUID)",
+    "countBadge": "{{n}} active",
+    "empty": "No pre-alerts right now.",
+    "volunteerTransport": "Volunteer: {{name}}",
+    "awaitingVolunteer": "Awaiting volunteer assignment"
+  },
+  "register": {
+    "title": "Sajili mgonjwa",
+    "sections": {
+      "identity": "Utambulisho",
+      "location": "Mahali",
+      "pregnancy": "Maelezo ya ujauzito",
+      "risks": "Hatari",
+      "contacts": "Mawasiliano ya dharura"
+    },
+    "submit": "Sajili mgonjwa",
+    "success": "Mgonjwa amesajiliwa",
+    "patientId": "Patient ID",
+    "statusLink": "Family status link",
+    "another": "Register another patient",
+    "locationRequired": "Capture your current location before submitting.",
+    "captureLocation": "Capture my current location",
+    "validation": {
+      "required": "Required"
+    },
+    "fields": {
+      "name": "Full name",
+      "age": "Age",
+      "language": "Language",
+      "phonePrimary": "Primary phone",
+      "phoneSecondary": "Secondary phone",
+      "village": "Village or area",
+      "landmark": "Landmark",
+      "weeksPregnant": "Weeks pregnant",
+      "dueDate": "Due date",
+      "prevPregnancies": "Previous pregnancies",
+      "prevBirths": "Previous births",
+      "prevCsection": "Previous C-section",
+      "lastAnc": "Last ANC visit",
+      "bloodType": "Blood type",
+      "medicationName": "Medication name",
+      "contactName": "Name",
+      "contactPhone": "Phone",
+      "relationship": "Relationship"
+    },
+    "risks": {
+      "pre_eclampsia": "Pre-eclampsia",
+      "placenta_previa": "Placenta previa",
+      "severe_anaemia": "Severe anaemia",
+      "gestational_diabetes": "Gestational diabetes",
+      "multiple_pregnancy": "Multiple pregnancy",
+      "obstructed_labour_history": "Obstructed labour history",
+      "hiv_positive": "HIV positive",
+      "on_medication": "On medication"
+    },
+    "relationship": {
+      "husband": "Husband",
+      "mother": "Mother",
+      "sister": "Sister",
+      "neighbour": "Neighbour",
+      "other": "Other"
+    },
+    "contact": {
+      "n": "Contact {{n}}"
+    }
+  },
+  "family": {
+    "title": "Hali ya MamaAlert",
+    "alertReceived": "Tahadhari imepokelewa",
+    "volunteerResponding": "{{name}} anakuja",
+    "atFacility": "Amefika {{hospital}}",
+    "resolved": "Salama",
+    "lastUpdate": "Sasisho la mwisho {{time}} iliyopita",
+    "findingHelp": "Finding help...",
+    "enRouteClinic": "En route to clinic (waiting...)",
+    "carePending": "Care in progress or pending",
+    "invalidToken": "Missing status link.",
+    "notFound": "We could not load this status page."
+  },
+  "admin": {
+    "title": "Msimamizi wa eneo",
+    "patients": "Wagonjwa",
+    "volunteers": "Wahamasishaji",
+    "alerts": "Historia ya tahadhari",
+    "mapTab": "Map",
+    "healthWorker": "Health worker",
+    "atRiskAnc": "ANC overdue",
+    "skills": "Skills",
+    "vehicle": "Vehicle",
+    "radius": "Radius",
+    "lastResponse": "Last response",
+    "active": "Active",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "avgResponse": "Average response time (resolved): ~{{n}} min",
+    "triggeredAt": "Triggered",
+    "responseTime": "Response time",
+    "volunteer": "Volunteer",
+    "outcome": "Outcome",
+    "mapLegend": "Red: patients · Green: volunteers · Blue: hospitals · Large red: active alerts"
+  },
+  "demo": {
+    "title": "Mtiririko wa demo",
+    "step1": "Step 1: Patient Priya triggers SOS from the MamaAlert home screen.",
+    "step2": "Step 2: SMS goes to volunteers within 5 km.",
+    "step3": "Step 3: Ravi replies YES by SMS or the volunteer dashboard.",
+    "step4": "Step 4: Priya gets a confirmation SMS.",
+    "step5": "Step 5: PHC Demo Clinic receives a pre-alert.",
+    "step6": "Step 6: Family opens the secure status link.",
+    "prev": "Previous",
+    "next": "Next",
+    "stepCounter": "Step {{current}} / {{total}}",
+    "autoAdvance": "Auto-advance every 4 seconds",
+    "sosPreviewTitle": "Hakiki: skrini ya nyumbani ya SOS ya mgonjwa",
+    "triggerReal": "Trigger real demo SOS",
+    "seedHint": "Uses seed patient phone {{phone}} (Supabase seed + API must be running)."
+  },
+  "auth": {
+    "required": "Ingia kwenye akaunti",
+    "adminRequired": "Uruhusu wa msimamizi unahitajika",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "signOut": "Sign out"
+  },
+  "status": {
+    "active": "Hai",
+    "volunteer_responding": "Mhitaji anakuja",
+    "at_facility": "Katika kituo",
+    "resolved": "Imetatuliwa",
+    "cancelled": "Imefutwa",
+    "none": "No recent alert"
+  },
+  "common": {
+    "loading": "Inapakia...",
+    "error": "Kuna hitilafu",
+    "retry": "Jaribu tena",
+    "save": "Hifadhi",
+    "cancel": "Ghairi"
+  }
+}

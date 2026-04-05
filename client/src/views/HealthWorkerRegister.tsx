@@ -1,0 +1,446 @@
+import { useMemo, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { MapView } from '@/components/MapView'
+import { useGeolocation } from '@/hooks/useGeolocation'
+import { useZoneId } from '@/hooks/useZoneId'
+import { postRegisterPatient } from '@/services/api'
+import { ErrorMessage } from '@/components/ErrorMessage'
+
+const langs = ['en', 'hi', 'fr', 'sw', 'ar', 'pt'] as const
+
+const relationshipValues = ['husband', 'mother', 'sister', 'neighbour', 'other'] as const
+
+const riskKeys = [
+  'pre_eclampsia',
+  'placenta_previa',
+  'severe_anaemia',
+  'gestational_diabetes',
+  'multiple_pregnancy',
+  'obstructed_labour_history',
+  'hiv_positive',
+  'on_medication',
+] as const
+
+const formSchema = z
+  .object({
+    name: z.string().min(1),
+    age: z.string().optional(),
+    phone_primary: z.string().min(8).max(20),
+    phone_secondary: z.string().max(20).optional(),
+    language: z.enum(langs),
+    village: z.string().optional(),
+    landmark: z.string().optional(),
+    weeks_pregnant: z.string().optional(),
+    due_date: z.string().optional(),
+    prev_pregnancies: z.string().optional(),
+    prev_births: z.string().optional(),
+    prev_csection: z.boolean().optional(),
+    last_anc_date: z.string().optional(),
+    blood_type: z.string().max(8).optional(),
+    medication_name: z.string().optional(),
+    c1_name: z.string().min(1),
+    c1_phone: z.string().min(8),
+    c1_rel: z.enum(relationshipValues),
+    c2_name: z.string().optional(),
+    c2_phone: z.string().optional(),
+    c2_rel: z.enum(relationshipValues).optional(),
+  })
+  .superRefine((val, ctx) => {
+    if (val.c2_phone && val.c2_phone.length >= 8) {
+      if (!val.c2_name || val.c2_name.length < 1) {
+        ctx.addIssue({ code: 'custom', path: ['c2_name'], message: 'required' })
+      }
+      if (!val.c2_rel) {
+        ctx.addIssue({ code: 'custom', path: ['c2_rel'], message: 'required' })
+      }
+    }
+  })
+
+type FormValues = z.infer<typeof formSchema>
+
+export function HealthWorkerRegister() {
+  const { t } = useTranslation()
+  const zoneId = useZoneId()
+  const { lat, lng, error: geoErr, isLoading: geoLoading, capture: captureLocation } = useGeolocation()
+  const [risk, setRisk] = useState<Record<(typeof riskKeys)[number], boolean>>(
+    () =>
+      Object.fromEntries(riskKeys.map((k) => [k, false])) as Record<
+        (typeof riskKeys)[number],
+        boolean
+      >,
+  )
+  const [submitErr, setSubmitErr] = useState<string | null>(null)
+  const [success, setSuccess] = useState<{ id: string; status_token: string } | null>(null)
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+      phone_primary: '',
+      phone_secondary: '',
+      language: 'en',
+      village: '',
+      landmark: '',
+      prev_csection: false,
+      c1_name: '',
+      c1_phone: '',
+      c1_rel: 'husband',
+      c2_name: '',
+      c2_phone: '',
+    },
+  })
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = form
+
+  // react-hook-form watch() is the supported way to derive locale-driven labels
+  // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch() for language field
+  const lang = watch('language')
+
+  const onSubmit = async (values: FormValues) => {
+    setSubmitErr(null)
+    if (lat === null || lng === null) {
+      setSubmitErr(t('register.locationRequired'))
+      return
+    }
+    const ageNum = values.age?.trim() ? Number(values.age) : undefined
+    const weeks = values.weeks_pregnant?.trim() ? Number(values.weeks_pregnant) : undefined
+    const prevP = values.prev_pregnancies?.trim() ? Number(values.prev_pregnancies) : undefined
+    const prevB = values.prev_births?.trim() ? Number(values.prev_births) : undefined
+
+    const risk_flags = riskKeys.filter((k) => risk[k])
+    const emergency_contacts = [
+      { name: values.c1_name, phone: values.c1_phone, relationship: values.c1_rel },
+    ]
+    if (values.c2_name && values.c2_phone && values.c2_rel) {
+      emergency_contacts.push({
+        name: values.c2_name,
+        phone: values.c2_phone,
+        relationship: values.c2_rel,
+      })
+    }
+
+    try {
+      const out = await postRegisterPatient({
+        name: values.name,
+        age: ageNum !== undefined && !Number.isNaN(ageNum) ? ageNum : null,
+        phone_primary: values.phone_primary.trim(),
+        phone_secondary: values.phone_secondary?.trim() || null,
+        village: values.village?.trim() || null,
+        landmark: values.landmark?.trim() || null,
+        lat,
+        lng,
+        weeks_pregnant: weeks !== undefined && !Number.isNaN(weeks) ? weeks : null,
+        due_date: values.due_date?.trim() || null,
+        prev_pregnancies: prevP !== undefined && !Number.isNaN(prevP) ? prevP : null,
+        prev_births: prevB !== undefined && !Number.isNaN(prevB) ? prevB : null,
+        prev_csection: values.prev_csection ?? false,
+        last_anc_date: values.last_anc_date?.trim() || null,
+        blood_type: values.blood_type?.trim() || null,
+        language: values.language,
+        zone_id: zoneId,
+        risk_flags,
+        medication_name: risk.on_medication ? values.medication_name?.trim() || null : null,
+        emergency_contacts,
+      })
+      setSuccess(out)
+    } catch (e) {
+      setSubmitErr(e instanceof Error ? e.message : t('common.error'))
+    }
+  }
+
+  const statusPath = useMemo(() => {
+    if (!success) {
+      return ''
+    }
+    return `${window.location.origin}/status/${success.status_token}`
+  }, [success])
+
+  if (success) {
+    return (
+      <div className="mx-auto max-w-lg space-y-6 p-6">
+        <h1 className="text-2xl font-bold">{t('register.success')}</h1>
+        <p className="text-muted-foreground text-sm">
+          {t('register.patientId')}: <span className="font-mono text-foreground">{success.id}</span>
+        </p>
+        <p className="text-sm">
+          {t('register.statusLink')}:{' '}
+          <a href={statusPath} className="text-primary underline">
+            {statusPath}
+          </a>
+        </p>
+        <Button
+          type="button"
+          onClick={() => {
+            setSuccess(null)
+            form.reset({
+              name: '',
+              phone_primary: '',
+              phone_secondary: '',
+              language: 'en',
+              village: '',
+              landmark: '',
+              prev_csection: false,
+              c1_name: '',
+              c1_phone: '',
+              c1_rel: 'husband',
+              c2_name: '',
+              c2_phone: '',
+            })
+            setRisk(
+              Object.fromEntries(riskKeys.map((k) => [k, false])) as Record<
+                (typeof riskKeys)[number],
+                boolean
+              >,
+            )
+          }}
+        >
+          {t('register.another')}
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <form className="mx-auto max-w-2xl space-y-6 p-6 pb-24" onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
+      <h1 className="text-2xl font-bold">{t('register.title')}</h1>
+
+      {submitErr ? <ErrorMessage message={submitErr} onRetry={() => setSubmitErr(null)} /> : null}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('register.sections.identity')}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="name">{t('register.fields.name')}</Label>
+            <Input id="name" {...register('name')} />
+            {errors.name ? <p className="text-destructive text-xs">{t('register.validation.required')}</p> : null}
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="age">{t('register.fields.age')}</Label>
+            <Input id="age" type="number" {...register('age')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="language">{t('register.fields.language')}</Label>
+            <Select value={lang} onValueChange={(v) => setValue('language', v as FormValues['language'])}>
+              <SelectTrigger id="language">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {langs.map((l) => (
+                  <SelectItem key={l} value={l}>
+                    {l}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone_primary">{t('register.fields.phonePrimary')}</Label>
+            <Input id="phone_primary" type="tel" {...register('phone_primary')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone_secondary">{t('register.fields.phoneSecondary')}</Label>
+            <Input id="phone_secondary" type="tel" {...register('phone_secondary')} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('register.sections.location')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button type="button" variant="secondary" disabled={geoLoading} onClick={captureLocation}>
+            {geoLoading ? t('common.loading') : t('register.captureLocation')}
+          </Button>
+          {geoErr ? <p className="text-destructive text-sm">{geoErr}</p> : null}
+          {lat !== null && lng !== null ? (
+            <>
+              <p className="text-muted-foreground text-sm">
+                {lat.toFixed(5)}, {lng.toFixed(5)}
+              </p>
+              <MapView
+                center={[lat, lng]}
+                zoom={14}
+                patients={[{ id: 'capture', name: '', lat, lng }]}
+                className="h-48 w-full rounded-md"
+              />
+            </>
+          ) : null}
+          <div className="space-y-2">
+            <Label htmlFor="village">{t('register.fields.village')}</Label>
+            <Input id="village" {...register('village')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="landmark">{t('register.fields.landmark')}</Label>
+            <Input id="landmark" {...register('landmark')} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('register.sections.pregnancy')}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="weeks">{t('register.fields.weeksPregnant')}</Label>
+            <Input id="weeks" type="number" min={1} max={44} {...register('weeks_pregnant')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="due">{t('register.fields.dueDate')}</Label>
+            <Input id="due" type="date" {...register('due_date')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="prev_p">{t('register.fields.prevPregnancies')}</Label>
+            <Input id="prev_p" type="number" min={0} {...register('prev_pregnancies')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="prev_b">{t('register.fields.prevBirths')}</Label>
+            <Input id="prev_b" type="number" min={0} {...register('prev_births')} />
+          </div>
+          <div className="flex items-center gap-2 sm:col-span-2">
+            <Checkbox
+              id="csection"
+              checked={watch('prev_csection') ?? false}
+              onCheckedChange={(c) => setValue('prev_csection', c === true)}
+            />
+            <Label htmlFor="csection">{t('register.fields.prevCsection')}</Label>
+          </div>
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="anc">{t('register.fields.lastAnc')}</Label>
+            <Input id="anc" type="date" {...register('last_anc_date')} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="blood">{t('register.fields.bloodType')}</Label>
+            <Input id="blood" {...register('blood_type')} />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('register.sections.risks')}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          {riskKeys.map((k) => (
+            <div key={k} className="flex items-center gap-2">
+              <Checkbox
+                id={k}
+                checked={risk[k]}
+                onCheckedChange={(c) => setRisk((prev) => ({ ...prev, [k]: c === true }))}
+              />
+              <Label htmlFor={k} className="font-normal">
+                {t(`register.risks.${k}`)}
+              </Label>
+            </div>
+          ))}
+          {risk.on_medication ? (
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="med">{t('register.fields.medicationName')}</Label>
+              <Input id="med" {...register('medication_name')} />
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>{t('register.sections.contacts')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>{t('register.contact.n', { n: 1 })}</Label>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="c1n">{t('register.fields.contactName')}</Label>
+              <Input id="c1n" {...register('c1_name')} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="c1p">{t('register.fields.contactPhone')}</Label>
+              <Input id="c1p" type="tel" {...register('c1_phone')} />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>{t('register.fields.relationship')}</Label>
+              <Select
+                value={watch('c1_rel')}
+                onValueChange={(v) => setValue('c1_rel', v as FormValues['c1_rel'])}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {relationshipValues.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {t(`register.relationship.${r}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>{t('register.contact.n', { n: 2 })}</Label>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="c2n">{t('register.fields.contactName')}</Label>
+              <Input id="c2n" {...register('c2_name')} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="c2p">{t('register.fields.contactPhone')}</Label>
+              <Input id="c2p" type="tel" {...register('c2_phone')} />
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>{t('register.fields.relationship')}</Label>
+              <Select
+                value={watch('c2_rel') ?? undefined}
+                onValueChange={(v) =>
+                  setValue('c2_rel', v as FormValues['c2_rel'], { shouldValidate: true })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={t('register.fields.relationship')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {relationshipValues.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {t(`register.relationship.${r}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+        {isSubmitting ? t('common.loading') : t('register.submit')}
+      </Button>
+    </form>
+  )
+}

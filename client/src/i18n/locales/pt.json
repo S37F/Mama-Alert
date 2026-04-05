@@ -1,0 +1,180 @@
+{
+  "sos": {
+    "title": "MamaAlert",
+    "greeting": "Olá, {{name}}",
+    "weeks": "{{n}} semanas de gravidez",
+    "button": "Pressione para ajuda de emergência",
+    "sending": "A enviar alerta...",
+    "sent": "A ajuda está a chegar",
+    "helpMessage": "{{volunteerName}} está a caminho",
+    "offline": "Sem sinal — o alerta está na fila",
+    "offlineSubtext": "Será enviado automaticamente quando houver sinal",
+    "language": "Language",
+    "needPhone": "Add your phone number below so we can find your record.",
+    "phoneLabel": "Your phone number",
+    "phonePlaceholder": "e.g. +15551230000",
+    "savePhone": "Save",
+    "sentDetail": "Volunteers and your clinic are being notified.",
+    "error": "Could not send. Try again.",
+    "networkOfflineHint": "Está offline — os alertas ficam na fila até voltar a estar online."
+  },
+  "volunteer": {
+    "title": "Painel do voluntário",
+    "activeAlert": "Alerta de emergência",
+    "minutesAgo": "Há {{n}} minutos",
+    "distance": "{{km}} km de si",
+    "accept": "Sim, estou a ir",
+    "decline": "Não",
+    "pastAlerts": "Alertas anteriores",
+    "watching": "Watching for alerts...",
+    "directionsSent": "Directions sent to your phone.",
+    "enterPhone": "Enter the phone number you registered with.",
+    "savePhone": "Save and continue",
+    "phoneLabel": "Your volunteer phone"
+  },
+  "hospital": {
+    "title": "Alerta recebido",
+    "eta": "ETA ~{{n}} minutos",
+    "ready": "Estamos prontos",
+    "moreInfo": "Precisamos de mais informações",
+    "idLabel": "Hospital ID (UUID)",
+    "countBadge": "{{n}} active",
+    "empty": "No pre-alerts right now.",
+    "volunteerTransport": "Volunteer: {{name}}",
+    "awaitingVolunteer": "Awaiting volunteer assignment"
+  },
+  "register": {
+    "title": "Registar doente",
+    "sections": {
+      "identity": "Identidade",
+      "location": "Localização",
+      "pregnancy": "Gravidez",
+      "risks": "Riscos",
+      "contacts": "Contactos de emergência"
+    },
+    "submit": "Registar doente",
+    "success": "Doente registado com sucesso",
+    "patientId": "Patient ID",
+    "statusLink": "Family status link",
+    "another": "Register another patient",
+    "locationRequired": "Capture your current location before submitting.",
+    "captureLocation": "Capture my current location",
+    "validation": {
+      "required": "Required"
+    },
+    "fields": {
+      "name": "Full name",
+      "age": "Age",
+      "language": "Language",
+      "phonePrimary": "Primary phone",
+      "phoneSecondary": "Secondary phone",
+      "village": "Village or area",
+      "landmark": "Landmark",
+      "weeksPregnant": "Weeks pregnant",
+      "dueDate": "Due date",
+      "prevPregnancies": "Previous pregnancies",
+      "prevBirths": "Previous births",
+      "prevCsection": "Previous C-section",
+      "lastAnc": "Last ANC visit",
+      "bloodType": "Blood type",
+      "medicationName": "Medication name",
+      "contactName": "Name",
+      "contactPhone": "Phone",
+      "relationship": "Relationship"
+    },
+    "risks": {
+      "pre_eclampsia": "Pre-eclampsia",
+      "placenta_previa": "Placenta previa",
+      "severe_anaemia": "Severe anaemia",
+      "gestational_diabetes": "Gestational diabetes",
+      "multiple_pregnancy": "Multiple pregnancy",
+      "obstructed_labour_history": "Obstructed labour history",
+      "hiv_positive": "HIV positive",
+      "on_medication": "On medication"
+    },
+    "relationship": {
+      "husband": "Husband",
+      "mother": "Mother",
+      "sister": "Sister",
+      "neighbour": "Neighbour",
+      "other": "Other"
+    },
+    "contact": {
+      "n": "Contact {{n}}"
+    }
+  },
+  "family": {
+    "title": "Estado MamaAlert",
+    "alertReceived": "Alerta recebido",
+    "volunteerResponding": "{{name}} está a caminho",
+    "atFacility": "Chegou a {{hospital}}",
+    "resolved": "Tudo seguro",
+    "lastUpdate": "Última atualização há {{time}}",
+    "findingHelp": "Finding help...",
+    "enRouteClinic": "En route to clinic (waiting...)",
+    "carePending": "Care in progress or pending",
+    "invalidToken": "Missing status link.",
+    "notFound": "We could not load this status page."
+  },
+  "admin": {
+    "title": "Administração da zona",
+    "patients": "Doentes",
+    "volunteers": "Voluntários",
+    "alerts": "Histórico de alertas",
+    "mapTab": "Map",
+    "healthWorker": "Health worker",
+    "atRiskAnc": "ANC overdue",
+    "skills": "Skills",
+    "vehicle": "Vehicle",
+    "radius": "Radius",
+    "lastResponse": "Last response",
+    "active": "Active",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "avgResponse": "Average response time (resolved): ~{{n}} min",
+    "triggeredAt": "Triggered",
+    "responseTime": "Response time",
+    "volunteer": "Volunteer",
+    "outcome": "Outcome",
+    "mapLegend": "Red: patients · Green: volunteers · Blue: hospitals · Large red: active alerts"
+  },
+  "demo": {
+    "title": "Fluxo de demonstração",
+    "step1": "Step 1: Patient Priya triggers SOS from the MamaAlert home screen.",
+    "step2": "Step 2: SMS goes to volunteers within 5 km.",
+    "step3": "Step 3: Ravi replies YES by SMS or the volunteer dashboard.",
+    "step4": "Step 4: Priya gets a confirmation SMS.",
+    "step5": "Step 5: PHC Demo Clinic receives a pre-alert.",
+    "step6": "Step 6: Family opens the secure status link.",
+    "prev": "Previous",
+    "next": "Next",
+    "stepCounter": "Step {{current}} / {{total}}",
+    "autoAdvance": "Auto-advance every 4 seconds",
+    "sosPreviewTitle": "Pré-visualização: ecrã SOS da paciente",
+    "triggerReal": "Trigger real demo SOS",
+    "seedHint": "Uses seed patient phone {{phone}} (Supabase seed + API must be running)."
+  },
+  "auth": {
+    "required": "Início de sessão necessário",
+    "adminRequired": "Acesso de administrador necessário",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "signOut": "Sign out"
+  },
+  "status": {
+    "active": "Ativo",
+    "volunteer_responding": "Voluntário a caminho",
+    "at_facility": "Na unidade",
+    "resolved": "Resolvido",
+    "cancelled": "Cancelado",
+    "none": "No recent alert"
+  },
+  "common": {
+    "loading": "A carregar...",
+    "error": "Algo correu mal",
+    "retry": "Tentar novamente",
+    "save": "Guardar",
+    "cancel": "Cancelar"
+  }
+}
