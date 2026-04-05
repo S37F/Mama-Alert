@@ -23,6 +23,10 @@ import { logError } from '@/lib/logger'
 const app = express()
 const PORT = Number(process.env.PORT) || 3000
 
+// Railway / other reverse proxies send X-Forwarded-For; required for express-rate-limit client IPs
+const trustProxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS ?? '1', 10)
+app.set('trust proxy', Number.isFinite(trustProxyHops) && trustProxyHops > 0 ? trustProxyHops : 1)
+
 app.use(helmet())
 app.use(
   cors({
