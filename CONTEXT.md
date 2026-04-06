@@ -22,7 +22,7 @@ MamaAlert collapses all three delays simultaneously using SMS, USSD, and a commu
 - **TypeScript** (strict mode — `"strict": true` in tsconfig)
 - **Tailwind CSS v3**
 - **shadcn/ui** (component library on top of Radix UI)
-- **React Router v6** (for 6 layout routing)
+- **React Router v6** (role-based routes; see route table below)
 - **vite-plugin-pwa** + **Workbox** (offline PWA, background sync)
 - **idb** (IndexedDB wrapper for offline queue)
 - **@supabase/supabase-js** (DB + real-time + auth)
@@ -36,8 +36,9 @@ MamaAlert collapses all three delays simultaneously using SMS, USSD, and a commu
 - **@supabase/supabase-js** (server-side DB queries)
 - **twilio** (SMS + Voice/IVR)
 - **africastalking** (USSD + SMS Africa fallback)
-- **jsonwebtoken** + **bcrypt** (JWT auth middleware)
 - **dotenv**, **cors**, **helmet**, **express-rate-limit**
+- Protected routes: **Supabase Auth** access token in `Authorization: Bearer` verified via `supabaseAdmin.auth.getUser` (no app-managed `JWT_SECRET`)
+- **Volunteer live feed:** Server-Sent Events (`GET /api/volunteer/events?phone=…`) so phone-only volunteers get push refresh without Postgres Realtime as `anon`
 - **ts-node-dev** (dev server with hot reload)
 
 ### Database
@@ -61,7 +62,7 @@ MamaAlert collapses all three delays simultaneously using SMS, USSD, and a commu
 mamaalert/
 ├── client/                  ← React PWA → deploys to Vercel
 │   ├── src/
-│   │   ├── views/           ← 6 role-based screens
+│   │   ├── views/           ← role-based screens (SOS, volunteer, hospital, register, worker dashboard, family, admin, demo)
 │   │   ├── components/      ← reusable UI components
 │   │   ├── hooks/           ← custom React hooks
 │   │   ├── services/        ← supabase client, api calls, offline queue
@@ -89,16 +90,18 @@ mamaalert/
 
 ---
 
-## The 6 User Roles & Their Routes
+## User Roles & Routes
 
 | Route | Role | Auth Required |
 |---|---|---|
 | `/` | Patient SOS — big red button | None (phone = identity) |
-| `/volunteer` | Volunteer alert feed + YES/NO | None (phone = identity) |
+| `/volunteer` | Volunteer alert feed + YES/NO (SSE live refresh) | None (phone = identity) |
 | `/hospital` | Hospital pre-alert inbox | None (SMS fallback exists) |
 | `/register` | Health worker registers patients | Supabase Auth |
+| `/worker` | Health worker dashboard (patients, alerts, volunteers) | Supabase Auth (health_worker) |
 | `/status/:token` | Family read-only status page | None (token in URL) |
 | `/admin` | NGO zone admin dashboard | Supabase Auth (admin role) |
+| `/demo` | Hackathon demo walkthrough | None |
 
 ---
 
@@ -175,7 +178,7 @@ Service Worker intercepts failed POST /api/sos → saves to IndexedDB → Backgr
 - **Patients:** No login — identified by phone number from registration
 - **Volunteers:** No login — identified by phone number from registration
 - **Family:** No login — URL token (`/status/:token`)
-- JWT middleware on protected Express routes verifies Supabase session tokens
+- `requireAuth` middleware on protected Express routes verifies the **Supabase** access token (`supabaseAdmin.auth.getUser`)
 
 ---
 
@@ -204,12 +207,13 @@ VITE_API_URL=
 ```
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
+SUPABASE_ANON_KEY=
+# Set TWILIO_MOCK=true for local dev without real Twilio (SMS logged; webhook validation relaxed).
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
 TWILIO_NUMBER=
 AT_API_KEY=
 AT_USERNAME=
-JWT_SECRET=
 PORT=3000
 CLIENT_URL=
 NODE_ENV=
@@ -224,5 +228,5 @@ NODE_ENV=
 3. Offline SOS queue must survive browser close — use Background Sync, not just localStorage
 4. All patient medical data must use Row-Level Security in Supabase — no exceptions
 5. The demo must show a real SMS arriving on a real phone — not simulated
-6. TypeScript strict mode throughout — no `any`, no `@ts-ignore`
+6. TypeScript strict mode throughout — no `any`, no `@ts-ignore` (includes `exactOptionalPropertyTypes` and `noFallthroughCasesInSwitch` per [rules.md](rules.md))
 7. All UI text must go through i18next — no hardcoded strings in JSX

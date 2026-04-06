@@ -13,6 +13,7 @@ import {
 import { getNearbyVolunteers } from '@/services/geo'
 import { supabaseAdmin } from '@/services/supabase'
 import { sendSMS, sendSmsMultipart, sendVoiceConfirmation } from '@/services/twilio'
+import { notifyVolunteerFeedRefresh } from '@/services/volunteerSseHub'
 import type { Alert } from '@/types/alert'
 import type { Patient } from '@/types/patient'
 import type { Volunteer } from '@/types/volunteer'
@@ -119,6 +120,7 @@ async function notifyNewVolunteers(
         })
         continue
       }
+      notifyVolunteerFeedRefresh(v.phone)
       const body = buildVolunteerAlertSMS(patient, v, alertRow, v.language)
       await sendSmsMultipart(v.phone, body)
     } catch (err) {

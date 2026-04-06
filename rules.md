@@ -385,18 +385,10 @@ const { data: volunteers } = await supabaseAdmin.rpc('get_nearby_volunteers', {
 - Use `process.env.VAR!` only after startup validation
 
 ```typescript
-// server/src/index.ts — validate on boot
-const requiredEnvVars = [
-  'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY',
-  'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_NUMBER',
-  'JWT_SECRET', 'CLIENT_URL'
-];
-
-for (const key of requiredEnvVars) {
-  if (!process.env[key]) {
-    throw new Error(`Missing required env var: ${key}`);
-  }
-}
+// server/src/config/env.ts — validate on boot (see implementation)
+// Required: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_ANON_KEY, CLIENT_URL
+// Twilio vars required unless TWILIO_MOCK is set (local dev).
+// Auth uses Supabase session tokens — no app-level JWT_SECRET.
 ```
 
 ### Rate Limiting on SOS — Prevent Abuse

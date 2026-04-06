@@ -175,6 +175,7 @@ client/src/
 │   ├── VolunteerDashboard.tsx
 │   ├── HospitalInbox.tsx
 │   ├── HealthWorkerRegister.tsx
+│   ├── HealthWorkerDashboard.tsx
 │   ├── FamilyStatus.tsx
 │   ├── AdminZone.tsx
 │   └── DemoFlow.tsx
@@ -517,19 +518,20 @@ Three sub-routes:
 
 ## Phase 3 — Frontend Views
 
-> Build all 6 views + shared components. Reference CONTEXT.md for exact route paths.
+> Build all role views + shared components. Reference CONTEXT.md for exact route paths.
 
 ### 3.1 — client/src/main.tsx + App.tsx
 
 **main.tsx:** Init i18next before rendering. Wrap app in Supabase auth context.
 
-**App.tsx:** Set up React Router with all 6 routes:
+**App.tsx:** Set up React Router with core routes (patient, volunteer, hospital, register, worker dashboard, family, admin, demo):
 ```typescript
 <Routes>
   <Route path="/" element={<PatientSOS />} />
   <Route path="/volunteer" element={<VolunteerDashboard />} />
   <Route path="/hospital" element={<HospitalInbox />} />
   <Route path="/register" element={<ProtectedRoute><HealthWorkerRegister /></ProtectedRoute>} />
+  <Route path="/worker" element={<ProtectedRoute role="health_worker"><HealthWorkerDashboard /></ProtectedRoute>} />
   <Route path="/status/:token" element={<FamilyStatus />} />
   <Route path="/admin" element={<ProtectedRoute role="admin"><AdminZone /></ProtectedRoute>} />
   <Route path="/demo" element={<DemoFlow />} />
@@ -649,9 +651,9 @@ Translate all keys for: `hi.json`, `fr.json`, `sw.json`, `ar.json`, `pt.json`. U
 - Show active alerts in a card list, newest first
 - Each `AlertCard` shows: patient first name, landmark, distance, weeks pregnant, time since alert
 - Two prominent buttons: `YES I AM GOING` (green, full width) and `NO` (outlined, smaller)
-- On YES tap: call `POST /api/volunteer-response` with YES → show "Directions sent to your phone" confirmation
+- On YES tap: call `POST /api/volunteer/response` with YES → show "Directions sent to your phone" confirmation
 - Show past alerts history below (greyed out cards)
-- Supabase real-time subscription for new alerts
+- **Live updates:** `EventSource` to `GET /api/volunteer/events?phone=…` (SSE). Server emits `feed_refresh` when this volunteer’s feed changes (SOS, escalation wave, YES/NO). Volunteers are phone-identified and do not use Supabase Realtime as `anon`.
 - If no active alerts: show "Watching for alerts..." with a subtle pulse indicator
 
 ### 3.5 — HospitalInbox.tsx
@@ -1017,7 +1019,7 @@ The `/demo` route should present this same flow visually with step cards for jud
 
 ### Phase 3 — Frontend
 - [ ] PatientSOS: full-screen button, handles offline state, sends SOS
-- [ ] VolunteerDashboard: shows alerts, YES/NO works, real-time updates
+- [ ] VolunteerDashboard: shows alerts, YES/NO works, SSE live refresh (`/api/volunteer/events`)
 - [ ] HospitalInbox: shows pre-alerts, real-time updates
 - [ ] HealthWorkerRegister: full 5-section form, GPS capture, Supabase auth
 - [ ] FamilyStatus: loads by token, polls every 30s, no medical data

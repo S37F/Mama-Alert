@@ -233,11 +233,13 @@ PATIENT PHONE                BACKEND                   EXTERNAL SERVICES
 
 ```
 mamaalert.app/              → Patient SOS screen
-mamaalert.app/volunteer     → Volunteer alert feed
+mamaalert.app/volunteer     → Volunteer alert feed (SSE + REST)
 mamaalert.app/hospital      → Hospital pre-alert inbox
 mamaalert.app/register      → Patient registration (health worker)
-mamaalert.app/status/:id    → Family read-only status page
+mamaalert.app/worker        → Health worker dashboard (auth)
+mamaalert.app/status/:token → Family read-only status page
 mamaalert.app/admin         → NGO zone admin dashboard
+mamaalert.app/demo          → Demo walkthrough
 ```
 
 ---
@@ -393,13 +395,12 @@ No patient medical data shown. Name + status only.
 
 **Who uses it:** GNEC partner NGO managing a district or zone.
 
-**Capabilities:**
-- View all patients, volunteers, health workers in zone
-- Full alert history with response times and outcomes
-- Set escalation rules (time thresholds, radius expansion)
-- Add/remove health workers
-- Export monthly CSV reports
-- Configure which hospitals receive pre-alerts
+**Capabilities (reference app):**
+- View patients, volunteers, health workers, and alerts in zone (admin UI)
+- Adjust zone escalation radii / delay where exposed in admin settings
+- Invite / attach health workers to the zone
+
+**Future / product extensions (not all implemented in the hackathon repo):** export monthly CSV reports; full “add/remove health worker” lifecycle beyond invite; rich per-hospital alert routing UI.
 
 ---
 
@@ -680,59 +681,50 @@ CREATE POLICY "health_workers_see_own_patients"
 | **Backend** | Node.js + Express | 20 LTS | REST API server |
 | **Database** | Supabase (PostgreSQL) | — | Primary database |
 | **Geospatial** | PostGIS | 3.x | 5km radius queries |
-| **Real-time** | Supabase Realtime | — | Live dashboard updates |
-| **Auth** | Supabase Auth + JWT | — | Health worker login |
+| **Real-time** | Supabase Realtime | — | Authenticated coordinator/admin views (`alerts` changes) |
+| **Volunteer live feed** | Server-Sent Events (SSE) | — | `GET /api/volunteer/events?phone=…` (phone-only volunteers, no anon Realtime) |
+| **Auth** | Supabase Auth (Bearer access token) | — | Health worker + admin; verified server-side with `getUser` |
 | **SMS primary** | Twilio | — | SMS send/receive |
 | **SMS Africa** | Africa's Talking | — | USSD + SMS fallback |
 | **Voice/IVR** | Twilio Voice | — | Blind user audio confirm |
-| **Maps** | Mapbox GL JS | 3.x | Coordinator map view |
+| **Maps** | Leaflet + react-leaflet | — | Coordinator / registration map view |
 | **Location** | Browser Geolocation API | — | GPS capture at registration |
-| **Map tiles** | OpenStreetMap | — | Free map data |
-| **Encryption** | AES-256 (Node crypto) | — | Patient data at rest |
+| **Map tiles** | OpenStreetMap | — | Free tiles (no Mapbox token) |
+| **Encryption** | Supabase + TLS | — | Data at rest / in transit per Supabase |
 | **Frontend hosting** | Vercel | — | PWA deployment |
 | **Backend hosting** | Railway | — | Express API hosting |
 | **CI/CD** | GitHub Actions | — | Auto deploy on push |
 
 ### Package Installation
 
-```bash
-# Frontend
-npm create vite@latest mamaalert-client -- --template react
-cd mamaalert-client
-npm install react-router-dom @supabase/supabase-js
-npm install mapbox-gl idb
-npm install -D tailwindcss postcss autoprefixer vite-plugin-pwa workbox-window
-npx tailwindcss init -p
-
-# Backend
-mkdir mamaalert-server && cd mamaalert-server
-npm init -y
-npm install express cors dotenv jsonwebtoken bcrypt
-npm install twilio @supabase/supabase-js
-npm install -D nodemon
-```
+See **CONTEXT.md** and **CURSOR_PROMPT.md** for the canonical monorepo (`client/` + `server/`). Summary: React 18 + Vite 5 + TypeScript + Tailwind + shadcn + Leaflet + i18next + idb; Node 20 + **Express 4** + Twilio + Supabase + Zod. No Mapbox or app-managed `jsonwebtoken` in the reference implementation.
 
 ---
 
 ## 10. API Design
 
-### Endpoints Reference
+### Endpoints Reference (aligned with shipped `server/src/index.ts`)
 
 ```
-POST   /api/sos                → Trigger SOS alert
-POST   /api/sms-reply          → Twilio inbound SMS webhook
-POST   /api/register/patient   → Register a new patient
-POST   /api/register/volunteer → Register a new volunteer
-POST   /api/register/hospital  → Register a hospital
-POST   /api/login              → Health worker login
-GET    /api/alerts             → Get active alerts (coordinator)
-GET    /api/alerts/:id         → Get single alert + responder status
-GET    /api/patients           → Get health worker's patients
-GET    /api/volunteers/nearby  → Get volunteers within radius
-GET    /api/status/:token      → Family status page (no auth)
-POST   /api/escalate/:alertId  → Manually trigger escalation
-PATCH  /api/alerts/:id/resolve → Mark alert resolved
+POST   /api/sos                      → Trigger SOS (rate-limited)
+POST   /api/sms-reply                → Twilio inbound SMS webhook
+POST   /api/ussd                     → Africa's Talking USSD webhook
+POST   /api/register/*               → Patient / volunteer / hospital registration (see register router)
+POST   /api/login                    → Supabase sign-in (health worker / admin)
+POST   /api/logout                   → Sign out (Bearer)
+GET    /api/public/patient-hints     → Rate-limited patient display hints for SOS screen
+GET    /api/volunteer/feed           → Volunteer alert feed (query: phone)
+GET    /api/volunteer/events         → SSE live refresh for volunteer feed (query: phone)
+POST   /api/volunteer/response       → PWA YES/NO (body: phone, alertId, response)
+GET    /api/hospital/*               → Hospital portal (see hospitalPortal router)
+GET    /api/admin/* , PATCH …        → Zone admin data (see adminData router)
+GET    /api/worker/*                 → Health worker portal (patients, volunteers, alerts)
+GET    /api/alerts/*                 → Authenticated alerts API
+GET    /api/status/:token            → Family status (no auth; safe fields only)
+GET    /api/health                   → Health check
 ```
+
+Escalation runs on timers in the SOS pipeline; there is no separate `POST /api/escalate/:id` in the reference server. Radius queries use Supabase RPC (`get_nearby_volunteers`, etc.), not `GET /api/volunteers/nearby`.
 
 ### SOS Endpoint Detail
 
@@ -1325,7 +1317,7 @@ const checkEscalation = async (alertId, wave = 0) => {
 If GPS is unavailable at registration:
 1. Health worker types village name → system geocodes using OpenStreetMap Nominatim API
 2. Accuracy: ~300–500m (sufficient for 5km radius)
-3. Manual pin-drop on Mapbox map as final fallback
+3. Manual pin-drop on Leaflet map as final fallback
 
 ---
 
@@ -1420,68 +1412,35 @@ CREATE POLICY "alert_access" ON alerts
 
 ## 17. Project Folder Structure
 
+Canonical layout: **TypeScript** throughout (`*.tsx` / `*.ts`), `server/src/index.ts` entry, Workbox via `vite-plugin-pwa` + `public/sw-sos.js`. See **CONTEXT.md** for the full tree. Abbreviated:
+
 ```
 mamaalert/
-├── client/                          ← React PWA (deploy to Vercel)
-│   ├── public/
-│   │   ├── manifest.json
-│   │   ├── icon-192.png
-│   │   └── icon-512.png
+├── client/
 │   ├── src/
-│   │   ├── main.jsx
-│   │   ├── App.jsx                  ← Router setup
-│   │   ├── views/
-│   │   │   ├── PatientSOS.jsx       ← Big red button screen
-│   │   │   ├── VolunteerDashboard.jsx
-│   │   │   ├── HospitalInbox.jsx
-│   │   │   ├── HealthWorkerRegister.jsx
-│   │   │   ├── FamilyStatus.jsx     ← Public, token-based
-│   │   │   └── AdminZone.jsx
+│   │   ├── main.tsx
+│   │   ├── App.tsx
+│   │   ├── views/           PatientSOS, VolunteerDashboard, HospitalInbox, HealthWorkerRegister,
+│   │   │                    HealthWorkerDashboard, FamilyStatus, AdminZone, DemoFlow
 │   │   ├── components/
-│   │   │   ├── SOSButton.jsx
-│   │   │   ├── AlertCard.jsx
-│   │   │   ├── PatientCard.jsx
-│   │   │   ├── MapView.jsx
-│   │   │   └── StatusBadge.jsx
 │   │   ├── hooks/
-│   │   │   ├── useGeolocation.js
-│   │   │   ├── useRealtimeAlerts.js
-│   │   │   └── useOfflineQueue.js
 │   │   ├── services/
-│   │   │   ├── supabase.js          ← Supabase client init
-│   │   │   ├── api.js               ← Axios API calls
-│   │   │   └── offline.js           ← IndexedDB queue
-│   │   └── service-worker.js        ← Workbox SW
-│   ├── vite.config.js
+│   │   └── i18n/
+│   ├── vite.config.ts
 │   └── tailwind.config.js
-│
-├── server/                          ← Express API (deploy to Railway)
-│   ├── index.js                     ← App entry point
-│   ├── routes/
-│   │   ├── sos.js                   ← POST /api/sos
-│   │   ├── smsReply.js              ← POST /api/sms-reply (Twilio webhook)
-│   │   ├── register.js              ← POST /api/register/*
-│   │   ├── alerts.js                ← GET /api/alerts
-│   │   ├── auth.js                  ← POST /api/login
-│   │   └── status.js               ← GET /api/status/:token
-│   ├── services/
-│   │   ├── twilio.js                ← SMS + IVR helpers
-│   │   ├── supabase.js              ← DB queries
-│   │   ├── geo.js                   ← Radius query helper
-│   │   └── escalation.js           ← Escalation timer logic
-│   ├── middleware/
-│   │   ├── auth.js                  ← JWT verification
-│   │   └── twilioValidate.js        ← Twilio signature check
-│   └── .env
-│
+├── server/
+│   ├── src/
+│   │   ├── index.ts
+│   │   ├── routes/
+│   │   ├── services/        (twilio, supabase, geo, escalation, volunteerSseHub, …)
+│   │   ├── middleware/
+│   │   └── config/
+│   └── tsconfig.json
 ├── supabase/
-│   ├── schema.sql                   ← Full DB schema (run once)
-│   └── functions.sql               ← PostGIS stored functions
-│
-├── .github/
-│   └── workflows/
-│       └── deploy.yml              ← GitHub Actions CI/CD
-│
+│   ├── schema.sql
+│   ├── functions.sql
+│   └── seed.sql
+├── .github/workflows/deploy.yml
 └── README.md
 ```
 
@@ -1531,7 +1490,7 @@ Evening:
   □ HospitalInbox.jsx — pre-alert feed
   □ FamilyStatus.jsx — token-based read-only page
   □ Basic AdminZone.jsx — patient + volunteer list
-  □ MapView.jsx — Mapbox coordinator map
+  □ MapView — Leaflet coordinator map
 ```
 
 ### Day 3 — Polish + Demo Prep
@@ -1731,8 +1690,9 @@ Evening:
 # Supabase
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+SUPABASE_ANON_KEY=your-anon-key
 
-# Twilio
+# Twilio (optional locally if TWILIO_MOCK=true)
 TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=your-auth-token
 TWILIO_NUMBER=+14155238886
@@ -1742,10 +1702,7 @@ AT_API_KEY=your-africastalking-api-key
 AT_USERNAME=sandbox
 AT_USSD_CODE=*456#
 
-# JWT
-JWT_SECRET=your-super-secret-jwt-key-min-32-chars
-
-# App
+# App (auth: Supabase session Bearer tokens — no app JWT_SECRET)
 PORT=3000
 CLIENT_URL=https://mamaalert.vercel.app
 NODE_ENV=production
@@ -1757,7 +1714,6 @@ NODE_ENV=production
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 VITE_API_URL=https://your-backend.railway.app
-VITE_MAPBOX_TOKEN=pk.eyJ1...
 ```
 
 ---
@@ -1772,7 +1728,7 @@ All services fit within free tiers for hackathon demo:
 | Twilio | $15 trial credit (~500 SMS) | < 50 SMS in demo | Yes |
 | Vercel | Unlimited deploys, 100GB bandwidth | Negligible | Yes |
 | Railway | $5/month free credit | < $0.50 demo | Yes |
-| Mapbox | 50,000 map loads/month | < 100 demo | Yes |
+| OSM tiles (Leaflet) | N/A (free tiles; fair use) | Light demo usage | Yes |
 | Africa's Talking | Free sandbox | Sandbox only | Yes |
 | GitHub Actions | 2,000 min/month free | < 10 min | Yes |
 

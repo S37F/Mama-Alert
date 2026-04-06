@@ -404,10 +404,14 @@ adminDataRouter.post(
       typeof process.env.CLIENT_URL === 'string' && process.env.CLIENT_URL.length > 0
         ? `${process.env.CLIENT_URL.replace(/\/$/, '')}/login`
         : undefined
-    const { data: invited, error: invErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
-      data: { full_name: name },
-      redirectTo,
-    })
+    const invitePayload =
+      redirectTo !== undefined
+        ? { data: { full_name: name }, redirectTo }
+        : { data: { full_name: name } }
+    const { data: invited, error: invErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      email,
+      invitePayload,
+    )
     if (invErr || !invited?.user?.id) {
       logError('admin invite failed', { error: String(invErr) })
       res.status(400).json({ error: invErr?.message ?? 'Invite failed' })

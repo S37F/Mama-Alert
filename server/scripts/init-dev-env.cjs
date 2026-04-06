@@ -1,6 +1,5 @@
 const fs = require('fs')
 const path = require('path')
-const crypto = require('crypto')
 
 const root = path.join(__dirname, '..')
 const dest = path.join(root, '.env')
@@ -14,7 +13,6 @@ if (!fs.existsSync(example)) {
   process.exit(0)
 }
 
-let content = fs.readFileSync(example, 'utf8')
-content = content.replace(/__GENERATE_JWT_SECRET__/g, crypto.randomBytes(32).toString('hex'))
+const content = fs.readFileSync(example, 'utf8')
 fs.writeFileSync(dest, content, 'utf8')
 console.log('[init-dev-env] wrote server/.env — set real SUPABASE_* when you connect to a project.')

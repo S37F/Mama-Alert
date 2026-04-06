@@ -21,7 +21,12 @@ sosRouter.post(
       return
     }
     try {
-      const result = await triggerSos(parsed.data)
+      const { phone, triggerMethod, incapacitationSuspected } = parsed.data
+      const result = await triggerSos(
+        incapacitationSuspected === undefined
+          ? { phone, triggerMethod }
+          : { phone, triggerMethod, incapacitationSuspected },
+      )
       res.status(201).json(result)
     } catch (err) {
       const code = err && typeof err === 'object' && 'statusCode' in err ? (err as { statusCode: number }).statusCode : 500

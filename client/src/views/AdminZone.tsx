@@ -286,11 +286,15 @@ export function AdminZone() {
 
   const sendInvite = async () => {
     try {
-      await postAdminInviteHealthWorker({
+      const inviteBody: { email: string; name: string; phone?: string } = {
         email: inviteEmail.trim(),
         name: inviteName.trim(),
-        phone: invitePhone.trim() || undefined,
-      })
+      }
+      const invitePhoneTrimmed = invitePhone.trim()
+      if (invitePhoneTrimmed.length > 0) {
+        inviteBody.phone = invitePhoneTrimmed
+      }
+      await postAdminInviteHealthWorker(inviteBody)
       setInviteEmail('')
       setInviteName('')
       setInvitePhone('')

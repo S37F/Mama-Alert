@@ -20,3 +20,12 @@ export const patientHintsRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 })
+
+/** New volunteer SSE connections per IP (long-lived; limit abuse). */
+export const volunteerSseRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  message: { error: 'Too many SSE connections' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})

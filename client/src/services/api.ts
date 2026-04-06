@@ -129,6 +129,17 @@ export async function getVolunteerFeed(phone: string): Promise<VolunteerFeedItem
   return response.data.items
 }
 
+/** Absolute or same-origin URL for volunteer live feed (SSE). Uses `VITE_API_URL` when set. */
+export function volunteerSseUrl(phone: string): string {
+  const base = import.meta.env.VITE_API_URL ?? ''
+  const trimmed = base.replace(/\/$/, '')
+  const q = `phone=${encodeURIComponent(phone)}`
+  if (trimmed.length === 0) {
+    return `/api/volunteer/events?${q}`
+  }
+  return `${trimmed}/api/volunteer/events?${q}`
+}
+
 export async function postVolunteerResponse(body: {
   phone: string
   alertId: string

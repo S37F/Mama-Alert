@@ -7,6 +7,7 @@ import { scheduleIncapacitationFollowUp } from '@/services/incapacitationTimer'
 import { supabaseAdmin } from '@/services/supabase'
 import { sendSmsMultipart } from '@/services/twilio'
 import { buildVolunteerAlertSMS } from '@/services/messageBuilder'
+import { notifyVolunteerFeedRefresh } from '@/services/volunteerSseHub'
 import type { Alert } from '@/types/alert'
 
 export interface TriggerSosInput {
@@ -107,6 +108,7 @@ export async function triggerSos(input: TriggerSosInput): Promise<TriggerSosResu
         })
         continue
       }
+      notifyVolunteerFeedRefresh(v.phone)
       const smsBody = buildVolunteerAlertSMS(patient, v, alertRow, v.language)
       await sendSmsMultipart(v.phone, smsBody)
       notified += 1

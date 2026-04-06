@@ -1,3 +1,8 @@
+/**
+ * Required at process start (see rules.md / CONTEXT.md).
+ * Twilio vars are optional when TWILIO_MOCK is set (local dev).
+ * Africa's Talking is optional until USSD/SMS fallback is used in that environment.
+ */
 const REQUIRED_CORE = [
   'SUPABASE_URL',
   'SUPABASE_SERVICE_ROLE_KEY',

@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { logError } from '@/lib/logger'
 import { normalizePhone } from '@/lib/phone'
+import { volunteerSseRateLimit } from '@/middleware/rateLimiter'
+import { registerVolunteerSse } from '@/services/volunteerSseHub'
 import {
   applyVolunteerNo,
   applyVolunteerYes,
@@ -11,6 +13,19 @@ import {
 import { supabaseAdmin } from '@/services/supabase'
 
 export const volunteerPortalRouter = Router()
+
+volunteerPortalRouter.get('/events', volunteerSseRateLimit, (req, res, next) => {
+  const phoneRaw = req.query.phone
+  if (typeof phoneRaw !== 'string' || phoneRaw.trim().length < 8) {
+    res.status(400).json({ error: 'Missing or invalid phone' })
+    return
+  }
+  try {
+    registerVolunteerSse(req, res, phoneRaw.trim())
+  } catch (err) {
+    next(err)
+  }
+})
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null

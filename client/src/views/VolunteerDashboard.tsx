@@ -7,7 +7,12 @@ import { Label } from '@/components/ui/label'
 import { AlertCard } from '@/components/AlertCard'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
-import { getVolunteerFeed, postVolunteerResponse, type VolunteerFeedItem } from '@/services/api'
+import {
+  getVolunteerFeed,
+  postVolunteerResponse,
+  volunteerSseUrl,
+  type VolunteerFeedItem,
+} from '@/services/api'
 import { volunteerFeedItemToSummary } from '@/lib/volunteerFeed'
 
 const LS_VOL_PHONE = 'mamaalert_volunteer_phone'
@@ -56,11 +61,24 @@ export function VolunteerDashboard() {
   }, [load])
 
   useEffect(() => {
-    const id = window.setInterval(() => {
+    if (savedPhone.length < 8) {
+      return
+    }
+    let es: EventSource | null = null
+    try {
+      es = new EventSource(volunteerSseUrl(savedPhone))
+    } catch {
+      return
+    }
+    const onRefresh = (): void => {
       void load()
-    }, 8000)
-    return () => window.clearInterval(id)
-  }, [load])
+    }
+    es.addEventListener('feed_refresh', onRefresh)
+    es.addEventListener('connected', onRefresh)
+    return () => {
+      es?.close()
+    }
+  }, [savedPhone, load])
 
   const { active, past } = useMemo(() => {
     const activeList: VolunteerFeedItem[] = []

@@ -20,8 +20,7 @@ function mapVolunteerRow(row: unknown): Volunteer | null {
   const lang = typeof language === 'string' ? language : 'en'
   const skills = Array.isArray(row.skills) ? row.skills.filter((s): s is string => typeof s === 'string') : []
   const vehicle = typeof row.vehicle === 'string' ? row.vehicle : 'none'
-  const distance_m = typeof row.distance_m === 'number' ? row.distance_m : undefined
-  return {
+  const base = {
     id,
     name,
     phone,
@@ -29,8 +28,8 @@ function mapVolunteerRow(row: unknown): Volunteer | null {
     zone_id: typeof row.zone_id === 'string' ? row.zone_id : null,
     skills,
     vehicle,
-    distance_m,
   }
+  return typeof row.distance_m === 'number' ? { ...base, distance_m: row.distance_m } : base
 }
 
 function mapHospitalRow(row: unknown): Hospital | null {
@@ -45,8 +44,8 @@ function mapHospitalRow(row: unknown): Hospital | null {
   const phone_emergency = typeof row.phone_emergency === 'string' ? row.phone_emergency : null
   const services = Array.isArray(row.services) ? row.services.filter((s): s is string => typeof s === 'string') : []
   const is_24hr = typeof row.is_24hr === 'boolean' ? row.is_24hr : false
-  const distance_m = typeof row.distance_m === 'number' ? row.distance_m : undefined
-  return { id, name, phone_emergency, services, is_24hr, distance_m }
+  const base = { id, name, phone_emergency, services, is_24hr }
+  return typeof row.distance_m === 'number' ? { ...base, distance_m: row.distance_m } : base
 }
 
 export async function getNearbyVolunteers(

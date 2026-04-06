@@ -1,5 +1,6 @@
 import { extractFamilyPhones } from '@/lib/emergencyContacts'
 import { logError } from '@/lib/logger'
+import { normalizePhone } from '@/lib/phone'
 import { getNearbyHospital } from '@/services/geo'
 import {
   buildClinicPreAlertSMS,
@@ -9,6 +10,7 @@ import {
 } from '@/services/messageBuilder'
 import { supabaseAdmin } from '@/services/supabase'
 import { sendSMS, sendSmsMultipart } from '@/services/twilio'
+import { notifyVolunteerFeedRefresh } from '@/services/volunteerSseHub'
 import type { PatientSosRow } from '@/types/patientSos'
 import type { Patient } from '@/types/patient'
 import type { Volunteer } from '@/types/volunteer'
@@ -111,6 +113,20 @@ export async function applyVolunteerDone(volunteerId: string): Promise<boolean> 
 }
 
 export async function applyVolunteerNo(responseId: string): Promise<void> {
+  const { data: before, error: loadErr } = await supabaseAdmin
+    .from('alert_responses')
+    .select('volunteers ( phone )')
+    .eq('id', responseId)
+    .maybeSingle()
+  if (loadErr) {
+    logError('volunteer-reply: NO prefetch failed', { error: String(loadErr) })
+  }
+  let volunteerPhone: string | null = null
+  const volJoin = before && isRecord(before.volunteers) ? before.volunteers : null
+  if (volJoin && typeof volJoin.phone === 'string') {
+    volunteerPhone = volJoin.phone
+  }
+
   const nowIso = new Date().toISOString()
   const { error: upErr } = await supabaseAdmin
     .from('alert_responses')
@@ -118,6 +134,10 @@ export async function applyVolunteerNo(responseId: string): Promise<void> {
     .eq('id', responseId)
   if (upErr) {
     logError('volunteer-reply: NO update failed', { error: String(upErr) })
+    return
+  }
+  if (volunteerPhone) {
+    notifyVolunteerFeedRefresh(normalizePhone(volunteerPhone))
   }
 }
 
@@ -213,6 +233,8 @@ export async function applyVolunteerYes(vol: Volunteer, responseId: string, aler
       logError('volunteer-reply: clinic pre-alert SMS failed', { err: String(err) })
     }
   }
+
+  notifyVolunteerFeedRefresh(normalizePhone(vol.phone))
 }
 
 export function toVolunteerRow(row: {
