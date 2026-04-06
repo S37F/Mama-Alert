@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { listPendingAlerts, queueOfflineAlert, removePendingAlert } from '@/services/offline'
 import { registerSosBackgroundSync } from '@/services/pwaSync'
-import { postSos } from '@/services/api'
+import { ApiHttpError, postSos } from '@/services/api'
 import type { PendingAlert, SosPayload } from '@/types/api'
 
 function isSosPayload(value: unknown): value is SosPayload {
@@ -79,8 +79,11 @@ export function useOfflineQueue(): {
       try {
         await postSos(item.payload)
         await removePendingAlert(item.id)
-      } catch {
-        /* keep queued for next attempt */
+      } catch (err) {
+        if (err instanceof ApiHttpError && err.statusCode === 409) {
+          await removePendingAlert(item.id)
+        }
+        /* else keep queued for next attempt */
       }
     }
     await syncQueue()

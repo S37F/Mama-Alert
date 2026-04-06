@@ -18,7 +18,7 @@ const emergencyContactSchema = z.object({
 const patientSchema = z.object({
   name: z.string().min(1),
   age: z.number().int().min(1).max(120).optional().nullable(),
-  phone_primary: z.string().min(8).max(20),
+  phone_primary: z.string().min(8).max(20).regex(/^\+?[0-9]{8,20}$/),
   phone_secondary: z.string().max(20).optional().nullable(),
   village: z.string().optional().nullable(),
   landmark: z.string().optional().nullable(),

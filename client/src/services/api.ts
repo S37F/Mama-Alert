@@ -70,6 +70,16 @@ export async function logout(accessToken: string): Promise<void> {
   )
 }
 
+export class ApiHttpError extends Error {
+  readonly statusCode: number
+
+  constructor(message: string, statusCode: number) {
+    super(message)
+    this.name = 'ApiHttpError'
+    this.statusCode = statusCode
+  }
+}
+
 export interface SosSuccessResponse {
   success: true
   alertId: string
@@ -96,15 +106,16 @@ export async function postSos(payload: SosPayload): Promise<SosSuccessResponse> 
     const response = await api.post<SosSuccessResponse>('/api/sos', payload)
     return response.data
   } catch (error) {
-    if (axios.isAxiosError(error)) {
-      throw new Error(
-        typeof error.response?.data === 'object' &&
-          error.response.data !== null &&
-          'error' in error.response.data &&
-          typeof (error.response.data as { error: unknown }).error === 'string'
+    if (axios.isAxiosError(error) && error.response) {
+      const status = error.response.status
+      const msg =
+        typeof error.response.data === 'object' &&
+        error.response.data !== null &&
+        'error' in error.response.data &&
+        typeof (error.response.data as { error: unknown }).error === 'string'
           ? (error.response.data as { error: string }).error
-          : 'SOS failed',
-      )
+          : 'SOS failed'
+      throw new ApiHttpError(msg, status)
     }
     throw error
   }

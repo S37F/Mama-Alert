@@ -5,6 +5,10 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { getFamilyStatus, type FamilyStatusPayload } from '@/services/api'
 
+/** Matches VALIDATION_QUESTIONS.md demo URL; resolves to seed `status_token` UUID. */
+const DEMO_STATUS_SLUG = 'demo-status-token-abc123'
+const DEFAULT_DEMO_STATUS_TOKEN = 'a0000000-1111-4222-8333-000000000001'
+
 function formatRelative(iso: string | null): string {
   if (!iso) {
     return '—'
@@ -21,27 +25,32 @@ function formatRelative(iso: string | null): string {
 
 export function FamilyStatus() {
   const { t } = useTranslation()
-  const { token } = useParams<{ token: string }>()
+  const { token: rawToken } = useParams<{ token: string }>()
   const [data, setData] = useState<FamilyStatusPayload | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const resolvedToken =
+    rawToken === DEMO_STATUS_SLUG
+      ? (import.meta.env.VITE_DEMO_STATUS_TOKEN as string | undefined)?.trim() || DEFAULT_DEMO_STATUS_TOKEN
+      : rawToken
+
   const load = useCallback(async () => {
-    if (!token) {
+    if (!resolvedToken) {
       setError(t('family.invalidToken'))
       setLoading(false)
       return
     }
     setError(null)
     try {
-      const d = await getFamilyStatus(token)
+      const d = await getFamilyStatus(resolvedToken)
       setData(d)
     } catch {
       setError(t('family.notFound'))
     } finally {
       setLoading(false)
     }
-  }, [token, t])
+  }, [resolvedToken, t])
 
   useEffect(() => {
     void load()

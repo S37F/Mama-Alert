@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { SOSButton, type SosVisualStatus } from '@/components/SOSButton'
 import { useOfflineQueue } from '@/hooks/useOfflineQueue'
-import { postPatientHints, postSos } from '@/services/api'
+import { ApiHttpError, postPatientHints, postSos } from '@/services/api'
 
 const LS_PHONE = 'mamaalert_patient_phone'
 const LS_NAME = 'mamaalert_patient_display_name'
@@ -138,6 +138,7 @@ export function PatientSOS() {
   }, [effectivePhone, i18n])
 
   const [status, setStatus] = useState<SosVisualStatus>('idle')
+  const [duplicateCooldown, setDuplicateCooldown] = useState(false)
   const [isOnline, setIsOnline] = useState(
     () => typeof navigator !== 'undefined' && navigator.onLine,
   )
@@ -178,10 +179,24 @@ export function PatientSOS() {
     }
 
     setStatus('sending')
+    setDuplicateCooldown(false)
     try {
       await postSos(payload)
       setStatus('sent')
-    } catch {
+    } catch (err) {
+      if (err instanceof ApiHttpError) {
+        if (err.statusCode === 409) {
+          setDuplicateCooldown(true)
+          setStatus('sent')
+          return
+        }
+        if (err.statusCode === 404) {
+          setStatus('error')
+          return
+        }
+        setStatus('error')
+        return
+      }
       try {
         await addToQueue(payload)
         setStatus('offline')
@@ -266,7 +281,12 @@ export function PatientSOS() {
         ) : null}
 
         {status === 'sent' ? (
-          <p className="text-muted-foreground max-w-sm text-center text-sm">{t('sos.sentDetail')}</p>
+          <div className="max-w-sm space-y-3 text-center">
+            <p className="text-muted-foreground text-sm">{duplicateCooldown ? t('sos.duplicateDetail') : t('sos.sentDetail')}</p>
+            <Button type="button" variant="outline" size="sm" onClick={() => { setStatus('idle'); setDuplicateCooldown(false) }}>
+              {t('sos.reset')}
+            </Button>
+          </div>
         ) : null}
       </div>
     </div>

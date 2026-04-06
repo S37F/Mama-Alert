@@ -15,6 +15,8 @@
     "phonePlaceholder": "e.g. +15551230000",
     "savePhone": "Save",
     "sentDetail": "Volunteers and your clinic are being notified.",
+    "duplicateDetail": "Já foi enviado um alerta recentemente. A ajuda já está a ser organizada.",
+    "reset": "Novo alerta",
     "error": "Could not send. Try again.",
     "networkOfflineHint": "Está offline — os alertas ficam na fila até voltar a estar online."
   },

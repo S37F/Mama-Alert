@@ -36,6 +36,8 @@ export function validateEnv(): void {
       }
     }
   }
+  const validatedKeys = [...REQUIRED_CORE, ...(isTwilioMock() ? [] : [...REQUIRED_TWILIO])]
+  console.log(`MamaAlert: environment OK — required keys present: ${validatedKeys.join(', ')}`)
   validated = true
 }
 

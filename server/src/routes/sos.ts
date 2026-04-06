@@ -4,6 +4,7 @@ import { asyncHandler } from '@/lib/asyncHandler'
 import { logError } from '@/lib/logger'
 import { triggerSos } from '@/services/sosService'
 
+/** Duplicate-active-alert guard and volunteer fan-out live in `triggerSos` (sosService.ts). */
 export const sosRouter = Router()
 
 const sosBodySchema = z.object({

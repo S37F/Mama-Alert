@@ -40,7 +40,7 @@ const formSchema = z
   .object({
     name: z.string().min(1),
     age: z.string().optional(),
-    phone_primary: z.string().min(8).max(20),
+    phone_primary: z.string().min(8).max(20).regex(/^\+?[0-9]{8,20}$/),
     phone_secondary: z.string().max(20).optional(),
     language: z.enum(langs),
     village: z.string().optional(),

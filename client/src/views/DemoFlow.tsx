@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { postSos } from '@/services/api'
+import { ApiHttpError, postSos } from '@/services/api'
 import { ErrorMessage } from '@/components/ErrorMessage'
 
 const DEMO_PHONE =
@@ -32,6 +32,10 @@ export function DemoFlow() {
     try {
       await postSos({ phone: DEMO_PHONE, triggerMethod: 'pwa' })
     } catch (e) {
+      if (e instanceof ApiHttpError && e.statusCode === 409) {
+        setDemoErr(t('sos.duplicateDetail'))
+        return
+      }
       setDemoErr(e instanceof Error ? e.message : t('common.error'))
     } finally {
       setDemoBusy(false)

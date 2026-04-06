@@ -89,7 +89,7 @@ VALUES
   (
     'Kofi Adu',
     '+15551230103',
-    ST_SetSRID(ST_MakePoint(73.9100, 18.5390), 4326)::geography,
+    ST_SetSRID(ST_MakePoint(73.8620, 18.5230), 4326)::geography,
     ARRAY['community_health_worker']::text[],
     'car',
     true,

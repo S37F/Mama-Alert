@@ -15,6 +15,8 @@
     "phonePlaceholder": "e.g. +15551230000",
     "savePhone": "Save",
     "sentDetail": "Volunteers and your clinic are being notified.",
+    "duplicateDetail": "تم إرسال تنبيه مؤخرًا. المساعدة قيد الترتيب بالفعل.",
+    "reset": "تنبيه جديد",
     "error": "Could not send. Try again.",
     "networkOfflineHint": "أنت غير متصل — ستُخزَّن التنبيهات في قائمة الانتظار حتى يعود الاتصال."
   },

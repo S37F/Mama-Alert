@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { useAlertsRealtimeRefresh } from '@/hooks/useAlertsRealtimeRefresh'
 import { useAuth } from '@/hooks/useAuth'
 import { useZoneId } from '@/hooks/useZoneId'
 import {
@@ -23,7 +24,7 @@ import { HealthWorkerRegister } from '@/views/HealthWorkerRegister'
 
 export function HealthWorkerDashboard() {
   const { t } = useTranslation()
-  const { logout } = useAuth()
+  const { logout, session, isLoading: authLoading } = useAuth()
   const zoneId = useZoneId()
   const [tab, setTab] = useState('overview')
   const [patients, setPatients] = useState<WorkerPatientRow[]>([])
@@ -47,9 +48,33 @@ export function HealthWorkerDashboard() {
     }
   }, [t])
 
+  const refreshCoordinatorAlerts = useCallback(async () => {
+    try {
+      const a = await getCoordinatorAlerts()
+      setAlerts(a)
+    } catch {
+      /* keep existing list */
+    }
+  }, [])
+
+  useAlertsRealtimeRefresh(!authLoading && !!session, zoneId, () => {
+    void refreshCoordinatorAlerts()
+  })
+
   useEffect(() => {
     void load()
   }, [load])
+
+  /** Fallback if Realtime misses an event (rare). */
+  useEffect(() => {
+    if (tab !== 'overview') {
+      return
+    }
+    const id = window.setInterval(() => {
+      void refreshCoordinatorAlerts()
+    }, 90_000)
+    return () => window.clearInterval(id)
+  }, [tab, refreshCoordinatorAlerts])
 
   return (
     <div className="mx-auto max-w-5xl space-y-4 p-6">

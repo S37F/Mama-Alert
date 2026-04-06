@@ -20,6 +20,7 @@ LANGUAGE sql
 STABLE
 SET search_path = public, extensions
 AS $$
+  -- Coordinate order: longitude first, latitude second (same as ST_Point(lon, lat); this file uses ST_MakePoint).
   SELECT
     v.id,
     v.name,

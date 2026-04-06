@@ -40,7 +40,7 @@ export function SOSButton({ onTrigger, status }: SOSButtonProps) {
   return (
     <button
       type="button"
-      disabled={status === 'sending'}
+      disabled={status === 'sending' || status === 'sent'}
       onClick={() => void onTrigger()}
       className={cn(
         'flex min-h-[200px] min-w-[200px] max-h-[min(85vw,320px)] max-w-[min(85vw,320px)] flex-col items-center justify-center rounded-full px-6 text-center text-lg font-bold text-white shadow-lg transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-300 disabled:opacity-90',

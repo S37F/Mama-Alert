@@ -115,7 +115,7 @@ async function processPendingSOS() {
         body: JSON.stringify({ phone, triggerMethod }),
         credentials: 'omit',
       })
-      if (res.ok || res.status === 201) {
+      if (res.ok || res.status === 201 || res.status === 409) {
         await removePending(db, row.id)
         cleared += 1
       }
