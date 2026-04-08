@@ -31,12 +31,32 @@ const LANGS = [
 
 const SUPPORTED_LOCALES = new Set(LANGS.map((l) => l.code))
 
+const DIAL_CODE_BY_REGION: Record<string, string> = {
+  IN: '+91',
+  US: '+1',
+  GB: '+44',
+  KE: '+254',
+  TZ: '+255',
+  UG: '+256',
+  FR: '+33',
+  PT: '+351',
+  BR: '+55',
+}
+
+function normalizePhoneInput(value: string): string {
+  const trimmed = value.replace(/[^\d+\s()-]/g, '')
+  const withPlus = trimmed.startsWith('00') ? `+${trimmed.slice(2)}` : trimmed
+  return withPlus.replace(/\s+/g, ' ').trim()
+}
+
 export function PatientSOS() {
   const { t, i18n } = useTranslation()
   const [searchParams] = useSearchParams()
   const { addToQueue, processPending } = useOfflineQueue()
 
   const [manualPhone, setManualPhone] = useState('')
+  const [showHowItWorks, setShowHowItWorks] = useState(false)
+  const [locationPrompted, setLocationPrompted] = useState(false)
 
   const storedPhone = useMemo(() => {
     const q = searchParams.get('phone')
@@ -47,6 +67,13 @@ export function PatientSOS() {
   }, [searchParams])
 
   const effectivePhone = manualPhone.trim().length >= 8 ? manualPhone.trim() : storedPhone
+  const helpPhone = import.meta.env.VITE_HELP_PHONE ?? '112'
+
+  const countryHint = useMemo(() => {
+    const locale = i18n.resolvedLanguage || navigator.language || 'en'
+    const region = locale.split('-')[1]?.toUpperCase()
+    return region ? DIAL_CODE_BY_REGION[region] ?? '+<country code>' : '+<country code>'
+  }, [i18n.resolvedLanguage])
 
   const displayName = useMemo(() => {
     const q = searchParams.get('name')
@@ -158,11 +185,26 @@ export function PatientSOS() {
   }, [processPending])
 
   const persistPhone = useCallback(() => {
-    const p = manualPhone.trim()
+    const p = normalizePhoneInput(manualPhone)
     if (p.length >= 8) {
       localStorage.setItem(LS_PHONE, p)
+      setManualPhone(p)
     }
   }, [manualPhone])
+
+  const requestLocationAccess = useCallback(async () => {
+    if (locationPrompted || !('geolocation' in navigator)) {
+      return
+    }
+    setLocationPrompted(true)
+    await new Promise<void>((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        () => resolve(),
+        () => resolve(),
+        { enableHighAccuracy: false, timeout: 6000, maximumAge: 60_000 },
+      )
+    })
+  }, [locationPrompted])
 
   const triggerSos = useCallback(async () => {
     if (effectivePhone.length < 8) {
@@ -178,6 +220,7 @@ export function PatientSOS() {
       return
     }
 
+    await requestLocationAccess()
     setStatus('sending')
     setDuplicateCooldown(false)
     try {
@@ -204,40 +247,26 @@ export function PatientSOS() {
         setStatus('error')
       }
     }
-  }, [addToQueue, effectivePhone, isOnline])
+  }, [addToQueue, effectivePhone, isOnline, requestLocationAccess])
 
   const missingPhone = effectivePhone.length < 8
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col bg-background">
-      <div className="absolute right-3 top-3 z-10">
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            type="button"
-            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'text-xs')}
-          >
-            {t('sos.language')}
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {LANGS.map((l) => (
-              <DropdownMenuItem key={l.code} onClick={() => void i18n.changeLanguage(l.code)}>
-                {l.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-12 pt-16">
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-20 pt-16 text-base">
         <div className="text-center">
           <p className="text-3xl font-semibold tracking-tight md:text-4xl">
             {t('sos.greeting', { name: displayName })}
           </p>
           {weeksPregnant !== null ? (
-            <p className="text-muted-foreground mt-2 text-xl">{t('sos.weeks', { n: weeksPregnant })}</p>
+            <p className="mt-2 text-xl text-foreground/90">{t('sos.weeks', { n: weeksPregnant })}</p>
           ) : null}
           {!isOnline ? (
-            <p className="text-muted-foreground mt-3 text-sm" role="status" aria-live="polite">
+            <p
+              className="mt-3 rounded-md border border-amber-400/70 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900"
+              role="status"
+              aria-live="polite"
+            >
               {t('sos.networkOfflineHint')}
             </p>
           ) : null}
@@ -255,9 +284,14 @@ export function PatientSOS() {
               autoComplete="tel"
               className="text-lg"
               value={manualPhone}
-              onChange={(e) => setManualPhone(e.target.value)}
-              placeholder={t('sos.phonePlaceholder')}
+              onChange={(e) => setManualPhone(normalizePhoneInput(e.target.value))}
+              onBlur={persistPhone}
+              placeholder={`${countryHint} 555 123 0000`}
+              aria-describedby="sos-phone-hint"
             />
+            <p id="sos-phone-hint" className="text-muted-foreground text-sm">
+              {t('sos.phoneHint', { dialCode: countryHint })}
+            </p>
             <Button type="button" className="w-full" onClick={persistPhone}>
               {t('sos.savePhone')}
             </Button>
@@ -277,7 +311,7 @@ export function PatientSOS() {
         ) : null}
 
         {status === 'offline' ? (
-          <p className="text-muted-foreground max-w-sm text-center text-sm">{t('sos.offlineSubtext')}</p>
+          <p className="max-w-sm text-center text-sm font-medium text-foreground/85">{t('sos.offlineSubtext')}</p>
         ) : null}
 
         {status === 'sent' ? (
@@ -287,6 +321,50 @@ export function PatientSOS() {
               {t('sos.reset')}
             </Button>
           </div>
+        ) : null}
+      </div>
+
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-3 py-2 backdrop-blur">
+        <div className="mx-auto grid w-full max-w-md grid-cols-3 gap-2">
+          <a
+            href={`tel:${helpPhone}`}
+            className={cn(
+              buttonVariants({ variant: 'outline', size: 'sm' }),
+              'justify-center text-center text-xs font-semibold',
+            )}
+          >
+            {t('sos.helpCall')}
+          </a>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              type="button"
+              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'text-xs font-semibold')}
+            >
+              {t('sos.language')}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center">
+              {LANGS.map((l) => (
+                <DropdownMenuItem key={l.code} onClick={() => void i18n.changeLanguage(l.code)}>
+                  {l.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-xs font-semibold"
+            onClick={() => setShowHowItWorks((prev) => !prev)}
+            aria-expanded={showHowItWorks}
+          >
+            {t('sos.helpHow')}
+          </Button>
+        </div>
+        {showHowItWorks ? (
+          <p className="mx-auto mt-2 max-w-md rounded-md bg-muted px-3 py-2 text-xs text-foreground/90">
+            {t('sos.howItWorks')}
+          </p>
         ) : null}
       </div>
     </div>

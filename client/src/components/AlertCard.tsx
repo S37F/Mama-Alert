@@ -2,6 +2,7 @@
  * Phase 4.1 volunteer card. `actionsDisabled` is an app-level guard while YES/NO is in flight (not in the prompt snippet).
  */
 import { useTranslation } from 'react-i18next'
+import { CheckCircle2, XCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -53,6 +54,7 @@ export function AlertCard({
               disabled={actionsDisabled}
               onClick={() => void onAccept(alert.id)}
             >
+              <CheckCircle2 className="mr-2 size-4" aria-hidden />
               {t('volunteer.accept')}
             </Button>
             <Button
@@ -63,6 +65,7 @@ export function AlertCard({
               disabled={actionsDisabled}
               onClick={() => void onDecline(alert.id)}
             >
+              <XCircle className="mr-2 size-4" aria-hidden />
               {t('volunteer.decline')}
             </Button>
           </>

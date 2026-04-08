@@ -16,6 +16,23 @@ import {
 import { volunteerFeedItemToSummary } from '@/lib/volunteerFeed'
 
 const LS_VOL_PHONE = 'mamaalert_volunteer_phone'
+const DIAL_CODE_BY_REGION: Record<string, string> = {
+  IN: '+91',
+  US: '+1',
+  GB: '+44',
+  KE: '+254',
+  TZ: '+255',
+  UG: '+256',
+  FR: '+33',
+  PT: '+351',
+  BR: '+55',
+}
+
+function normalizePhoneInput(value: string): string {
+  const trimmed = value.replace(/[^\d+\s()-]/g, '')
+  const withPlus = trimmed.startsWith('00') ? `+${trimmed.slice(2)}` : trimmed
+  return withPlus.replace(/\s+/g, ' ').trim()
+}
 
 function minutesSince(iso: string): number {
   const t = new Date(iso).getTime()
@@ -31,11 +48,16 @@ export function VolunteerDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [actingId, setActingId] = useState<string | null>(null)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null)
+  const countryHint = useMemo(() => {
+    const region = (navigator.language || 'en').split('-')[1]?.toUpperCase()
+    return region ? DIAL_CODE_BY_REGION[region] ?? '+<country code>' : '+<country code>'
+  }, [])
 
   const persistPhone = useCallback(() => {
-    const p = phoneInput.trim()
+    const p = normalizePhoneInput(phoneInput)
     if (p.length >= 8) {
       localStorage.setItem(LS_VOL_PHONE, p)
+      setPhoneInput(p)
       setSavedPhone(p)
     }
   }, [phoneInput])
@@ -128,17 +150,24 @@ export function VolunteerDashboard() {
 
   if (savedPhone.length < 8) {
     return (
-      <div className="mx-auto max-w-lg space-y-4 p-6">
+      <div className="mx-auto max-w-lg space-y-4 p-6 text-base">
         <h1 className="text-2xl font-bold">{t('volunteer.title')}</h1>
         <div className="space-y-3 rounded-lg border p-4">
           <Label htmlFor="vol-phone">{t('volunteer.phoneLabel')}</Label>
           <Input
             id="vol-phone"
             type="tel"
+            inputMode="tel"
             value={phoneInput}
-            onChange={(e) => setPhoneInput(e.target.value)}
+            onChange={(e) => setPhoneInput(normalizePhoneInput(e.target.value))}
+            onBlur={persistPhone}
             autoComplete="tel"
+            placeholder={`${countryHint} 555 123 0000`}
+            aria-describedby="vol-phone-hint"
           />
+          <p id="vol-phone-hint" className="text-muted-foreground text-sm">
+            {t('sos.phoneHint', { dialCode: countryHint })}
+          </p>
           <Button type="button" className="w-full" onClick={persistPhone}>
             {t('volunteer.savePhone')}
           </Button>
@@ -148,7 +177,7 @@ export function VolunteerDashboard() {
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 p-6">
+    <div className="mx-auto max-w-lg space-y-6 p-6 text-base">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('volunteer.title')}</h1>
         <Badge variant="secondary">{items.length}</Badge>
