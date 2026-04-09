@@ -11,7 +11,10 @@ export function useAlertsRealtimeRefresh(
   onRefresh: () => void,
 ): void {
   const onRefreshRef = useRef(onRefresh)
-  onRefreshRef.current = onRefresh
+
+  useEffect(() => {
+    onRefreshRef.current = onRefresh
+  }, [onRefresh])
 
   useEffect(() => {
     if (!enabled) {

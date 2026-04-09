@@ -81,7 +81,7 @@ export function HealthWorkerDashboard() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('worker.title')}</h1>
         <div className="flex gap-2">
-          <Link to="/register" className={cn(buttonVariants({ variant: 'outline' }))}>
+          <Link to="/app/register" className={cn(buttonVariants({ variant: 'outline' }))}>
             {t('worker.openRegister')}
           </Link>
           <Button type="button" variant="outline" onClick={() => void logout()}>

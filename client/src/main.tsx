@@ -6,6 +6,9 @@ import './index.css'
 import { App } from './App'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { setOfflineApiBase } from '@/services/offline'
+import { captureInstallPrompt } from '@/landing/installPromptStore'
+
+window.addEventListener('beforeinstallprompt', captureInstallPrompt)
 
 const apiBase = import.meta.env.VITE_API_URL
 if (typeof apiBase === 'string' && apiBase.length > 0) {
