@@ -240,6 +240,65 @@ export async function postRegisterPatient(body: RegisterPatientPayload): Promise
   }
 }
 
+export interface RegisterVolunteerPayload {
+  name: string
+  phone: string
+  lat: number
+  lng: number
+  skills?: string[]
+  vehicle?: 'none' | 'motorcycle' | 'car' | 'ambulance'
+  max_radius_km?: number
+  language?: string
+  zone_id?: string | null
+}
+
+export async function postRegisterVolunteer(body: RegisterVolunteerPayload): Promise<{ id: string }> {
+  try {
+    const response = await api.post<{ id: string }>('/api/register/volunteer', body)
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const d = error.response?.data
+      const msg =
+        typeof d === 'object' && d !== null && 'error' in d && typeof (d as { error: unknown }).error === 'string'
+          ? (d as { error: string }).error
+          : 'Volunteer registration failed'
+      throw new Error(msg)
+    }
+    throw error
+  }
+}
+
+export interface RegisterHospitalPayload {
+  name: string
+  type?: string
+  lat: number
+  lng: number
+  phone_main?: string | null
+  phone_emergency?: string | null
+  services?: string[]
+  is_24hr?: boolean
+  receive_alerts?: boolean
+  zone_id?: string | null
+}
+
+export async function postRegisterHospital(body: RegisterHospitalPayload): Promise<{ id: string }> {
+  try {
+    const response = await api.post<{ id: string }>('/api/register/hospital', body)
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const d = error.response?.data
+      const msg =
+        typeof d === 'object' && d !== null && 'error' in d && typeof (d as { error: unknown }).error === 'string'
+          ? (d as { error: string }).error
+          : 'Hospital registration failed'
+      throw new Error(msg)
+    }
+    throw error
+  }
+}
+
 export interface AdminPatientRow {
   id: string
   name: string

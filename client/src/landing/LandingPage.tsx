@@ -7,6 +7,7 @@ import { HowItWorks } from '@/landing/sections/HowItWorks'
 import { InstallSection } from '@/landing/sections/InstallSection'
 import { JoinTheNetwork } from '@/landing/sections/JoinTheNetwork'
 import { MeetTheWomen } from '@/landing/sections/MeetTheWomen'
+import { RoleAccessHub } from '@/landing/sections/RoleAccessHub'
 import { TheTruth } from '@/landing/sections/TheTruth'
 import { ThreeDelays } from '@/landing/sections/ThreeDelays'
 
@@ -20,6 +21,7 @@ export function LandingPage() {
         <ThreeDelays />
         <MeetTheWomen />
         <HowItWorks />
+        <RoleAccessHub />
         <GlobalImpact />
         <JoinTheNetwork />
         <InstallSection />

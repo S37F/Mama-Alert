@@ -84,6 +84,37 @@ export function JoinTheNetwork() {
               <br />
               We activate the one that exists.
             </p>
+            <div
+              style={{
+                marginTop: 18,
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 10,
+              }}
+            >
+              {[
+                'Patient: triggers SOS in one tap',
+                'Volunteer: confirms response by SMS',
+                'Hospital: receives pre-alert with ETA',
+                'Worker/Admin: coordinates locality',
+              ].map((line) => (
+                <span
+                  key={line}
+                  style={{
+                    display: 'block',
+                    border: '1px solid var(--color-sand-dark)',
+                    borderRadius: 8,
+                    background: 'var(--color-card)',
+                    padding: '8px 10px',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: 'var(--text-xs)',
+                    color: 'var(--color-warm-gray)',
+                  }}
+                >
+                  {line}
+                </span>
+              ))}
+            </div>
           </motion.div>
 
           <motion.div

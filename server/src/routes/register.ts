@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { logError } from '@/lib/logger'
-import { requireAdmin, requireAuth } from '@/middleware/auth'
+import { requireAuth } from '@/middleware/auth'
 import { supabaseAdmin } from '@/services/supabase'
 
 export const registerRouter = Router()
@@ -154,8 +154,6 @@ registerRouter.post(
 
 registerRouter.post(
   '/hospital',
-  requireAuth,
-  requireAdmin,
   asyncHandler(async (req, res) => {
     const parsed = hospitalSchema.safeParse(req.body)
     if (!parsed.success) {
