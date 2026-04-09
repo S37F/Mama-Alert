@@ -1,6 +1,6 @@
 import type { Request } from 'express'
 import twilio from 'twilio'
-import { getTwilioWebhookUrl, isTwilioMock } from '@/config/env'
+import { getTwilioUssdWebhookUrl, getTwilioWebhookUrl, isTwilioMock } from '@/config/env'
 import { splitSmsTwoParts } from '@/lib/smsLength'
 import { logWarn } from '@/lib/logger'
 
@@ -67,5 +67,20 @@ export function validateWebhookSignature(req: Request): boolean {
     return false
   }
   const url = getTwilioWebhookUrl()
+  return twilio.validateRequest(authToken, signature, url, req.body)
+}
+
+export function validateUssdWebhookSignature(req: Request): boolean {
+  if (isTwilioMock()) {
+    return true
+  }
+  if (!authToken) {
+    return false
+  }
+  const signature = req.headers['x-twilio-signature']
+  if (typeof signature !== 'string') {
+    return false
+  }
+  const url = getTwilioUssdWebhookUrl()
   return twilio.validateRequest(authToken, signature, url, req.body)
 }

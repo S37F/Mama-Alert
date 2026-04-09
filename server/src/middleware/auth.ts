@@ -2,6 +2,15 @@ import type { NextFunction, Request, Response } from 'express'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { supabaseAdmin } from '@/services/supabase'
 
+/** Zone admins must have `zone_id` set; health workers may omit it. */
+export function assertAdminHasZone(res: Response, accessLevel: string, zoneId: string | null): boolean {
+  if (accessLevel === 'admin' && !zoneId) {
+    res.status(403).json({ error: 'Admin account must have a zone assigned' })
+    return false
+  }
+  return true
+}
+
 export const requireAuth = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
   const hdr = req.headers.authorization
   const token = hdr?.startsWith('Bearer ') ? hdr.slice(7) : undefined
@@ -26,6 +35,9 @@ export const requireAuth = asyncHandler(async (req: Request, res: Response, next
   const level = hw.access_level
   if (level !== 'health_worker' && level !== 'admin') {
     res.status(403).json({ error: 'Invalid access level' })
+    return
+  }
+  if (!assertAdminHasZone(res, level, hw.zone_id)) {
     return
   }
   req.authUserId = data.user.id

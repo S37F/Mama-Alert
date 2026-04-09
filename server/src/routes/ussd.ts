@@ -1,7 +1,9 @@
 import { Router } from 'express'
+import twilio from 'twilio'
+import { getTwilioUssdWebhookUrl } from '@/config/env'
+import { asyncHandler } from '@/lib/asyncHandler'
 import { logError } from '@/lib/logger'
 import { normalizePhone } from '@/lib/phone'
-import { asyncHandler } from '@/lib/asyncHandler'
 import { fetchPatientForSos } from '@/services/patientQueries'
 import { supabaseAdmin } from '@/services/supabase'
 import { sendSMS } from '@/services/twilio'
@@ -9,82 +11,207 @@ import { triggerSos } from '@/services/sosService'
 
 export const ussdRouter = Router()
 
+const SMS_MENU =
+  'MamaAlert — reply with a number:\n1 — I need help NOW\n2 — I am okay\n3 — Call my health worker'
+
+function isTwilioSms(body: Record<string, unknown>): boolean {
+  return typeof body.MessageSid === 'string'
+}
+
+function isTwilioVoice(body: Record<string, unknown>): boolean {
+  return typeof body.CallSid === 'string' && typeof body.MessageSid !== 'string'
+}
+
+function sendSmsTwiml(res: import('express').Response, text: string): void {
+  const twiml = new twilio.twiml.MessagingResponse()
+  twiml.message(text)
+  res.type('text/xml').send(twiml.toString())
+}
+
+function sendVoiceGather(res: import('express').Response): void {
+  const actionUrl = getTwilioUssdWebhookUrl()
+  const vr = new twilio.twiml.VoiceResponse()
+  const gather = vr.gather({
+    numDigits: 1,
+    action: actionUrl,
+    method: 'POST',
+    timeout: 10,
+  })
+  gather.say(
+    { voice: 'alice' },
+    'Press 1 if you need help now. Press 2 if you are okay. Press 3 to request a call from your health worker.',
+  )
+  vr.say({ voice: 'alice' }, 'We did not receive a choice. Goodbye.')
+  res.type('text/xml').send(vr.toString())
+}
+
+function sendVoiceSay(res: import('express').Response, text: string): void {
+  const vr = new twilio.twiml.VoiceResponse()
+  vr.say({ voice: 'alice' }, text)
+  res.type('text/xml').send(vr.toString())
+}
+
+function sosErrorToVoiceMessage(code: number): string {
+  if (code === 404) {
+    return 'We could not find your registration. Contact your clinic.'
+  }
+  if (code === 409) {
+    return 'An alert is already active. Help is being arranged.'
+  }
+  return 'Could not send alert. Please try again or call for help.'
+}
+
+function sosErrorToSmsMessage(code: number): string {
+  if (code === 404) {
+    return 'We could not find your registration. Contact your clinic.'
+  }
+  if (code === 409) {
+    return 'An alert is already active. Help is being arranged.'
+  }
+  return 'Could not send alert. Please try again or call for help.'
+}
+
 ussdRouter.post(
   '/',
   asyncHandler(async (req, res) => {
-    const sessionId = typeof req.body.sessionId === 'string' ? req.body.sessionId : ''
-    void sessionId
-    const serviceCode = typeof req.body.serviceCode === 'string' ? req.body.serviceCode : ''
-    void serviceCode
-    const phoneNumber = typeof req.body.phoneNumber === 'string' ? req.body.phoneNumber : ''
-    const text = typeof req.body.text === 'string' ? req.body.text : ''
+    const body = req.body as Record<string, unknown>
 
-    res.type('text/plain')
+    if (isTwilioSms(body)) {
+      const from = typeof body.From === 'string' ? body.From : ''
+      const text = typeof body.Body === 'string' ? body.Body.trim() : ''
 
-    if (text === '') {
-      res.send(
-        'CON 1. I need help NOW\n2. I am okay\n3. Call my health worker',
-      )
-      return
-    }
-
-    if (text === '2') {
-      res.send('END Thank you. Stay safe.')
-      return
-    }
-
-    if (text === '1') {
-      try {
-        await triggerSos({
-          phone: normalizePhone(phoneNumber),
-          triggerMethod: 'ussd',
-          incapacitationSuspected: true,
-        })
-        res.send('END Help is on the way. Stay where you are.')
-      } catch (err) {
-        logError('ussd: SOS failed', { err: String(err) })
-        const code =
-          err && typeof err === 'object' && 'statusCode' in err
-            ? (err as { statusCode: number }).statusCode
-            : 500
-        if (code === 404) {
-          res.send('END We could not find your registration. Contact your clinic.')
-          return
-        }
-        if (code === 409) {
-          res.send('END An alert is already active. Help is being arranged.')
-          return
-        }
-        res.send('END Could not send alert. Please try again or call for help.')
-      }
-      return
-    }
-
-    if (text === '3') {
-      const row = await fetchPatientForSos(normalizePhone(phoneNumber))
-      if (!row) {
-        res.send('END We could not find your profile.')
+      if (!from) {
+        res.status(400).send('Bad Request')
         return
       }
-      const { data: hw, error } = await supabaseAdmin
-        .from('health_workers')
-        .select('phone')
-        .eq('user_id', row.health_worker_id)
-        .maybeSingle()
-      if (error || !hw?.phone) {
-        res.send('END No health worker phone on file.')
+
+      if (text === '') {
+        sendSmsTwiml(res, SMS_MENU)
         return
       }
-      try {
-        await sendSMS(hw.phone, `USSD: ${row.name} requested a call.`)
-        res.send('END We sent a message to your health worker.')
-      } catch (err) {
-        logError('ussd: worker notify SMS failed', { err: String(err) })
-        res.send('END Could not reach your health worker. Try again later.')
+
+      if (text === '2') {
+        sendSmsTwiml(res, 'Thank you. Stay safe.')
+        return
       }
+
+      if (text === '1') {
+        try {
+          await triggerSos({
+            phone: normalizePhone(from),
+            triggerMethod: 'ussd',
+            incapacitationSuspected: true,
+          })
+          sendSmsTwiml(res, 'Help is on the way. Stay where you are.')
+        } catch (err) {
+          logError('ussd: SOS failed (SMS)', { err: String(err) })
+          const code =
+            err && typeof err === 'object' && 'statusCode' in err
+              ? (err as { statusCode: number }).statusCode
+              : 500
+          sendSmsTwiml(res, sosErrorToSmsMessage(code))
+        }
+        return
+      }
+
+      if (text === '3') {
+        const row = await fetchPatientForSos(normalizePhone(from))
+        if (!row) {
+          sendSmsTwiml(res, 'We could not find your profile.')
+          return
+        }
+        const { data: hw, error } = await supabaseAdmin
+          .from('health_workers')
+          .select('phone')
+          .eq('user_id', row.health_worker_id)
+          .maybeSingle()
+        if (error || !hw?.phone) {
+          sendSmsTwiml(res, 'No health worker phone on file.')
+          return
+        }
+        try {
+          await sendSMS(hw.phone, `USSD/SMS menu: ${row.name} requested a call.`)
+          sendSmsTwiml(res, 'We sent a message to your health worker.')
+        } catch (err) {
+          logError('ussd: worker notify SMS failed (SMS path)', { err: String(err) })
+          sendSmsTwiml(res, 'Could not reach your health worker. Try again later.')
+        }
+        return
+      }
+
+      sendSmsTwiml(res, 'Invalid choice. Reply 1, 2, or 3.')
       return
     }
 
-    res.send('END Invalid choice.')
+    if (isTwilioVoice(body)) {
+      const from = typeof body.From === 'string' ? body.From : ''
+      const digits = typeof body.Digits === 'string' ? body.Digits.trim() : ''
+
+      if (!from) {
+        res.status(400).send('Bad Request')
+        return
+      }
+
+      if (digits === '') {
+        sendVoiceGather(res)
+        return
+      }
+
+      const choice = digits.slice(0, 1)
+
+      if (choice === '2') {
+        sendVoiceSay(res, 'Thank you. Stay safe.')
+        return
+      }
+
+      if (choice === '1') {
+        try {
+          await triggerSos({
+            phone: normalizePhone(from),
+            triggerMethod: 'ussd',
+            incapacitationSuspected: true,
+          })
+          sendVoiceSay(res, 'Help is on the way. Stay where you are.')
+        } catch (err) {
+          logError('ussd: SOS failed (Voice)', { err: String(err) })
+          const code =
+            err && typeof err === 'object' && 'statusCode' in err
+              ? (err as { statusCode: number }).statusCode
+              : 500
+          sendVoiceSay(res, sosErrorToVoiceMessage(code))
+        }
+        return
+      }
+
+      if (choice === '3') {
+        const row = await fetchPatientForSos(normalizePhone(from))
+        if (!row) {
+          sendVoiceSay(res, 'We could not find your profile.')
+          return
+        }
+        const { data: hw, error } = await supabaseAdmin
+          .from('health_workers')
+          .select('phone')
+          .eq('user_id', row.health_worker_id)
+          .maybeSingle()
+        if (error || !hw?.phone) {
+          sendVoiceSay(res, 'No health worker phone on file.')
+          return
+        }
+        try {
+          await sendSMS(hw.phone, `USSD/Voice menu: ${row.name} requested a call.`)
+          sendVoiceSay(res, 'We sent a message to your health worker.')
+        } catch (err) {
+          logError('ussd: worker notify SMS failed (Voice path)', { err: String(err) })
+          sendVoiceSay(res, 'Could not reach your health worker. Try again later.')
+        }
+        return
+      }
+
+      sendVoiceSay(res, 'Invalid choice.')
+      return
+    }
+
+    res.status(400).send('Unsupported webhook payload')
   }),
 )

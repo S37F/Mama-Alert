@@ -2,7 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { logError } from '@/lib/logger'
-import { requireAuth } from '@/middleware/auth'
+import { assertAdminHasZone, requireAuth } from '@/middleware/auth'
 import { supabaseAdmin } from '@/services/supabase'
 import { supabaseAnon } from '@/services/supabaseAnon'
 
@@ -34,6 +34,9 @@ authRouter.post(
       .maybeSingle()
     if (hwErr || !hw) {
       res.status(403).json({ error: 'Health worker profile not linked to this account' })
+      return
+    }
+    if (!assertAdminHasZone(res, hw.access_level, hw.zone_id)) {
       return
     }
     res.json({

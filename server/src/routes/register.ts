@@ -172,7 +172,7 @@ registerRouter.post(
         services: body.services ?? [],
         is_24hr: body.is_24hr ?? false,
         receive_alerts: body.receive_alerts ?? true,
-        zone_id: body.zone_id ?? req.healthWorker?.zone_id ?? null,
+        zone_id: body.zone_id ?? null,
       })
       .select('id')
       .single()

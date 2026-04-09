@@ -18,6 +18,7 @@ import { ussdRouter } from '@/routes/ussd'
 import { generalRateLimit, patientHintsRateLimit, sosRateLimit } from '@/middleware/rateLimiter'
 import { publicPatientRouter } from '@/routes/publicPatient'
 import { workerPortalRouter } from '@/routes/workerPortal'
+import { validateTwilioUssdSignature } from '@/middleware/twilioValidate'
 import { logError } from '@/lib/logger'
 
 const app = express()
@@ -46,7 +47,7 @@ app.get('/api/health', (_req, res) => {
 
 app.use('/api/sos', sosRateLimit, sosRouter)
 app.use('/api/sms-reply', smsReplyRouter)
-app.use('/api/ussd', ussdRouter)
+app.use('/api/ussd', validateTwilioUssdSignature, ussdRouter)
 app.use('/api/register', registerRouter)
 app.use('/api/volunteer', volunteerPortalRouter)
 app.use('/api/hospital', hospitalPortalRouter)

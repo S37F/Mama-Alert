@@ -1,7 +1,7 @@
 /**
  * Required at process start (see rules.md / CONTEXT.md).
  * Twilio vars are optional when TWILIO_MOCK is set (local dev).
- * Africa's Talking is optional until USSD/SMS fallback is used in that environment.
+ * USSD-style menus are handled via Twilio (SMS and/or Voice) at POST /api/ussd.
  */
 const REQUIRED_CORE = [
   'SUPABASE_URL',
@@ -45,4 +45,10 @@ export function validateEnv(): void {
 export function getTwilioWebhookUrl(): string {
   const base = process.env.SERVER_PUBLIC_URL ?? process.env.CLIENT_URL ?? ''
   return `${base.replace(/\/$/, '')}/api/sms-reply`
+}
+
+/** Must match the exact URL configured for the Twilio number / Studio action hitting POST /api/ussd. */
+export function getTwilioUssdWebhookUrl(): string {
+  const base = process.env.SERVER_PUBLIC_URL ?? process.env.CLIENT_URL ?? ''
+  return `${base.replace(/\/$/, '')}/api/ussd`
 }
