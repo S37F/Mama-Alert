@@ -47,7 +47,8 @@ export function SOSButton({ onTrigger, status }: SOSButtonProps) {
         bgClass,
         pulse && 'animate-pulse',
       )}
-      aria-label={t('sos.button')}
+      aria-busy={status === 'sending'}
+      aria-label={label}
     >
       {status === 'sending' ? (
         <Loader2 className="mb-2 size-12 animate-spin" aria-hidden />

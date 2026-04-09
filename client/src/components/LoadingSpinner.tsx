@@ -14,8 +14,13 @@ export function LoadingSpinner({ variant = 'fullscreen', className }: LoadingSpi
   const { t } = useTranslation()
 
   const inner = (
-    <div className="flex items-center justify-center gap-2 text-muted-foreground" role="status" aria-live="polite">
-      <Loader2 className="size-6 animate-spin" aria-hidden />
+    <div
+      className="flex items-center justify-center gap-2 text-muted-foreground"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <Loader2 className="size-6 animate-spin motion-reduce:animate-none" aria-hidden />
       <span>{t('common.loading')}</span>
     </div>
   )

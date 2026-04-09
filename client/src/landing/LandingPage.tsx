@@ -15,7 +15,7 @@ export function LandingPage() {
   return (
     <div className="landing-page">
       <NavBar />
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <Hero />
         <TheTruth />
         <ThreeDelays />

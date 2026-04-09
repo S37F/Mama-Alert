@@ -1,4 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
+import { DocumentLangSync } from '@/components/DocumentLangSync'
+import { SkipLink } from '@/components/SkipLink'
 import { LandingPage } from '@/landing/LandingPage'
 import { AdminZone } from '@/views/AdminZone'
 import { DemoFlow } from '@/views/DemoFlow'
@@ -12,7 +14,10 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 
 export function App() {
   return (
-    <Routes>
+    <>
+      <SkipLink />
+      <DocumentLangSync />
+      <Routes>
       <Route path="/" element={<LandingPage />} />
 
       <Route path="/app" element={<PatientSOS />} />
@@ -74,5 +79,6 @@ export function App() {
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   )
 }

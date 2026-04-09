@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -73,7 +74,12 @@ const formSchema = z
 
 type FormValues = z.infer<typeof formSchema>
 
-export function HealthWorkerRegister() {
+interface HealthWorkerRegisterProps {
+  /** When true, omit landmark `main#main-content` (parent route already provides it). */
+  embedded?: boolean
+}
+
+export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterProps) {
   const { t } = useTranslation()
   const zoneId = useZoneId()
   const { lat, lng, error: geoErr, isLoading: geoLoading, capture: captureLocation } = useGeolocation()
@@ -86,6 +92,15 @@ export function HealthWorkerRegister() {
   )
   const [submitErr, setSubmitErr] = useState<string | null>(null)
   const [success, setSuccess] = useState<{ id: string; status_token: string } | null>(null)
+
+  const wrapPage = (inner: ReactNode) =>
+    embedded ? (
+      inner
+    ) : (
+      <main id="main-content" tabIndex={-1} className="outline-none">
+        {inner}
+      </main>
+    )
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -177,7 +192,7 @@ export function HealthWorkerRegister() {
   }, [success])
 
   if (success) {
-    return (
+    return wrapPage(
       <div className="mx-auto max-w-lg space-y-6 p-6">
         <h1 className="text-2xl font-bold">{t('register.success')}</h1>
         <p className="text-muted-foreground text-sm">
@@ -217,11 +232,11 @@ export function HealthWorkerRegister() {
         >
           {t('register.another')}
         </Button>
-      </div>
+      </div>,
     )
   }
 
-  return (
+  return wrapPage(
     <form className="mx-auto max-w-2xl space-y-6 p-6 pb-24" onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
       <h1 className="text-2xl font-bold">{t('register.title')}</h1>
 
@@ -441,6 +456,6 @@ export function HealthWorkerRegister() {
       <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
         {isSubmitting ? t('common.loading') : t('register.submit')}
       </Button>
-    </form>
+    </form>,
   )
 }

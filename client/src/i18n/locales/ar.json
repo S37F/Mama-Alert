@@ -172,6 +172,20 @@
     "cancelled": "ملغى",
     "none": "No recent alert"
   },
+  "a11y": {
+    "skipToMain": "تخطي إلى المحتوى الرئيسي",
+    "openMenu": "فتح القائمة",
+    "closeMenu": "إغلاق القائمة",
+    "chooseLanguage": "اختر اللغة",
+    "callEmergency": "اتصال برقم الطوارئ {{phone}}",
+    "watchDemo": "الانتقال إلى قسم كيف يعمل",
+    "siteMenu": "قائمة الموقع",
+    "sosAnnouncementSending": "جارٍ إرسال تنبيه الطوارئ.",
+    "sosAnnouncementSent": "المساعدة في الطريق. يتم إشعار المتطوعين وعيادتك.",
+    "sosAnnouncementOffline": "لا يوجد إشارة. تم حفظ تنبيهك وسيُرسل عند عودة الاتصال.",
+    "sosAnnouncementError": "تعذر إرسال التنبيه. حاول مرة أخرى.",
+    "sosAnnouncementDuplicate": "تم إرسال تنبيه مؤخرًا. جارٍ ترتيب المساعدة."
+  },
   "common": {
     "loading": "جارٍ التحميل...",
     "error": "حدث خطأ",

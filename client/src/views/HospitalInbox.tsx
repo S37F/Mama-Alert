@@ -70,7 +70,7 @@ export function HospitalInbox() {
 
   if (hospitalId.length < 8) {
     return (
-      <div className="mx-auto max-w-lg space-y-4 p-6">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-4 p-6 outline-none">
         <h1 className="text-2xl font-bold">{t('hospital.title')}</h1>
         <div className="space-y-3 rounded-lg border p-4">
           <Label htmlFor="hosp-id">{t('hospital.idLabel')}</Label>
@@ -79,12 +79,12 @@ export function HospitalInbox() {
             {t('common.save')}
           </Button>
         </div>
-      </div>
+      </main>
     )
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-4 p-6">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-4 p-6 outline-none">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('hospital.title')}</h1>
         <Badge variant="destructive">{t('hospital.countBadge', { n: items.length })}</Badge>
@@ -142,6 +142,6 @@ export function HospitalInbox() {
           </Card>
         ))}
       </div>
-    </div>
+    </main>
   )
 }

@@ -53,7 +53,7 @@ export function DemoFlow() {
   }, [auto, steps.length])
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 p-6">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-6 p-6 outline-none">
       <h1 className="text-2xl font-bold">{t('demo.title')}</h1>
 
       {step === 0 ? (
@@ -63,8 +63,13 @@ export function DemoFlow() {
         </div>
       ) : null}
 
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={auto} onChange={(e) => setAuto(e.target.checked)} />
+      <label htmlFor="demo-auto-advance" className="flex items-center gap-2 text-sm">
+        <input
+          id="demo-auto-advance"
+          type="checkbox"
+          checked={auto}
+          onChange={(e) => setAuto(e.target.checked)}
+        />
         {t('demo.autoAdvance')}
       </label>
 
@@ -98,6 +103,6 @@ export function DemoFlow() {
       {demoErr ? <ErrorMessage message={demoErr} /> : null}
 
       <p className="text-muted-foreground text-xs">{t('demo.seedHint', { phone: DEMO_PHONE })}</p>
-    </div>
+    </main>
   )
 }

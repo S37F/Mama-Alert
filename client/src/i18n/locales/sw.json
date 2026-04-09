@@ -172,6 +172,20 @@
     "cancelled": "Imefutwa",
     "none": "No recent alert"
   },
+  "a11y": {
+    "skipToMain": "Nenda kwenye maudhui kuu",
+    "openMenu": "Fungua menyu",
+    "closeMenu": "Funga menyu",
+    "chooseLanguage": "Chagua lugha",
+    "callEmergency": "Piga nambari ya dharura {{phone}}",
+    "watchDemo": "Nenda kwenye jinsi inavyofanya kazi",
+    "siteMenu": "Menyu ya tovuti",
+    "sosAnnouncementSending": "Inatuma tahadhari yako ya dharura.",
+    "sosAnnouncementSent": "Msaada unakuja. Wahamasishaji na kituo chako wanaarifiwa.",
+    "sosAnnouncementOffline": "Hakuna mtandao. Tahadhari yako imehifadhiwa na itatumwa unaporudi mtandaoni.",
+    "sosAnnouncementError": "Imeshindwa kutuma tahadhari. Jaribu tena.",
+    "sosAnnouncementDuplicate": "Tahadhari tayari imetumwa hivi karibuni. Msaada unapangwa."
+  },
   "common": {
     "loading": "Inapakia...",
     "error": "Kuna hitilafu",

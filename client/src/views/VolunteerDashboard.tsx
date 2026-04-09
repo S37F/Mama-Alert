@@ -150,7 +150,7 @@ export function VolunteerDashboard() {
 
   if (savedPhone.length < 8) {
     return (
-      <div className="mx-auto max-w-lg space-y-4 p-6 text-base">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-4 p-6 text-base outline-none">
         <h1 className="text-2xl font-bold">{t('volunteer.title')}</h1>
         <div className="space-y-3 rounded-lg border p-4">
           <Label htmlFor="vol-phone">{t('volunteer.phoneLabel')}</Label>
@@ -172,12 +172,12 @@ export function VolunteerDashboard() {
             {t('volunteer.savePhone')}
           </Button>
         </div>
-      </div>
+      </main>
     )
   }
 
   return (
-    <div className="mx-auto max-w-lg space-y-6 p-6 text-base">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-6 p-6 text-base outline-none">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('volunteer.title')}</h1>
         <Badge variant="secondary">{items.length}</Badge>
@@ -245,6 +245,6 @@ export function VolunteerDashboard() {
           </div>
         </div>
       ) : null}
-    </div>
+    </main>
   )
 }

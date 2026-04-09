@@ -77,7 +77,7 @@ export function HealthWorkerDashboard() {
   }, [tab, refreshCoordinatorAlerts])
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4 p-6">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-5xl space-y-4 p-6 outline-none">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('worker.title')}</h1>
         <div className="flex gap-2">
@@ -199,9 +199,9 @@ export function HealthWorkerDashboard() {
         </TabsContent>
 
         <TabsContent value="register" className="mt-4">
-          <HealthWorkerRegister />
+          <HealthWorkerRegister embedded />
         </TabsContent>
       </Tabs>
-    </div>
+    </main>
   )
 }

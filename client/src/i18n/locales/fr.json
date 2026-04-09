@@ -172,6 +172,20 @@
     "cancelled": "Annulé",
     "none": "No recent alert"
   },
+  "a11y": {
+    "skipToMain": "Aller au contenu principal",
+    "openMenu": "Ouvrir le menu",
+    "closeMenu": "Fermer le menu",
+    "chooseLanguage": "Choisir la langue",
+    "callEmergency": "Appeler le numéro d'urgence {{phone}}",
+    "watchDemo": "Aller à comment ça marche",
+    "siteMenu": "Menu du site",
+    "sosAnnouncementSending": "Envoi de votre alerte d'urgence.",
+    "sosAnnouncementSent": "Les secours arrivent. Les bénévoles et votre centre sont avertis.",
+    "sosAnnouncementOffline": "Pas de signal. Votre alerte est enregistrée et sera envoyée dès le retour du réseau.",
+    "sosAnnouncementError": "Impossible d'envoyer l'alerte. Réessayez.",
+    "sosAnnouncementDuplicate": "Une alerte a déjà été envoyée récemment. Les secours sont en route."
+  },
   "common": {
     "loading": "Chargement...",
     "error": "Une erreur s'est produite",

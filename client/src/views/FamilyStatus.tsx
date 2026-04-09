@@ -63,17 +63,17 @@ export function FamilyStatus() {
 
   if (loading && !data) {
     return (
-      <div className="flex min-h-screen items-center justify-center p-6">
+      <main id="main-content" tabIndex={-1} className="flex min-h-screen items-center justify-center p-6 outline-none">
         <LoadingSpinner variant="inline" />
-      </div>
+      </main>
     )
   }
 
   if (error || !data) {
     return (
-      <div className="mx-auto max-w-lg p-6">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg p-6 outline-none">
         <ErrorMessage message={error ?? t('common.error')} onRetry={() => void load()} />
-      </div>
+      </main>
     )
   }
 
@@ -98,7 +98,7 @@ export function FamilyStatus() {
   ]
 
   return (
-    <div className="mx-auto max-w-lg space-y-8 p-6">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-8 p-6 outline-none">
       <div>
         <h1 className="text-2xl font-bold">{t('family.title')}</h1>
         <p className="text-muted-foreground mt-1 text-lg">{data.patientFirstName}</p>
@@ -121,6 +121,6 @@ export function FamilyStatus() {
       <p className="text-muted-foreground text-center text-xs">
         {t('family.lastUpdate', { time: formatRelative(data.lastUpdated) })}
       </p>
-    </div>
+    </main>
   )
 }

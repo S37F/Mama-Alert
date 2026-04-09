@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Play } from 'lucide-react'
 import { usePWAInstall } from '@/landing/hooks/usePWAInstall'
 
 export function NavBar() {
+  const { t } = useTranslation()
   const [solid, setSolid] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const { install, isInstalled, isInstalling, canInstall } = usePWAInstall()
@@ -13,6 +15,19 @@ export function NavBar() {
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
+
+  useEffect(() => {
+    if (!menuOpen) {
+      return
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setMenuOpen(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [menuOpen])
 
   const goHowItWorks = () => {
     document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })
@@ -87,7 +102,7 @@ export function NavBar() {
             onClick={goHowItWorks}
           >
             <Play size={18} strokeWidth={2} aria-hidden />
-            Watch Demo
+            {t('a11y.watchDemo')}
           </button>
           <button
             type="button"
@@ -103,8 +118,9 @@ export function NavBar() {
         <button
           type="button"
           className="landing-nav-burger landing-btn landing-btn--ghost"
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-label={menuOpen ? t('a11y.closeMenu') : t('a11y.openMenu')}
           aria-expanded={menuOpen}
+          aria-controls="landing-nav-drawer"
           onClick={() => setMenuOpen((o) => !o)}
           style={{ padding: '0 14px', minWidth: 44 }}
         >
@@ -114,7 +130,10 @@ export function NavBar() {
 
       {menuOpen ? (
         <div
+          id="landing-nav-drawer"
           className="landing-nav-drawer"
+          role="navigation"
+          aria-label={t('a11y.siteMenu')}
           style={{
             borderBottom: '1px solid var(--color-sand-dark)',
             background: 'var(--color-card)',
@@ -131,7 +150,7 @@ export function NavBar() {
             onClick={goHowItWorks}
           >
             <Play size={18} strokeWidth={2} aria-hidden />
-            Watch Demo
+            {t('a11y.watchDemo')}
           </button>
           <button
             type="button"

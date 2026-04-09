@@ -172,6 +172,20 @@
     "cancelled": "रद्द",
     "none": "No recent alert"
   },
+  "a11y": {
+    "skipToMain": "मुख्य सामग्री पर जाएं",
+    "openMenu": "मेनू खोलें",
+    "closeMenu": "मेनू बंद करें",
+    "chooseLanguage": "भाषा चुनें",
+    "callEmergency": "आपातकालीन नंबर कॉल करें {{phone}}",
+    "watchDemo": "यह कैसे काम करता है, वहाँ जाएं",
+    "siteMenu": "साइट मेनू",
+    "sosAnnouncementSending": "आपकी आपातकालीन सूचना भेजी जा रही है।",
+    "sosAnnouncementSent": "मदद आ रही है। स्वयंसेवक और आपका केंद्र सूचित किए जा रहे हैं।",
+    "sosAnnouncementOffline": "कोई सिग्नल नहीं। आपकी सूचना सहेजी गई है और ऑनलाइन आने पर भेजी जाएगी।",
+    "sosAnnouncementError": "सूचना नहीं भेजी जा सकी। फिर कोशिश करें।",
+    "sosAnnouncementDuplicate": "हाल ही में पहले ही सूचना भेजी जा चुकी है। मदद की व्यवस्था हो रही है।"
+  },
   "common": {
     "loading": "लोड हो रहा है...",
     "error": "कुछ गलत हुआ",

@@ -210,6 +210,20 @@
     "cancelled": "Cancelled",
     "none": "No recent alert"
   },
+  "a11y": {
+    "skipToMain": "Skip to main content",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "chooseLanguage": "Choose language",
+    "callEmergency": "Call emergency number {{phone}}",
+    "watchDemo": "Jump to how it works",
+    "siteMenu": "Site menu",
+    "sosAnnouncementSending": "Sending your emergency alert.",
+    "sosAnnouncementSent": "Help is coming. Volunteers and your clinic are being notified.",
+    "sosAnnouncementOffline": "No signal. Your alert is saved and will send when you are back online.",
+    "sosAnnouncementError": "Could not send your alert. Try again.",
+    "sosAnnouncementDuplicate": "An alert was already sent recently. Help is being arranged."
+  },
   "common": {
     "loading": "Loading...",
     "error": "Something went wrong",

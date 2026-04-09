@@ -52,6 +52,7 @@ export function AlertCard({
               type="button"
               className="w-full bg-green-600 text-white hover:bg-green-700"
               disabled={actionsDisabled}
+              aria-label={`${t('volunteer.accept')}, ${alert.patientFirstName}`}
               onClick={() => void onAccept(alert.id)}
             >
               <CheckCircle2 className="mr-2 size-4" aria-hidden />
@@ -63,6 +64,7 @@ export function AlertCard({
               size="sm"
               className="w-full"
               disabled={actionsDisabled}
+              aria-label={`${t('volunteer.decline')}, ${alert.patientFirstName}`}
               onClick={() => void onDecline(alert.id)}
             >
               <XCircle className="mr-2 size-4" aria-hidden />

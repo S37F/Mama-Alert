@@ -324,7 +324,7 @@ export function AdminZone() {
   const avgMin = avgMs !== null ? Math.round(avgMs / 60_000) : null
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 p-6">
+    <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl space-y-4 p-6 outline-none">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('admin.title')}</h1>
         <Button type="button" variant="outline" onClick={() => void logout()}>
@@ -609,6 +609,6 @@ export function AdminZone() {
           )}
         </TabsContent>
       </Tabs>
-    </div>
+    </main>
   )
 }

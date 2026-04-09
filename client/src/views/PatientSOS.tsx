@@ -166,6 +166,21 @@ export function PatientSOS() {
 
   const [status, setStatus] = useState<SosVisualStatus>('idle')
   const [duplicateCooldown, setDuplicateCooldown] = useState(false)
+
+  const statusAnnouncement = useMemo(() => {
+    switch (status) {
+      case 'sending':
+        return t('a11y.sosAnnouncementSending')
+      case 'sent':
+        return duplicateCooldown ? t('a11y.sosAnnouncementDuplicate') : t('a11y.sosAnnouncementSent')
+      case 'offline':
+        return t('a11y.sosAnnouncementOffline')
+      case 'error':
+        return t('a11y.sosAnnouncementError')
+      default:
+        return ''
+    }
+  }, [duplicateCooldown, status, t])
   const [isOnline, setIsOnline] = useState(
     () => typeof navigator !== 'undefined' && navigator.onLine,
   )
@@ -252,12 +267,15 @@ export function PatientSOS() {
   const missingPhone = effectivePhone.length < 8
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col bg-background">
+    <main id="main-content" tabIndex={-1} className="relative flex min-h-[100dvh] flex-col bg-background outline-none">
+      <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+        {statusAnnouncement}
+      </div>
       <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-20 pt-16 text-base">
         <div className="text-center">
-          <p className="text-3xl font-semibold tracking-tight md:text-4xl">
+          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
             {t('sos.greeting', { name: displayName })}
-          </p>
+          </h1>
           {weeksPregnant !== null ? (
             <p className="mt-2 text-xl text-foreground/90">{t('sos.weeks', { n: weeksPregnant })}</p>
           ) : null}
@@ -328,6 +346,7 @@ export function PatientSOS() {
         <div className="mx-auto grid w-full max-w-md grid-cols-3 gap-2">
           <a
             href={`tel:${helpPhone}`}
+            aria-label={t('a11y.callEmergency', { phone: helpPhone })}
             className={cn(
               buttonVariants({ variant: 'outline', size: 'sm' }),
               'justify-center text-center text-xs font-semibold',
@@ -339,6 +358,7 @@ export function PatientSOS() {
             <DropdownMenuTrigger
               type="button"
               className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'text-xs font-semibold')}
+              aria-label={t('a11y.chooseLanguage')}
             >
               {t('sos.language')}
             </DropdownMenuTrigger>
@@ -351,22 +371,29 @@ export function PatientSOS() {
             </DropdownMenuContent>
           </DropdownMenu>
           <Button
+            id="sos-how-toggle"
             type="button"
             variant="outline"
             size="sm"
             className="text-xs font-semibold"
             onClick={() => setShowHowItWorks((prev) => !prev)}
             aria-expanded={showHowItWorks}
+            aria-controls="sos-how-works"
           >
             {t('sos.helpHow')}
           </Button>
         </div>
         {showHowItWorks ? (
-          <p className="mx-auto mt-2 max-w-md rounded-md bg-muted px-3 py-2 text-xs text-foreground/90">
+          <p
+            id="sos-how-works"
+            role="region"
+            aria-labelledby="sos-how-toggle"
+            className="mx-auto mt-2 max-w-md rounded-md bg-muted px-3 py-2 text-xs text-foreground/90"
+          >
             {t('sos.howItWorks')}
           </p>
         ) : null}
       </div>
-    </div>
+    </main>
   )
 }

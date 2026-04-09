@@ -172,6 +172,20 @@
     "cancelled": "Cancelado",
     "none": "No recent alert"
   },
+  "a11y": {
+    "skipToMain": "Ir para o conteúdo principal",
+    "openMenu": "Abrir menu",
+    "closeMenu": "Fechar menu",
+    "chooseLanguage": "Escolher idioma",
+    "callEmergency": "Ligar para emergência {{phone}}",
+    "watchDemo": "Ir para como funciona",
+    "siteMenu": "Menu do site",
+    "sosAnnouncementSending": "A enviar o seu alerta de emergência.",
+    "sosAnnouncementSent": "A ajuda está a caminho. Voluntários e a sua unidade estão a ser notificados.",
+    "sosAnnouncementOffline": "Sem sinal. O alerta foi guardado e será enviado quando voltar a ter rede.",
+    "sosAnnouncementError": "Não foi possível enviar o alerta. Tente novamente.",
+    "sosAnnouncementDuplicate": "Já foi enviado um alerta recentemente. A ajuda está a ser organizada."
+  },
   "common": {
     "loading": "A carregar...",
     "error": "Algo correu mal",

@@ -23,12 +23,16 @@ export function ProtectedRoute({ children, role }: ProtectedRouteProps) {
   const [submitting, setSubmitting] = useState(false)
 
   if (isLoading) {
-    return <LoadingSpinner />
+    return (
+      <main id="main-content" tabIndex={-1} className="outline-none">
+        <LoadingSpinner />
+      </main>
+    )
   }
 
   if (!user) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-6">
+      <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col items-center justify-center gap-6 p-6 outline-none">
         <div className="w-full max-w-sm space-y-4">
           <h1 className="text-center text-2xl font-semibold">{t('auth.required')}</h1>
           <form
@@ -73,29 +77,29 @@ export function ProtectedRoute({ children, role }: ProtectedRouteProps) {
             </Button>
           </form>
         </div>
-      </div>
+      </main>
     )
   }
 
   if (role === 'admin' && userRole !== 'admin') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+      <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center outline-none">
         <p className="text-lg font-medium">{t('auth.adminRequired')}</p>
         <Button type="button" variant="outline" onClick={() => void logout()}>
           {t('auth.signOut')}
         </Button>
-      </div>
+      </main>
     )
   }
 
   if (role === 'health_worker' && userRole !== 'health_worker') {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
+      <main id="main-content" tabIndex={-1} className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center outline-none">
         <p className="text-lg font-medium">{t('worker.healthWorkerOnly')}</p>
         <Button type="button" variant="outline" onClick={() => void logout()}>
           {t('auth.signOut')}
         </Button>
-      </div>
+      </main>
     )
   }
 
