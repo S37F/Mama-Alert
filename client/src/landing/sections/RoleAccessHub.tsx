@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import type { LucideIcon } from 'lucide-react'
+import { Building2, HeartPulse, Link2, Radio, Shield, Stethoscope } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { fadeUpVariants, useScrollReveal } from '@/landing/hooks/useScrollReveal'
@@ -13,6 +15,86 @@ const ROLE_TARGETS = {
 } as const
 
 type RoleKey = keyof typeof ROLE_TARGETS
+
+const ROLE_TAB_LABEL: Record<RoleKey, string> = {
+  patient: 'Patient',
+  volunteer: 'Volunteer',
+  hospital: 'Hospital',
+  worker: 'Worker',
+  family: 'Family',
+  admin: 'Admin',
+}
+
+type CardAction = { to: string; label: string; variant: 'terra' | 'ghost' }
+
+type RoleCardDef = {
+  roleKey: RoleKey
+  title: string
+  badge: string
+  Icon: LucideIcon
+  body: string
+  actions?: CardAction[]
+  pathHint?: string
+}
+
+const ROLE_CARDS: RoleCardDef[] = [
+  {
+    roleKey: 'patient',
+    title: 'Patient SOS',
+    badge: 'No account',
+    Icon: HeartPulse,
+    body: 'One tap raises an alert with location so responders and facilities can act immediately—built for stress and low literacy, not forms or passwords.',
+    actions: [{ to: '/app', label: 'Open SOS screen', variant: 'terra' }],
+    pathHint: '/app',
+  },
+  {
+    roleKey: 'volunteer',
+    title: 'Community volunteer',
+    badge: 'Phone ID',
+    Icon: Radio,
+    body: 'A live feed of nearby maternal emergencies. Tap YES or NO to respond; when you are needed, directions land on your phone.',
+    actions: [{ to: '/volunteer', label: 'Open volunteer feed', variant: 'terra' }],
+    pathHint: '/volunteer',
+  },
+  {
+    roleKey: 'hospital',
+    title: 'Hospital inbox',
+    badge: 'Facility access',
+    Icon: Building2,
+    body: 'See pre-alerts before arrival, confirm bed and team readiness, and stay in sync with the field response.',
+    actions: [{ to: '/hospital', label: 'Open hospital inbox', variant: 'terra' }],
+    pathHint: '/hospital',
+  },
+  {
+    roleKey: 'worker',
+    title: 'Health worker',
+    badge: 'Staff sign-in',
+    Icon: Stethoscope,
+    body: 'Onboard women into the program, keep records straight, and run follow-ups from the worker dashboard.',
+    actions: [
+      { to: '/register', label: 'Patient registration', variant: 'ghost' },
+      { to: '/worker', label: 'Worker dashboard', variant: 'terra' },
+    ],
+    pathHint: '/register · /worker',
+  },
+  {
+    roleKey: 'family',
+    title: 'Family updates',
+    badge: 'SMS link',
+    Icon: Link2,
+    body: 'During an active alert, trusted contacts get a read-only status link by text—no app install, no editing, just clarity.',
+    pathHint: 'URL pattern: /status/:token',
+  },
+  {
+    roleKey: 'admin',
+    title: 'Zone administration',
+    badge: 'Restricted',
+    Icon: Shield,
+    body: 'NGO zone leads manage volunteers, hospitals, and locality rules so the right people see the right alerts.',
+    actions: [{ to: '/admin', label: 'Open admin console', variant: 'terra' }],
+    pathHint: '/admin',
+  },
+]
 
 export function RoleAccessHub() {
   const { ref, inView } = useScrollReveal(0.12)
@@ -47,11 +129,12 @@ export function RoleAccessHub() {
 
   return (
     <section
-      className="landing-section"
+      className="landing-section landing-role-access"
       style={{ background: 'var(--color-cream)', borderTop: '1px solid var(--color-sand-dark)' }}
     >
       <div className="landing-container">
         <motion.div ref={ref} initial="hidden" animate={inView ? 'visible' : 'hidden'} variants={fadeUpVariants}>
+          <p className="landing-role-access-eyebrow">How the product is organized</p>
           <h2
             style={{
               fontFamily: 'var(--font-display)',
@@ -63,116 +146,230 @@ export function RoleAccessHub() {
               lineHeight: 1.15,
             }}
           >
-            Role Access
-            <br />
-            Separate screens by URL
+            Each role opens its own screen
           </h2>
           <p
             style={{
               textAlign: 'center',
-              maxWidth: 760,
+              maxWidth: 640,
               margin: '0 auto 28px',
               color: 'var(--color-warm-gray)',
               fontFamily: 'var(--font-body)',
-              fontSize: 'var(--text-base)',
-              lineHeight: 1.6,
+              fontSize: 'var(--text-lg)',
+              lineHeight: 1.65,
             }}
           >
-            In line with your system docs, landing is informational. Each role uses its own route and screen for action.
+            This page explains the system. The links below jump straight into the live routes—same URLs responders bookmark in
+            the field.
           </p>
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              gap: 10,
-              marginBottom: 24,
-            }}
-          >
+          <div className="landing-role-access-tabs" role="tablist" aria-label="Role shortcuts">
             {roleEntries.map(([key]) => (
               <button
                 key={key}
                 type="button"
-                className={`landing-btn ${activeRole === key ? 'landing-btn--terra' : 'landing-btn--ghost'}`}
+                role="tab"
+                aria-selected={activeRole === key}
+                className={`landing-role-access-tab ${activeRole === key ? 'landing-role-access-tab--active' : ''}`}
                 onClick={() => jumpToRole(key)}
               >
-                {key.charAt(0).toUpperCase() + key.slice(1)}
+                {ROLE_TAB_LABEL[key]}
               </button>
             ))}
           </div>
         </motion.div>
 
-        <div className="landing-role-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
-          <article id="role-card-patient" className="landing-card" style={{ padding: 24, scrollMarginTop: 110 }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Patient SOS</h3>
-            <p style={{ color: 'var(--color-warm-gray)', lineHeight: 1.6 }}>
-              One-tap emergency trigger screen for pregnant women. No login required.
-            </p>
-            <Link to="/app" className="landing-btn landing-btn--terra">
-              Open `/app`
-            </Link>
-          </article>
-
-          <article id="role-card-volunteer" className="landing-card" style={{ padding: 24, scrollMarginTop: 110 }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Volunteer</h3>
-            <p style={{ color: 'var(--color-warm-gray)', lineHeight: 1.6 }}>
-              Live alert feed + YES/NO response flow for registered community responders.
-            </p>
-            <Link to="/volunteer" className="landing-btn landing-btn--terra">
-              Open `/volunteer`
-            </Link>
-          </article>
-
-          <article id="role-card-hospital" className="landing-card" style={{ padding: 24, scrollMarginTop: 110 }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Hospital</h3>
-            <p style={{ color: 'var(--color-warm-gray)', lineHeight: 1.6 }}>
-              Pre-alert inbox for incoming maternal emergencies and readiness acknowledgements.
-            </p>
-            <Link to="/hospital" className="landing-btn landing-btn--terra">
-              Open `/hospital`
-            </Link>
-          </article>
-
-          <article id="role-card-worker" className="landing-card" style={{ padding: 24, scrollMarginTop: 110 }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Health Worker</h3>
-            <p style={{ color: 'var(--color-warm-gray)', lineHeight: 1.6 }}>
-              Patient registration and worker dashboard. Auth required.
-            </p>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <Link to="/register" className="landing-btn landing-btn--ghost">
-                Open `/register`
-              </Link>
-              <Link to="/worker" className="landing-btn landing-btn--terra">
-                Open `/worker`
-              </Link>
-            </div>
-          </article>
-
-          <article id="role-card-family" className="landing-card" style={{ padding: 24, scrollMarginTop: 110 }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Family</h3>
-            <p style={{ color: 'var(--color-warm-gray)', lineHeight: 1.6 }}>
-              Token-based read-only status page shared by SMS when an alert is active.
-            </p>
-            <p style={{ color: 'var(--color-muted)', margin: '8px 0 0', fontSize: 'var(--text-sm)' }}>
-              URL pattern: `/status/:token`
-            </p>
-          </article>
-
-          <article id="role-card-admin" className="landing-card" style={{ padding: 24, scrollMarginTop: 110 }}>
-            <h3 style={{ fontFamily: 'var(--font-display)', marginTop: 0 }}>Admin (Zone)</h3>
-            <p style={{ color: 'var(--color-warm-gray)', lineHeight: 1.6 }}>
-              NGO zone governance dashboard. Locality visibility and controls are restricted to admin role.
-            </p>
-            <Link to="/admin" className="landing-btn landing-btn--terra">
-              Open `/admin`
-            </Link>
-          </article>
+        <div className="landing-role-access-grid">
+          {ROLE_CARDS.map(({ roleKey, title, badge, Icon, body, actions, pathHint }) => (
+            <article
+              key={roleKey}
+              id={ROLE_TARGETS[roleKey]}
+              className="landing-card landing-role-access-card"
+              style={{ scrollMarginTop: 110 }}
+            >
+              <div className="landing-role-access-card-head">
+                <div className="landing-role-access-icon" aria-hidden>
+                  <Icon size={22} strokeWidth={1.75} />
+                </div>
+                <div className="landing-role-access-card-titles">
+                  <span className="landing-role-access-badge">{badge}</span>
+                  <h3 style={{ fontFamily: 'var(--font-display)', margin: '6px 0 0', fontSize: 'var(--text-xl)' }}>
+                    {title}
+                  </h3>
+                </div>
+              </div>
+              <p className="landing-role-access-body">{body}</p>
+              <div className="landing-role-access-spacer" />
+              {actions && actions.length > 0 ? (
+                <div className="landing-role-access-actions">
+                  {actions.map((a) => (
+                    <Link
+                      key={a.to}
+                      to={a.to}
+                      className={`landing-btn ${a.variant === 'terra' ? 'landing-btn--terra' : 'landing-btn--ghost'}`}
+                    >
+                      {a.label}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+              {pathHint ? (
+                <p className="landing-role-access-path" title={pathHint}>
+                  {pathHint}
+                </p>
+              ) : null}
+            </article>
+          ))}
         </div>
       </div>
       <style>{`
+        .landing-role-access-eyebrow {
+          text-align: center;
+          margin: 0 0 12px;
+          font-family: var(--font-body);
+          font-size: var(--text-sm);
+          font-weight: 600;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          color: var(--color-terra);
+        }
+        .landing-role-access-tabs {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 6px;
+          padding: 8px;
+          max-width: max-content;
+          margin: 0 auto 36px;
+          background: var(--color-sand);
+          border: 1px solid var(--color-sand-dark);
+          border-radius: 999px;
+        }
+        .landing-role-access-tab {
+          font-family: var(--font-body);
+          font-size: var(--text-sm);
+          font-weight: 600;
+          padding: 10px 18px;
+          border-radius: 999px;
+          border: 1px solid transparent;
+          background: transparent;
+          color: var(--color-charcoal);
+          cursor: pointer;
+          transition:
+            background-color 0.2s ease,
+            color 0.2s ease,
+            border-color 0.2s ease,
+            box-shadow 0.2s ease;
+        }
+        .landing-role-access-tab:hover {
+          background: rgba(255, 255, 255, 0.55);
+        }
+        .landing-role-access-tab:focus-visible {
+          outline: 3px solid var(--color-terra);
+          outline-offset: 2px;
+        }
+        .landing-role-access-tab--active {
+          background: var(--color-terra);
+          color: var(--color-white);
+          border-color: var(--color-terra);
+          box-shadow: 0 4px 14px rgba(196, 82, 42, 0.28);
+        }
+        .landing-role-access-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 22px;
+          align-items: stretch;
+        }
+        .landing-role-access-card {
+          padding: 22px 22px 20px;
+          display: flex;
+          flex-direction: column;
+          min-height: 100%;
+          transition:
+            border-color 0.2s ease,
+            box-shadow 0.2s ease;
+        }
+        .landing-role-access-card:hover {
+          border-color: rgba(196, 82, 42, 0.35);
+          box-shadow: 0 14px 36px rgba(44, 36, 22, 0.07);
+        }
+        .landing-role-access-card-head {
+          display: flex;
+          align-items: flex-start;
+          gap: 14px;
+          margin-bottom: 12px;
+        }
+        .landing-role-access-icon {
+          flex-shrink: 0;
+          width: 46px;
+          height: 46px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(145deg, var(--color-sand) 0%, rgba(255, 248, 242, 0.9) 100%);
+          border: 1px solid var(--color-sand-dark);
+          color: var(--color-terra);
+        }
+        .landing-role-access-card-titles {
+          min-width: 0;
+        }
+        .landing-role-access-badge {
+          display: inline-block;
+          font-family: var(--font-body);
+          font-size: var(--text-xs);
+          font-weight: 600;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          color: var(--color-terra-dark);
+          background: rgba(196, 82, 42, 0.1);
+          padding: 4px 10px;
+          border-radius: 999px;
+        }
+        .landing-role-access-body {
+          margin: 0;
+          color: var(--color-warm-gray);
+          font-family: var(--font-body);
+          font-size: var(--text-base);
+          line-height: 1.65;
+        }
+        .landing-role-access-spacer {
+          flex: 1;
+          min-height: 16px;
+        }
+        .landing-role-access-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        .landing-role-access-path {
+          margin: 12px 0 0;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+          font-size: var(--text-xs);
+          color: var(--color-muted);
+          line-height: 1.5;
+          word-break: break-word;
+        }
         @media (max-width: 991px) {
-          .landing-role-grid {
+          .landing-role-access-grid {
             grid-template-columns: 1fr !important;
+          }
+          .landing-role-access-tabs {
+            max-width: 100%;
+            justify-content: flex-start;
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            border-radius: 16px;
+            scrollbar-width: thin;
+            -webkit-overflow-scrolling: touch;
+          }
+          .landing-role-access-tab {
+            flex: 0 0 auto;
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .landing-role-access-tab,
+          .landing-role-access-card {
+            transition: none;
           }
         }
       `}</style>
