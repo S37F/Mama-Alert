@@ -12,10 +12,7 @@ function isSosPayload(value: unknown): value is SosPayload {
     return false
   }
   const o = value as Record<string, unknown>
-  return (
-    typeof o.phone === 'string' &&
-    (o.triggerMethod === 'pwa' || o.triggerMethod === 'sms' || o.triggerMethod === 'ussd')
-  )
+  return typeof o.sosToken === 'string' && o.sosToken.length >= 24 && o.triggerMethod === 'pwa'
 }
 
 function toPendingAlerts(

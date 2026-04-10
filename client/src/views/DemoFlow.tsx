@@ -5,10 +5,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { ApiHttpError, postSos } from '@/services/api'
 import { ErrorMessage } from '@/components/ErrorMessage'
 
-const DEMO_PHONE =
-  typeof import.meta.env.VITE_DEMO_PHONE === 'string' && import.meta.env.VITE_DEMO_PHONE.trim().length >= 8
-    ? import.meta.env.VITE_DEMO_PHONE.trim()
-    : '+15551230000'
+const DEMO_SOS_TOKEN =
+  typeof import.meta.env.VITE_DEMO_SOS_TOKEN === 'string' && import.meta.env.VITE_DEMO_SOS_TOKEN.trim().length >= 24
+    ? import.meta.env.VITE_DEMO_SOS_TOKEN.trim()
+    : ''
 
 export function DemoFlow() {
   const { t } = useTranslation()
@@ -30,7 +30,11 @@ export function DemoFlow() {
     setDemoErr(null)
     setDemoBusy(true)
     try {
-      await postSos({ phone: DEMO_PHONE, triggerMethod: 'pwa' })
+      if (DEMO_SOS_TOKEN.length < 24) {
+        setDemoErr('Set VITE_DEMO_SOS_TOKEN in client .env to the sos_token from registering a demo patient.')
+        return
+      }
+      await postSos({ sosToken: DEMO_SOS_TOKEN, triggerMethod: 'pwa' })
     } catch (e) {
       if (e instanceof ApiHttpError && e.statusCode === 409) {
         setDemoErr(t('sos.duplicateDetail'))
@@ -102,7 +106,9 @@ export function DemoFlow() {
       </Button>
       {demoErr ? <ErrorMessage message={demoErr} /> : null}
 
-      <p className="text-muted-foreground text-xs">{t('demo.seedHint', { phone: DEMO_PHONE })}</p>
+      <p className="text-muted-foreground text-xs">
+        Demo SOS requires VITE_DEMO_SOS_TOKEN (from worker patient registration response).
+      </p>
     </main>
   )
 }

@@ -42,7 +42,7 @@ function coordinatorPhone(): string | undefined {
   return p && p.length > 0 ? p : undefined
 }
 
-async function loadEscalationConfig(patientId: string): Promise<EscalationRadiiConfig> {
+export async function loadEscalationConfig(patientId: string): Promise<EscalationRadiiConfig> {
   const defaults: EscalationRadiiConfig = {
     delayMs: defaultEscalationDelayMs(),
     r1: 10_000,
@@ -120,7 +120,7 @@ async function notifyNewVolunteers(
         })
         continue
       }
-      notifyVolunteerFeedRefresh(v.phone)
+      notifyVolunteerFeedRefresh(v.id)
       const body = buildVolunteerAlertSMS(patient, v, alertRow, v.language)
       await sendSmsMultipart(v.phone, body)
     } catch (err) {
@@ -206,25 +206,34 @@ async function runEscalationStep(params: {
   }
 }
 
+async function enqueueEscalationDelayedJob(alertId: string, patientId: string, wave: number): Promise<void> {
+  let cfg: EscalationRadiiConfig
+  try {
+    cfg = await loadEscalationConfig(patientId)
+  } catch (err) {
+    logError('escalation: loadEscalationConfig failed', { patientId, err: String(err) })
+    cfg = { delayMs: defaultEscalationDelayMs(), r1: 10_000, r2: 20_000 }
+  }
+  const runAfter = new Date(Date.now() + cfg.delayMs).toISOString()
+  const { error } = await supabaseAdmin.from('delayed_jobs').insert({
+    dedupe_key: `escalation:${alertId}:${wave}`,
+    job_type: 'escalation',
+    payload: { alertId, patientId, wave },
+    run_after: runAfter,
+  })
+  if (error && !String(error.message).includes('duplicate')) {
+    logError('escalation: delayed_jobs insert failed', { alertId, error: String(error) })
+  }
+}
+
 /**
  * @param wave 0 → after delay run r1 wave; 1 → after delay run r2 wave; 2 → after delay coordinator action SMS (+ optional voice)
  */
 export function scheduleEscalation(alertId: string, patientId: string, wave: number): void {
-  void (async () => {
-    let cfg: EscalationRadiiConfig
-    try {
-      cfg = await loadEscalationConfig(patientId)
-    } catch (err) {
-      logError('escalation: loadEscalationConfig failed', { patientId, err: String(err) })
-      cfg = { delayMs: defaultEscalationDelayMs(), r1: 10_000, r2: 20_000 }
-    }
-    setTimeout(() => {
-      void runEscalationTimer(alertId, patientId, wave, cfg)
-    }, cfg.delayMs)
-  })()
+  void enqueueEscalationDelayedJob(alertId, patientId, wave)
 }
 
-async function runEscalationTimer(
+export async function runEscalationTimer(
   alertId: string,
   patientId: string,
   wave: number,

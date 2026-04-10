@@ -1,13 +1,13 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
-import { normalizePhone } from '@/lib/phone'
-import { fetchPatientForSos } from '@/services/patientQueries'
+import { verifySosPatientToken } from '@/lib/sosToken'
+import { fetchPatientForSosById } from '@/services/patientQueries'
 
 export const publicPatientRouter = Router()
 
 const bodySchema = z.object({
-  phone: z.string().min(8).max(24),
+  sosToken: z.string().min(24),
 })
 
 publicPatientRouter.post(
@@ -18,8 +18,12 @@ publicPatientRouter.post(
       res.status(400).json({ error: 'Invalid payload' })
       return
     }
-    const phone = normalizePhone(parsed.data.phone)
-    const row = await fetchPatientForSos(phone)
+    const v = verifySosPatientToken(parsed.data.sosToken)
+    if (!v) {
+      res.status(401).json({ error: 'Invalid or expired token' })
+      return
+    }
+    const row = await fetchPatientForSosById(v.patientId)
     if (!row) {
       res.status(404).json({ error: 'Not found' })
       return

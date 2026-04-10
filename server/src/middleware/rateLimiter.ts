@@ -29,3 +29,11 @@ export const volunteerSseRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 })
+
+export const volunteerOtpRequestRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: { error: 'Too many OTP requests' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})

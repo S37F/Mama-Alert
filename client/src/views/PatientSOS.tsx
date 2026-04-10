@@ -18,6 +18,7 @@ import { ApiHttpError, postPatientHints, postSos } from '@/services/api'
 const LS_PHONE = 'mamaalert_patient_phone'
 const LS_NAME = 'mamaalert_patient_display_name'
 const LS_WEEKS = 'mamaalert_patient_weeks'
+const LS_SOS_TOKEN = 'mamaalert_sos_token'
 const LS_NOTIF_PROMPTED = 'mamaalert_notifications_prompted_v1'
 
 const LANGS = [
@@ -99,6 +100,7 @@ export function PatientSOS() {
     const p = searchParams.get('phone')
     const n = searchParams.get('name')
     const w = searchParams.get('weeks')
+    const tok = searchParams.get('token')
     if (p && p.trim().length >= 8) {
       localStorage.setItem(LS_PHONE, p.trim())
     }
@@ -108,10 +110,23 @@ export function PatientSOS() {
     if (w && /^\d+$/.test(w)) {
       localStorage.setItem(LS_WEEKS, w)
     }
+    if (tok && tok.trim().length >= 24) {
+      localStorage.setItem(LS_SOS_TOKEN, tok.trim())
+    }
   }, [searchParams])
 
+  const sosToken = useMemo(() => {
+    const q = searchParams.get('token')
+    if (q && q.trim().length >= 24) {
+      return q.trim()
+    }
+    return localStorage.getItem(LS_SOS_TOKEN) ?? ''
+  }, [searchParams])
+
+  const missingToken = sosToken.length < 24
+
   useEffect(() => {
-    if (effectivePhone.length < 8) {
+    if (missingToken || effectivePhone.length < 8) {
       return
     }
     if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
@@ -141,16 +156,16 @@ export function PatientSOS() {
     return () => {
       cancelled = true
     }
-  }, [effectivePhone])
+  }, [effectivePhone, missingToken])
 
   useEffect(() => {
     const apiBase = import.meta.env.VITE_API_URL ?? ''
-    if (effectivePhone.length < 8 || apiBase.length === 0) {
+    if (sosToken.length < 24 || apiBase.length === 0) {
       return
     }
     let cancelled = false
     void (async () => {
-      const hints = await postPatientHints(effectivePhone)
+      const hints = await postPatientHints(sosToken)
       if (cancelled || !hints) {
         return
       }
@@ -162,7 +177,7 @@ export function PatientSOS() {
     return () => {
       cancelled = true
     }
-  }, [effectivePhone, i18n])
+  }, [sosToken, i18n])
 
   const [status, setStatus] = useState<SosVisualStatus>('idle')
   const [duplicateCooldown, setDuplicateCooldown] = useState(false)
@@ -222,12 +237,12 @@ export function PatientSOS() {
   }, [locationPrompted])
 
   const triggerSos = useCallback(async () => {
-    if (effectivePhone.length < 8) {
+    if (sosToken.length < 24) {
       setStatus('error')
       return
     }
 
-    const payload = { phone: effectivePhone, triggerMethod: 'pwa' as const }
+    const payload = { sosToken, triggerMethod: 'pwa' as const }
 
     if (!isOnline) {
       await addToQueue(payload)
@@ -262,9 +277,7 @@ export function PatientSOS() {
         setStatus('error')
       }
     }
-  }, [addToQueue, effectivePhone, isOnline, requestLocationAccess])
-
-  const missingPhone = effectivePhone.length < 8
+  }, [addToQueue, sosToken, isOnline, requestLocationAccess])
 
   return (
     <main id="main-content" tabIndex={-1} className="relative flex min-h-[100dvh] flex-col bg-background outline-none">
@@ -290,7 +303,16 @@ export function PatientSOS() {
           ) : null}
         </div>
 
-        {missingPhone ? (
+        {missingToken ? (
+          <div className="w-full max-w-sm space-y-3 rounded-lg border border-border p-4 text-center">
+            <p className="text-muted-foreground text-sm">
+              Open your SOS link from your health worker (includes a <code className="text-xs">token</code> in the URL), or
+              ask them to resend it.
+            </p>
+          </div>
+        ) : null}
+
+        {!missingToken ? (
           <div className="w-full max-w-sm space-y-3 rounded-lg border border-border p-4">
             <Label htmlFor="sos-phone" className="text-base">
               {t('sos.phoneLabel')}
@@ -316,7 +338,7 @@ export function PatientSOS() {
           </div>
         ) : null}
 
-        {!missingPhone ? (
+        {!missingToken && effectivePhone.length >= 8 ? (
           <SOSButton
             status={status}
             onTrigger={async () => {
@@ -326,6 +348,12 @@ export function PatientSOS() {
               await triggerSos()
             }}
           />
+        ) : null}
+
+        {!missingToken && effectivePhone.length < 8 ? (
+          <p className="text-muted-foreground max-w-sm text-center text-sm">
+            Add your phone number so we can reach you if needed.
+          </p>
         ) : null}
 
         {status === 'offline' ? (

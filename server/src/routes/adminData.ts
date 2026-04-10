@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
-import { logError } from '@/lib/logger'
+import { logAudit, logError } from '@/lib/logger'
+import { signHospitalPortalToken } from '@/lib/portalJwt'
 import { requireAdmin, requireAuth } from '@/middleware/auth'
 import { supabaseAdmin } from '@/services/supabase'
 
@@ -134,7 +135,7 @@ adminDataRouter.get(
     const { data: alerts, error } = await supabaseAdmin
       .from('alerts')
       .select(
-        'id, status, triggered_at, resolved_at, responding_volunteer_id, patient_id, patients ( name, zone_id )',
+        'id, status, triggered_at, resolved_at, volunteer_confirmed_at, responding_volunteer_id, patient_id, patients ( name, zone_id )',
       )
       .order('triggered_at', { ascending: false })
       .limit(200)
@@ -172,8 +173,10 @@ adminDataRouter.get(
       }
     }
 
-    let totalResponseMs = 0
-    let responseCount = 0
+    let totalVolunteerConfirmMs = 0
+    let volunteerConfirmCount = 0
+    let totalResolveMs = 0
+    let resolveCount = 0
 
     const rows = filtered.map((a) => {
       const rawP = a.patients
@@ -181,27 +184,44 @@ adminDataRouter.get(
       const patientName = typeof p.name === 'string' ? p.name : ''
       const rid = a.responding_volunteer_id
       const volName = typeof rid === 'string' && volNames[rid] ? volNames[rid] : null
-      let responseMs: number | null = null
+      let volunteerConfirmMs: number | null = null
+      if (a.triggered_at && a.volunteer_confirmed_at) {
+        volunteerConfirmMs = new Date(a.volunteer_confirmed_at).getTime() - new Date(a.triggered_at).getTime()
+        if (volunteerConfirmMs >= 0) {
+          totalVolunteerConfirmMs += volunteerConfirmMs
+          volunteerConfirmCount += 1
+        }
+      }
+      let resolveTimeMs: number | null = null
       if (a.triggered_at && a.resolved_at) {
-        responseMs = new Date(a.resolved_at).getTime() - new Date(a.triggered_at).getTime()
-        if (responseMs >= 0) {
-          totalResponseMs += responseMs
-          responseCount += 1
+        resolveTimeMs = new Date(a.resolved_at).getTime() - new Date(a.triggered_at).getTime()
+        if (resolveTimeMs >= 0) {
+          totalResolveMs += resolveTimeMs
+          resolveCount += 1
         }
       }
       return {
         id: a.id,
         patientName,
         triggeredAt: a.triggered_at,
-        responseTimeMs: responseMs,
+        volunteerConfirmMs,
+        resolveTimeMs,
         volunteerName: volName,
         outcome: a.status,
       }
     })
 
-    const avgResponseMs = responseCount > 0 ? Math.round(totalResponseMs / responseCount) : null
+    const avgVolunteerConfirmMs =
+      volunteerConfirmCount > 0 ? Math.round(totalVolunteerConfirmMs / volunteerConfirmCount) : null
+    const avgResolveMs = resolveCount > 0 ? Math.round(totalResolveMs / resolveCount) : null
 
-    res.json({ alerts: rows, avgResponseMs })
+    res.json({
+      alerts: rows,
+      avgVolunteerConfirmMs,
+      avgResolveMs,
+      /** @deprecated use avgResolveMs */
+      avgResponseMs: avgResolveMs,
+    })
   }),
 )
 
@@ -284,6 +304,34 @@ adminDataRouter.patch(
       return
     }
     res.json({ success: true })
+  }),
+)
+
+adminDataRouter.post(
+  '/hospitals/:id/portal-token',
+  asyncHandler(async (req, res) => {
+    const id = req.params.id
+    if (!id) {
+      res.status(400).json({ error: 'Missing id' })
+      return
+    }
+    const zoneId = req.healthWorker?.zone_id
+    const { data: h, error: fErr } = await supabaseAdmin
+      .from('hospitals')
+      .select('id, zone_id')
+      .eq('id', id)
+      .maybeSingle()
+    if (fErr || !h) {
+      res.status(404).json({ error: 'Hospital not found' })
+      return
+    }
+    if (zoneId && h.zone_id !== zoneId) {
+      res.status(403).json({ error: 'Out of zone' })
+      return
+    }
+    const token = signHospitalPortalToken(h.id)
+    logAudit('hospital_portal_token_issued', { hospitalId: h.id, adminZoneId: zoneId })
+    res.status(201).json({ token })
   }),
 )
 

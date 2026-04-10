@@ -1,8 +1,9 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
-import { logError } from '@/lib/logger'
-import { requireAuth } from '@/middleware/auth'
+import { logAudit, logError } from '@/lib/logger'
+import { signSosPatientToken } from '@/lib/sosToken'
+import { requireAdmin, requireAuth } from '@/middleware/auth'
 import { supabaseAdmin } from '@/services/supabase'
 
 export const registerRouter = Router()
@@ -67,6 +68,9 @@ function geographyPointWkt(lng: number, lat: number): string {
   return `SRID=4326;POINT(${lng} ${lat})`
 }
 
+/** SOS link token TTL (seconds) — ~6 months. */
+const SOS_TOKEN_TTL_SEC = 180 * 24 * 60 * 60
+
 registerRouter.post(
   '/patient',
   requireAuth,
@@ -82,7 +86,10 @@ registerRouter.post(
       res.status(401).json({ error: 'Unauthorized' })
       return
     }
-    const zoneId = body.zone_id ?? req.healthWorker?.zone_id ?? null
+    const zoneId =
+      req.healthWorker?.access_level === 'admin'
+        ? (body.zone_id ?? req.healthWorker.zone_id ?? null)
+        : (req.healthWorker?.zone_id ?? null)
     const { data, error } = await supabaseAdmin
       .from('patients')
       .insert({
@@ -115,12 +122,16 @@ registerRouter.post(
       res.status(400).json({ error: 'Could not register patient', details: error.message })
       return
     }
-    res.status(201).json({ id: data.id, status_token: data.status_token })
+    const sos_token = signSosPatientToken(data.id, SOS_TOKEN_TTL_SEC)
+    logAudit('patient_registered', { patientId: data.id, healthWorkerId: hwId })
+    res.status(201).json({ id: data.id, status_token: data.status_token, sos_token })
   }),
 )
 
 registerRouter.post(
   '/volunteer',
+  requireAuth,
+  requireAdmin,
   asyncHandler(async (req, res) => {
     const parsed = volunteerSchema.safeParse(req.body)
     if (!parsed.success) {
@@ -128,6 +139,16 @@ registerRouter.post(
       return
     }
     const body = parsed.data
+    const adminZone = req.healthWorker?.zone_id ?? null
+    const targetZone = body.zone_id ?? adminZone
+    if (!targetZone) {
+      res.status(400).json({ error: 'zone_id is required for volunteer registration' })
+      return
+    }
+    if (adminZone && body.zone_id && body.zone_id !== adminZone) {
+      res.status(403).json({ error: 'Cannot register volunteer outside your zone' })
+      return
+    }
     const { data, error } = await supabaseAdmin
       .from('volunteers')
       .insert({
@@ -138,7 +159,7 @@ registerRouter.post(
         vehicle: body.vehicle ?? 'none',
         max_radius_km: body.max_radius_km ?? 5,
         language: body.language ?? 'en',
-        zone_id: body.zone_id ?? null,
+        zone_id: targetZone,
       })
       .select('id')
       .single()
@@ -148,12 +169,15 @@ registerRouter.post(
       res.status(400).json({ error: 'Could not register volunteer', details: error.message })
       return
     }
+    logAudit('volunteer_registered', { volunteerId: data.id, zoneId: targetZone })
     res.status(201).json({ id: data.id })
   }),
 )
 
 registerRouter.post(
   '/hospital',
+  requireAuth,
+  requireAdmin,
   asyncHandler(async (req, res) => {
     const parsed = hospitalSchema.safeParse(req.body)
     if (!parsed.success) {
@@ -161,6 +185,16 @@ registerRouter.post(
       return
     }
     const body = parsed.data
+    const adminZone = req.healthWorker?.zone_id ?? null
+    const targetZone = body.zone_id ?? adminZone
+    if (!targetZone) {
+      res.status(400).json({ error: 'zone_id is required for hospital registration' })
+      return
+    }
+    if (adminZone && body.zone_id && body.zone_id !== adminZone) {
+      res.status(403).json({ error: 'Cannot register hospital outside your zone' })
+      return
+    }
     const { data, error } = await supabaseAdmin
       .from('hospitals')
       .insert({
@@ -172,7 +206,7 @@ registerRouter.post(
         services: body.services ?? [],
         is_24hr: body.is_24hr ?? false,
         receive_alerts: body.receive_alerts ?? true,
-        zone_id: body.zone_id ?? null,
+        zone_id: targetZone,
       })
       .select('id')
       .single()
@@ -182,6 +216,7 @@ registerRouter.post(
       res.status(400).json({ error: 'Could not register hospital', details: error.message })
       return
     }
+    logAudit('hospital_registered', { hospitalId: data.id, zoneId: targetZone })
     res.status(201).json({ id: data.id })
   }),
 )

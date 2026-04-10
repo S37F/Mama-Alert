@@ -33,3 +33,17 @@ export async function fetchPatientForSos(phone: string): Promise<PatientSosRow |
   const row = data[0]
   return isPatientSosRow(row) ? row : null
 }
+
+export async function fetchPatientForSosById(patientId: string): Promise<PatientSosRow | null> {
+  const { data, error } = await supabaseAdmin.rpc('get_patient_for_sos_by_id', {
+    p_id: patientId,
+  })
+  if (error) {
+    throw error
+  }
+  if (!data || !Array.isArray(data) || data.length === 0) {
+    return null
+  }
+  const row = data[0]
+  return isPatientSosRow(row) ? row : null
+}

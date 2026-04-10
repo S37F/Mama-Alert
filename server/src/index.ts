@@ -20,6 +20,7 @@ import { publicPatientRouter } from '@/routes/publicPatient'
 import { workerPortalRouter } from '@/routes/workerPortal'
 import { validateTwilioUssdSignature } from '@/middleware/twilioValidate'
 import { logError } from '@/lib/logger'
+import { startDelayedJobPoller } from '@/services/delayedJobProcessor'
 import { supabaseAdmin } from '@/services/supabase'
 
 const app = express()
@@ -46,12 +47,19 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true })
 })
 
-/** Confirms service role can reach Postgres (replace placeholders in server/.env if this fails). */
-app.get('/api/health/db', async (_req, res) => {
+/** Confirms service role can reach Postgres. Requires `X-Health-Db-Token` matching `HEALTH_DB_TOKEN` when set. */
+app.get('/api/health/db', async (req, res) => {
+  const expected = process.env.HEALTH_DB_TOKEN
+  if (expected && expected.length > 0) {
+    const got = req.headers['x-health-db-token']
+    if (got !== expected) {
+      return res.status(404).json({ ok: false })
+    }
+  }
   const { error } = await supabaseAdmin.from('zones').select('id').limit(1)
   if (error) {
     logError('Health DB check failed', { error: error.message })
-    return res.status(503).json({ ok: false, database: 'error', message: error.message })
+    return res.status(503).json({ ok: false, database: 'error' })
   }
   return res.json({ ok: true, database: 'reachable' })
 })
@@ -75,4 +83,5 @@ app.use((err: unknown, _req: express.Request, res: express.Response, _next: expr
 
 app.listen(PORT, () => {
   console.log(`MamaAlert server running on port ${PORT}`)
+  startDelayedJobPoller()
 })

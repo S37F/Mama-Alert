@@ -1,8 +1,8 @@
 export type TriggerMethod = 'pwa' | 'sms' | 'ussd'
 
 export interface SosPayload {
-  phone: string
-  triggerMethod: TriggerMethod
+  sosToken: string
+  triggerMethod: 'pwa'
 }
 
 export interface ApiError {

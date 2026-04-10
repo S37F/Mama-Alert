@@ -1,6 +1,5 @@
 import { extractFamilyPhones } from '@/lib/emergencyContacts'
-import { logError } from '@/lib/logger'
-import { normalizePhone } from '@/lib/phone'
+import { logAudit, logError, logWarn } from '@/lib/logger'
 import { getNearbyHospital } from '@/services/geo'
 import {
   buildClinicPreAlertSMS,
@@ -115,17 +114,14 @@ export async function applyVolunteerDone(volunteerId: string): Promise<boolean> 
 export async function applyVolunteerNo(responseId: string): Promise<void> {
   const { data: before, error: loadErr } = await supabaseAdmin
     .from('alert_responses')
-    .select('volunteers ( phone )')
+    .select('volunteer_id, volunteers ( phone )')
     .eq('id', responseId)
     .maybeSingle()
   if (loadErr) {
     logError('volunteer-reply: NO prefetch failed', { error: String(loadErr) })
   }
-  let volunteerPhone: string | null = null
-  const volJoin = before && isRecord(before.volunteers) ? before.volunteers : null
-  if (volJoin && typeof volJoin.phone === 'string') {
-    volunteerPhone = volJoin.phone
-  }
+  let volunteerId: string | null =
+    before && typeof before.volunteer_id === 'string' ? before.volunteer_id : null
 
   const nowIso = new Date().toISOString()
   const { error: upErr } = await supabaseAdmin
@@ -136,8 +132,8 @@ export async function applyVolunteerNo(responseId: string): Promise<void> {
     logError('volunteer-reply: NO update failed', { error: String(upErr) })
     return
   }
-  if (volunteerPhone) {
-    notifyVolunteerFeedRefresh(normalizePhone(volunteerPhone))
+  if (volunteerId) {
+    notifyVolunteerFeedRefresh(volunteerId)
   }
 }
 
@@ -159,17 +155,6 @@ export async function applyVolunteerYes(vol: Volunteer, responseId: string, aler
     return
   }
 
-  const nowIso = new Date().toISOString()
-
-  const { error: upResErr } = await supabaseAdmin
-    .from('alert_responses')
-    .update({ response: 'YES', responded_at: nowIso })
-    .eq('id', responseId)
-  if (upResErr) {
-    logError('volunteer-reply: YES response row failed', { error: String(upResErr) })
-    return
-  }
-
   let lat = 0
   let lng = 0
   const { data: rpcRows, error: rpcErr } = await supabaseAdmin.rpc('get_patient_for_sos', {
@@ -183,19 +168,25 @@ export async function applyVolunteerYes(vol: Volunteer, responseId: string, aler
 
   const hospital = lat && lng ? await getNearbyHospital(lat, lng, 100_000).catch(() => null) : null
 
-  const { error: alUpErr } = await supabaseAdmin
-    .from('alerts')
-    .update({
-      status: 'volunteer_responding',
-      responding_volunteer_id: vol.id,
-      volunteer_confirmed_at: nowIso,
-      nearest_hospital_id: hospital?.id ?? null,
-    })
-    .eq('id', alertId)
+  const { data: claimRaw, error: claimErr } = await supabaseAdmin.rpc('claim_alert_for_volunteer', {
+    p_alert_id: alertId,
+    p_volunteer_id: vol.id,
+    p_response_id: responseId,
+    p_nearest_hospital_id: hospital?.id ?? null,
+  })
 
-  if (alUpErr) {
-    logError('volunteer-reply: alert update failed', { error: String(alUpErr) })
+  if (claimErr) {
+    logError('volunteer-reply: claim RPC failed', { error: String(claimErr) })
+    return
   }
+
+  const claim = claimRaw as { ok?: boolean; reason?: string }
+  if (!claim?.ok) {
+    logWarn('volunteer-reply: claim rejected', { reason: claim?.reason, alertId })
+    return
+  }
+
+  logAudit('volunteer_claimed_alert', { alertId, volunteerId: vol.id })
 
   try {
     if (hospital) {
@@ -234,7 +225,7 @@ export async function applyVolunteerYes(vol: Volunteer, responseId: string, aler
     }
   }
 
-  notifyVolunteerFeedRefresh(normalizePhone(vol.phone))
+  notifyVolunteerFeedRefresh(vol.id)
 }
 
 export function toVolunteerRow(row: {

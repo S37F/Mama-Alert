@@ -3,6 +3,20 @@
 
 CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA extensions;
 
+-- Phone match key (mirrors server/src/lib/phone.ts normalizePhone)
+CREATE OR REPLACE FUNCTION public.normalize_phone_for_match(p text)
+RETURNS text
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+AS $$
+  SELECT CASE
+    WHEN p IS NULL OR btrim(p) = '' THEN ''
+    WHEN btrim(p) LIKE '+%' THEN '+' || regexp_replace(substring(btrim(p) from 2), '\D', '', 'g')
+    ELSE regexp_replace(btrim(p), '\s', '', 'g')
+  END;
+$$;
+
 -- ---------------------------------------------------------------------------
 -- Enums (as check constraints / text for simplicity with PostgREST)
 -- ---------------------------------------------------------------------------
@@ -47,6 +61,7 @@ CREATE TABLE public.patients (
   name TEXT NOT NULL,
   age INTEGER,
   phone_primary TEXT NOT NULL,
+  phone_e164 TEXT GENERATED ALWAYS AS (public.normalize_phone_for_match(phone_primary)) STORED NOT NULL,
   phone_secondary TEXT,
   village TEXT,
   landmark TEXT,
@@ -74,6 +89,7 @@ CREATE INDEX patients_health_worker_id_idx ON public.patients (health_worker_id)
 CREATE INDEX patients_zone_id_idx ON public.patients (zone_id);
 CREATE INDEX patients_status_token_idx ON public.patients (status_token);
 CREATE INDEX patients_location_gix ON public.patients USING GIST (location);
+CREATE UNIQUE INDEX patients_phone_e164_uidx ON public.patients (phone_e164);
 
 -- ---------------------------------------------------------------------------
 -- volunteers
@@ -83,6 +99,7 @@ CREATE TABLE public.volunteers (
   zone_id UUID REFERENCES public.zones (id) ON DELETE SET NULL,
   name TEXT NOT NULL,
   phone TEXT NOT NULL,
+  phone_e164 TEXT GENERATED ALWAYS AS (public.normalize_phone_for_match(phone)) STORED NOT NULL,
   location GEOGRAPHY (POINT, 4326) NOT NULL,
   skills TEXT[] NOT NULL DEFAULT '{}',
   vehicle TEXT NOT NULL DEFAULT 'none'
@@ -95,6 +112,8 @@ CREATE TABLE public.volunteers (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT volunteers_phone_unique UNIQUE (phone)
 );
+
+CREATE UNIQUE INDEX volunteers_phone_e164_uidx ON public.volunteers (phone_e164);
 
 CREATE INDEX volunteers_zone_id_idx ON public.volunteers (zone_id);
 CREATE INDEX volunteers_location_gix ON public.volunteers USING GIST (location);
@@ -114,6 +133,7 @@ CREATE TABLE public.hospitals (
   services TEXT[] NOT NULL DEFAULT '{}',
   is_24hr BOOLEAN NOT NULL DEFAULT false,
   receive_alerts BOOLEAN NOT NULL DEFAULT true,
+  portal_api_key_hash TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -165,6 +185,46 @@ CREATE INDEX alert_responses_alert_id_idx ON public.alert_responses (alert_id);
 CREATE INDEX alert_responses_volunteer_id_idx ON public.alert_responses (volunteer_id);
 
 -- ---------------------------------------------------------------------------
+-- Hospital acks + volunteer OTP (portal auth); RLS on — no policies = PostgREST denies non–service-role
+-- ---------------------------------------------------------------------------
+CREATE TABLE public.hospital_alert_acks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  alert_id UUID NOT NULL REFERENCES public.alerts (id) ON DELETE CASCADE,
+  hospital_id UUID NOT NULL REFERENCES public.hospitals (id) ON DELETE CASCADE,
+  ack_type TEXT NOT NULL CHECK (ack_type IN ('ready', 'more_info')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX hospital_alert_acks_alert_id_idx ON public.hospital_alert_acks (alert_id);
+
+CREATE TABLE public.volunteer_otp_challenges (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  volunteer_id UUID NOT NULL REFERENCES public.volunteers (id) ON DELETE CASCADE,
+  code_hash TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  consumed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX volunteer_otp_volunteer_created_idx ON public.volunteer_otp_challenges (volunteer_id, created_at DESC);
+
+CREATE TABLE public.delayed_jobs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dedupe_key TEXT NOT NULL UNIQUE,
+  job_type TEXT NOT NULL,
+  payload JSONB NOT NULL,
+  run_after TIMESTAMPTZ NOT NULL,
+  locked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX delayed_jobs_due_idx ON public.delayed_jobs (run_after) WHERE locked_at IS NULL;
+
+ALTER TABLE public.hospital_alert_acks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.volunteer_otp_challenges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.delayed_jobs ENABLE ROW LEVEL SECURITY;
+
+-- ---------------------------------------------------------------------------
 -- updated_at trigger
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.set_updated_at()
@@ -201,6 +261,29 @@ CREATE TRIGGER hospitals_set_updated_at
   BEFORE UPDATE ON public.hospitals
   FOR EACH ROW
   EXECUTE FUNCTION public.set_updated_at();
+
+CREATE OR REPLACE FUNCTION public.health_workers_prevent_role_self_escalation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF TG_OP = 'UPDATE' THEN
+    IF (NEW.access_level IS DISTINCT FROM OLD.access_level OR NEW.zone_id IS DISTINCT FROM OLD.zone_id) THEN
+      IF COALESCE(auth.role(), '') = 'authenticated' THEN
+        RAISE EXCEPTION 'Changing access_level or zone_id is not allowed for authenticated clients';
+      END IF;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER health_workers_no_role_escalation
+  BEFORE UPDATE ON public.health_workers
+  FOR EACH ROW
+  EXECUTE FUNCTION public.health_workers_prevent_role_self_escalation();
 
 -- ---------------------------------------------------------------------------
 -- Row Level Security: zones, health_workers, volunteers, hospitals

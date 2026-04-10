@@ -8,56 +8,72 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
-import { getHospitalInbox, postHospitalAck, type HospitalInboxItem } from '@/services/api'
+import { getHospitalInbox, postHospitalAck, setHospitalPortalToken, type HospitalInboxItem } from '@/services/api'
 
-const LS_HOSP = 'mamaalert_hospital_id'
+const LS_HOSP_TOKEN = 'mamaalert_hospital_portal_token'
 
 export function HospitalInbox() {
   const { t } = useTranslation()
   const [searchParams] = useSearchParams()
-  const envId = import.meta.env.VITE_DEMO_HOSPITAL_ID as string | undefined
 
-  const initialId = useMemo(() => {
-    const q = searchParams.get('hospitalId')
-    if (q && q.length > 8) {
+  const initialToken = useMemo(() => {
+    const q = searchParams.get('token')
+    if (q && q.length > 20) {
       return q
     }
-    const ls = localStorage.getItem(LS_HOSP)
-    if (ls && ls.length > 8) {
+    const ls = localStorage.getItem(LS_HOSP_TOKEN)
+    const env = import.meta.env.VITE_HOSPITAL_PORTAL_TOKEN as string | undefined
+    if (ls && ls.length > 20) {
       return ls
     }
-    return envId && envId.length > 8 ? envId : ''
-  }, [searchParams, envId])
+    return env && env.length > 20 ? env : ''
+  }, [searchParams])
 
-  const [hospitalIdInput, setHospitalIdInput] = useState(initialId)
-  const [hospitalId, setHospitalId] = useState(initialId)
+  const [tokenInput, setTokenInput] = useState(initialToken)
+  const [savedToken, setSavedToken] = useState(initialToken)
   const [items, setItems] = useState<HospitalInboxItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const saveId = useCallback(() => {
-    const id = hospitalIdInput.trim()
-    if (id.length > 8) {
-      localStorage.setItem(LS_HOSP, id)
-      setHospitalId(id)
+  useEffect(() => {
+    const q = searchParams.get('token')
+    if (q && q.length > 20) {
+      localStorage.setItem(LS_HOSP_TOKEN, q)
+      setTokenInput(q)
+      setSavedToken(q)
     }
-  }, [hospitalIdInput])
+  }, [searchParams])
+
+  useEffect(() => {
+    if (savedToken.length > 20) {
+      setHospitalPortalToken(savedToken)
+    }
+  }, [savedToken])
+
+  const saveToken = useCallback(() => {
+    const t = tokenInput.trim()
+    if (t.length > 20) {
+      localStorage.setItem(LS_HOSP_TOKEN, t)
+      setSavedToken(t)
+      setHospitalPortalToken(t)
+    }
+  }, [tokenInput])
 
   const load = useCallback(async () => {
-    if (hospitalId.length < 8) {
+    if (savedToken.length < 20) {
       return
     }
     setLoading(true)
     setError(null)
     try {
-      const data = await getHospitalInbox(hospitalId)
+      const data = await getHospitalInbox()
       setItems(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
       setLoading(false)
     }
-  }, [hospitalId, t])
+  }, [savedToken, t])
 
   useEffect(() => {
     void load()
@@ -68,14 +84,23 @@ export function HospitalInbox() {
     return () => window.clearInterval(id)
   }, [load])
 
-  if (hospitalId.length < 8) {
+  if (savedToken.length < 20) {
     return (
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-4 p-6 outline-none">
         <h1 className="text-2xl font-bold">{t('hospital.title')}</h1>
+        <p className="text-muted-foreground text-sm">
+          Paste the hospital portal token issued by your zone admin (Admin dashboard → hospital row, or POST /api/admin/hospitals/:id/portal-token).
+        </p>
         <div className="space-y-3 rounded-lg border p-4">
-          <Label htmlFor="hosp-id">{t('hospital.idLabel')}</Label>
-          <Input id="hosp-id" value={hospitalIdInput} onChange={(e) => setHospitalIdInput(e.target.value)} />
-          <Button type="button" className="w-full" onClick={saveId}>
+          <Label htmlFor="hosp-token">Portal token</Label>
+          <Input
+            id="hosp-token"
+            value={tokenInput}
+            onChange={(e) => setTokenInput(e.target.value)}
+            autoComplete="off"
+            className="font-mono text-xs"
+          />
+          <Button type="button" className="w-full" onClick={saveToken}>
             {t('common.save')}
           </Button>
         </div>
@@ -85,9 +110,24 @@ export function HospitalInbox() {
 
   return (
     <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-4 p-6 outline-none">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('hospital.title')}</h1>
-        <Badge variant="destructive">{t('hospital.countBadge', { n: items.length })}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="destructive">{t('hospital.countBadge', { n: items.length })}</Badge>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              localStorage.removeItem(LS_HOSP_TOKEN)
+              setHospitalPortalToken(null)
+              setSavedToken('')
+              setTokenInput('')
+            }}
+          >
+            Sign out
+          </Button>
+        </div>
       </div>
 
       {error ? <ErrorMessage message={error} onRetry={() => void load()} /> : null}

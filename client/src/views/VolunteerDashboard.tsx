@@ -9,13 +9,17 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import {
   getVolunteerFeed,
+  postVolunteerOtpRequest,
+  postVolunteerOtpVerify,
   postVolunteerResponse,
+  setVolunteerPortalToken,
   volunteerSseUrl,
-  type VolunteerFeedItem,
 } from '@/services/api'
 import { volunteerFeedItemToSummary } from '@/lib/volunteerFeed'
+import type { VolunteerFeedItem } from '@/services/api'
 
 const LS_VOL_PHONE = 'mamaalert_volunteer_phone'
+const LS_VOL_PORTAL = 'mamaalert_volunteer_portal_token'
 const DIAL_CODE_BY_REGION: Record<string, string> = {
   IN: '+91',
   US: '+1',
@@ -42,7 +46,10 @@ function minutesSince(iso: string): number {
 export function VolunteerDashboard() {
   const { t } = useTranslation()
   const [phoneInput, setPhoneInput] = useState(() => localStorage.getItem(LS_VOL_PHONE) ?? '')
-  const [savedPhone, setSavedPhone] = useState(() => localStorage.getItem(LS_VOL_PHONE) ?? '')
+  const [otpCode, setOtpCode] = useState('')
+  const [portalToken, setPortalTokenState] = useState(() => localStorage.getItem(LS_VOL_PORTAL) ?? '')
+  const [loginStep, setLoginStep] = useState<'phone' | 'otp'>('phone')
+  const [otpBusy, setOtpBusy] = useState(false)
   const [items, setItems] = useState<VolunteerFeedItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -53,42 +60,41 @@ export function VolunteerDashboard() {
     return region ? DIAL_CODE_BY_REGION[region] ?? '+<country code>' : '+<country code>'
   }, [])
 
-  const persistPhone = useCallback(() => {
-    const p = normalizePhoneInput(phoneInput)
-    if (p.length >= 8) {
-      localStorage.setItem(LS_VOL_PHONE, p)
-      setPhoneInput(p)
-      setSavedPhone(p)
+  const sessionReady = portalToken.length > 20
+
+  useEffect(() => {
+    if (sessionReady) {
+      setVolunteerPortalToken(portalToken)
     }
-  }, [phoneInput])
+  }, [portalToken, sessionReady])
 
   const load = useCallback(async () => {
-    if (savedPhone.length < 8) {
+    if (!sessionReady) {
       return
     }
     setLoading(true)
     setError(null)
     try {
-      const data = await getVolunteerFeed(savedPhone)
+      const data = await getVolunteerFeed()
       setItems(data)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     } finally {
       setLoading(false)
     }
-  }, [savedPhone, t])
+  }, [sessionReady, t])
 
   useEffect(() => {
     void load()
   }, [load])
 
   useEffect(() => {
-    if (savedPhone.length < 8) {
+    if (!sessionReady) {
       return
     }
     let es: EventSource | null = null
     try {
-      es = new EventSource(volunteerSseUrl(savedPhone))
+      es = new EventSource(volunteerSseUrl(portalToken))
     } catch {
       return
     }
@@ -100,7 +106,7 @@ export function VolunteerDashboard() {
     return () => {
       es?.close()
     }
-  }, [savedPhone, load])
+  }, [sessionReady, portalToken, load])
 
   const { active, past } = useMemo(() => {
     const activeList: VolunteerFeedItem[] = []
@@ -116,14 +122,68 @@ export function VolunteerDashboard() {
     return { active: activeList, past: pastList }
   }, [items])
 
+  const persistPhone = useCallback(() => {
+    const p = normalizePhoneInput(phoneInput)
+    if (p.length >= 8) {
+      localStorage.setItem(LS_VOL_PHONE, p)
+      setPhoneInput(p)
+    }
+  }, [phoneInput])
+
+  const sendOtp = async () => {
+    persistPhone()
+    const p = normalizePhoneInput(phoneInput)
+    if (p.length < 8) {
+      return
+    }
+    setOtpBusy(true)
+    setError(null)
+    try {
+      await postVolunteerOtpRequest(p)
+      setLoginStep('otp')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setOtpBusy(false)
+    }
+  }
+
+  const verifyOtp = async () => {
+    const p = normalizePhoneInput(phoneInput)
+    if (p.length < 8 || otpCode.trim().length < 4) {
+      return
+    }
+    setOtpBusy(true)
+    setError(null)
+    try {
+      const out = await postVolunteerOtpVerify(p, otpCode.trim())
+      localStorage.setItem(LS_VOL_PORTAL, out.access_token)
+      setPortalTokenState(out.access_token)
+      setVolunteerPortalToken(out.access_token)
+      setLoginStep('phone')
+      setOtpCode('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setOtpBusy(false)
+    }
+  }
+
+  const logout = () => {
+    localStorage.removeItem(LS_VOL_PORTAL)
+    setPortalTokenState('')
+    setVolunteerPortalToken(null)
+    setItems([])
+  }
+
   const onAccept = async (alertId: string) => {
-    if (savedPhone.length < 8) {
+    if (!sessionReady) {
       return
     }
     setActingId(alertId)
     setConfirmMsg(null)
     try {
-      await postVolunteerResponse({ phone: savedPhone, alertId, response: 'YES' })
+      await postVolunteerResponse({ alertId, response: 'YES' })
       setConfirmMsg(t('volunteer.directionsSent'))
       await load()
     } catch (e) {
@@ -134,12 +194,12 @@ export function VolunteerDashboard() {
   }
 
   const onDecline = async (alertId: string) => {
-    if (savedPhone.length < 8) {
+    if (!sessionReady) {
       return
     }
     setActingId(alertId)
     try {
-      await postVolunteerResponse({ phone: savedPhone, alertId, response: 'NO' })
+      await postVolunteerResponse({ alertId, response: 'NO' })
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
@@ -148,10 +208,11 @@ export function VolunteerDashboard() {
     }
   }
 
-  if (savedPhone.length < 8) {
+  if (!sessionReady) {
     return (
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-4 p-6 text-base outline-none">
         <h1 className="text-2xl font-bold">{t('volunteer.title')}</h1>
+        <p className="text-muted-foreground text-sm">Sign in with the phone number registered as a volunteer. We will text you a one-time code.</p>
         <div className="space-y-3 rounded-lg border p-4">
           <Label htmlFor="vol-phone">{t('volunteer.phoneLabel')}</Label>
           <Input
@@ -160,7 +221,7 @@ export function VolunteerDashboard() {
             inputMode="tel"
             value={phoneInput}
             onChange={(e) => setPhoneInput(normalizePhoneInput(e.target.value))}
-            onBlur={persistPhone}
+            disabled={loginStep === 'otp'}
             autoComplete="tel"
             placeholder={`${countryHint} 555 123 0000`}
             aria-describedby="vol-phone-hint"
@@ -168,9 +229,30 @@ export function VolunteerDashboard() {
           <p id="vol-phone-hint" className="text-muted-foreground text-sm">
             {t('sos.phoneHint', { dialCode: countryHint })}
           </p>
-          <Button type="button" className="w-full" onClick={persistPhone}>
-            {t('volunteer.savePhone')}
-          </Button>
+          {loginStep === 'phone' ? (
+            <Button type="button" className="w-full" disabled={otpBusy} onClick={() => void sendOtp()}>
+              {otpBusy ? t('common.loading') : 'Send code'}
+            </Button>
+          ) : (
+            <>
+              <Label htmlFor="vol-otp">One-time code</Label>
+              <Input
+                id="vol-otp"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="123456"
+              />
+              <Button type="button" className="w-full" disabled={otpBusy} onClick={() => void verifyOtp()}>
+                {otpBusy ? t('common.loading') : 'Verify'}
+              </Button>
+              <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => setLoginStep('phone')}>
+                Use different number
+              </Button>
+            </>
+          )}
+          {error ? <ErrorMessage message={error} /> : null}
         </div>
       </main>
     )
@@ -180,7 +262,12 @@ export function VolunteerDashboard() {
     <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-6 p-6 text-base outline-none">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('volunteer.title')}</h1>
-        <Badge variant="secondary">{items.length}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">{items.length}</Badge>
+          <Button type="button" variant="outline" size="sm" onClick={logout}>
+            Sign out
+          </Button>
+        </div>
       </div>
 
       {error ? <ErrorMessage message={error} onRetry={() => void load()} /> : null}

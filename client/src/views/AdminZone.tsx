@@ -22,6 +22,7 @@ import {
   patchAdminHospital,
   patchAdminZoneEscalation,
   patchVolunteerActive,
+  postAdminHospitalPortalToken,
   postAdminInviteHealthWorker,
   type AdminPatientRow,
   type AdminVolunteerRow,
@@ -93,7 +94,8 @@ export function AdminZone() {
   const [patients, setPatients] = useState<AdminPatientRow[]>([])
   const [volunteers, setVolunteers] = useState<AdminVolunteerRow[]>([])
   const [alerts, setAlerts] = useState<AdminAlertHistoryRow[]>([])
-  const [avgMs, setAvgMs] = useState<number | null>(null)
+  const [avgVolunteerConfirmMs, setAvgVolunteerConfirmMs] = useState<number | null>(null)
+  const [avgResolveMs, setAvgResolveMs] = useState<number | null>(null)
   const [mapData, setMapData] = useState<AdminMapPoints | null>(null)
   const [zoneEscalation, setZoneEscalation] = useState<AdminZoneEscalation | null>(null)
   const [healthWorkers, setHealthWorkers] = useState<AdminHealthWorkerRow[]>([])
@@ -122,7 +124,8 @@ export function AdminZone() {
       setPatients(p)
       setVolunteers(v)
       setAlerts(a.alerts)
-      setAvgMs(a.avgResponseMs)
+      setAvgVolunteerConfirmMs(a.avgVolunteerConfirmMs ?? a.avgResponseMs)
+      setAvgResolveMs(a.avgResolveMs ?? a.avgResponseMs)
       setMapData(m)
 
       if (zoneId) {
@@ -208,17 +211,35 @@ export function AdminZone() {
 
   const exportAlerts = () => {
     const rows: string[][] = [
-      ['id', 'patientName', 'triggeredAt', 'responseTimeMin', 'volunteerName', 'outcome'],
+      [
+        'id',
+        'patientName',
+        'triggeredAt',
+        'volunteerConfirmMin',
+        'resolveTimeMin',
+        'volunteerName',
+        'outcome',
+      ],
       ...alerts.map((a) => [
         a.id,
         a.patientName,
         a.triggeredAt,
-        a.responseTimeMs !== null ? String(Math.round(a.responseTimeMs / 60_000)) : '',
+        a.volunteerConfirmMs !== null ? String(Math.round(a.volunteerConfirmMs / 60_000)) : '',
+        a.resolveTimeMs !== null ? String(Math.round(a.resolveTimeMs / 60_000)) : '',
         a.volunteerName ?? '',
         a.outcome,
       ]),
     ]
     downloadCsv('mamaalert-alerts.csv', rows)
+  }
+
+  const copyHospitalPortalToken = async (hospitalId: string) => {
+    try {
+      const { token } = await postAdminHospitalPortalToken(hospitalId)
+      await navigator.clipboard.writeText(token)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t('common.error'))
+    }
   }
 
   const saveEscalation = async () => {
@@ -321,7 +342,9 @@ export function AdminZone() {
     }
   }
 
-  const avgMin = avgMs !== null ? Math.round(avgMs / 60_000) : null
+  const avgVolunteerMin =
+    avgVolunteerConfirmMs !== null ? Math.round(avgVolunteerConfirmMs / 60_000) : null
+  const avgResolveMin = avgResolveMs !== null ? Math.round(avgResolveMs / 60_000) : null
 
   return (
     <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl space-y-4 p-6 outline-none">
@@ -429,8 +452,11 @@ export function AdminZone() {
 
         <TabsContent value="alerts" className="mt-4 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {avgMin !== null ? (
-              <p className="text-muted-foreground text-sm">{t('admin.avgResponse', { n: avgMin })}</p>
+            {avgVolunteerMin !== null || avgResolveMin !== null ? (
+              <p className="text-muted-foreground text-sm">
+                Volunteer confirms: {avgVolunteerMin !== null ? `${avgVolunteerMin} min avg` : '—'} · Resolved:{' '}
+                {avgResolveMin !== null ? `${avgResolveMin} min avg` : '—'}
+              </p>
             ) : (
               <span />
             )}
@@ -444,7 +470,8 @@ export function AdminZone() {
                 <TableRow>
                   <TableHead>{t('register.fields.name')}</TableHead>
                   <TableHead>{t('admin.triggeredAt')}</TableHead>
-                  <TableHead>{t('admin.responseTime')}</TableHead>
+                  <TableHead>Volunteer confirm</TableHead>
+                  <TableHead>Resolved</TableHead>
                   <TableHead>{t('admin.volunteer')}</TableHead>
                   <TableHead>{t('admin.outcome')}</TableHead>
                 </TableRow>
@@ -455,7 +482,10 @@ export function AdminZone() {
                     <TableCell>{a.patientName}</TableCell>
                     <TableCell>{new Date(a.triggeredAt).toLocaleString()}</TableCell>
                     <TableCell>
-                      {a.responseTimeMs !== null ? `${Math.round(a.responseTimeMs / 60_000)} min` : '—'}
+                      {a.volunteerConfirmMs !== null ? `${Math.round(a.volunteerConfirmMs / 60_000)} min` : '—'}
+                    </TableCell>
+                    <TableCell>
+                      {a.resolveTimeMs !== null ? `${Math.round(a.resolveTimeMs / 60_000)} min` : '—'}
                     </TableCell>
                     <TableCell>{a.volunteerName ?? '—'}</TableCell>
                     <TableCell>{a.outcome}</TableCell>
@@ -476,6 +506,7 @@ export function AdminZone() {
                   <TableRow>
                     <TableHead>{t('admin.hospitalName')}</TableHead>
                     <TableHead>{t('admin.receiveAlerts')}</TableHead>
+                    <TableHead>Portal</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -490,6 +521,11 @@ export function AdminZone() {
                           onChange={(e) => void onHospitalReceiveToggle(h.id, e.target.checked)}
                           aria-label={t('admin.receiveAlerts')}
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Button type="button" size="sm" variant="outline" onClick={() => void copyHospitalPortalToken(h.id)}>
+                          Copy portal token
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

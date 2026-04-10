@@ -91,7 +91,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
       >,
   )
   const [submitErr, setSubmitErr] = useState<string | null>(null)
-  const [success, setSuccess] = useState<{ id: string; status_token: string } | null>(null)
+  const [success, setSuccess] = useState<{ id: string; status_token: string; sos_token: string } | null>(null)
 
   const wrapPage = (inner: ReactNode) =>
     embedded ? (
@@ -191,12 +191,27 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
     return `${window.location.origin}/status/${success.status_token}`
   }, [success])
 
+  const sosPath = useMemo(() => {
+    if (!success) {
+      return ''
+    }
+    const u = new URL(`${window.location.origin}/app`)
+    u.searchParams.set('token', success.sos_token)
+    return u.toString()
+  }, [success])
+
   if (success) {
     return wrapPage(
       <div className="mx-auto max-w-lg space-y-6 p-6">
         <h1 className="text-2xl font-bold">{t('register.success')}</h1>
         <p className="text-muted-foreground text-sm">
           {t('register.patientId')}: <span className="font-mono text-foreground">{success.id}</span>
+        </p>
+        <p className="text-sm font-medium text-foreground">Patient SOS link (share with the patient; keep private)</p>
+        <p className="break-all font-mono text-xs">
+          <a href={sosPath} className="text-primary underline">
+            {sosPath}
+          </a>
         </p>
         <p className="text-sm">
           {t('register.statusLink')}:{' '}

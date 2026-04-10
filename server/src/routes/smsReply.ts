@@ -43,7 +43,7 @@ smsReplyRouter.post(
     const { data: volunteer, error: vErr } = await supabaseAdmin
       .from('volunteers')
       .select('id, name, phone, language, zone_id')
-      .eq('phone', from)
+      .eq('phone_e164', from)
       .maybeSingle()
 
     if (!vErr && volunteer) {

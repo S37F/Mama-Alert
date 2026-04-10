@@ -1,6 +1,5 @@
 /**
- * Hackathon: in-memory setTimeout. If the Node process restarts, timers are lost.
- * Multi-instance production should use a job queue.
+ * Incapacitation follow-up is scheduled via `delayed_jobs` (see delayedJobProcessor).
  */
 import { extractFamilyPhones } from '@/lib/emergencyContacts'
 import { logError, logWarn } from '@/lib/logger'
@@ -13,6 +12,7 @@ import {
 import { getNearbyVolunteers } from '@/services/geo'
 import { supabaseAdmin } from '@/services/supabase'
 import { sendSmsMultipart } from '@/services/twilio'
+import { notifyVolunteerFeedRefresh } from '@/services/volunteerSseHub'
 import type { Alert } from '@/types/alert'
 
 function incapacitationDelayMs(): number {
@@ -48,6 +48,20 @@ async function alreadyContactedVolunteerIds(alertId: string): Promise<Set<string
  * After PWA/SMS SOS: if no volunteer confirms within INCAPACITATION_DELAY_MS, bump priority,
  * SMS family, and notify additional volunteers within 10 km (excluding already contacted).
  */
+async function enqueueIncapacitationJob(alertId: string, patientId: string): Promise<void> {
+  const delay = incapacitationDelayMs()
+  const runAfter = new Date(Date.now() + delay).toISOString()
+  const { error } = await supabaseAdmin.from('delayed_jobs').insert({
+    dedupe_key: `incap:${alertId}`,
+    job_type: 'incapacitation',
+    payload: { alertId, patientId },
+    run_after: runAfter,
+  })
+  if (error && !String(error.message).includes('duplicate')) {
+    logError('incapacitation: delayed_jobs insert failed', { alertId, error: String(error) })
+  }
+}
+
 export function scheduleIncapacitationFollowUp(
   alertId: string,
   patientId: string,
@@ -56,14 +70,10 @@ export function scheduleIncapacitationFollowUp(
   if (triggerMethod === 'ussd') {
     return
   }
-
-  const delay = incapacitationDelayMs()
-  setTimeout(() => {
-    void runIncapacitationStep(alertId, patientId)
-  }, delay)
+  void enqueueIncapacitationJob(alertId, patientId)
 }
 
-async function runIncapacitationStep(alertId: string, patientId: string): Promise<void> {
+export async function runIncapacitationStep(alertId: string, patientId: string): Promise<void> {
   const { data: alertData, error: alertErr } = await supabaseAdmin
     .from('alerts')
     .select(
@@ -166,6 +176,7 @@ async function runIncapacitationStep(alertId: string, patientId: string): Promis
         })
         continue
       }
+      notifyVolunteerFeedRefresh(v.id)
       const smsBody = buildVolunteerAlertSMS(patientForFamily, v, alertRow, v.language)
       await sendSmsMultipart(v.phone, smsBody)
     } catch (err) {

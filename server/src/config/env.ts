@@ -8,6 +8,8 @@ const REQUIRED_CORE = [
   'SUPABASE_SERVICE_ROLE_KEY',
   'SUPABASE_ANON_KEY',
   'CLIENT_URL',
+  'SOS_SIGNING_SECRET',
+  'PORTAL_JWT_SECRET',
 ] as const
 
 const REQUIRED_TWILIO = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_NUMBER'] as const
@@ -35,6 +37,14 @@ export function validateEnv(): void {
         throw new Error(`Missing required environment variable: ${key}`)
       }
     }
+  }
+  const sos = process.env.SOS_SIGNING_SECRET ?? ''
+  const portal = process.env.PORTAL_JWT_SECRET ?? ''
+  if (sos.length < 16 || portal.length < 16) {
+    throw new Error('SOS_SIGNING_SECRET and PORTAL_JWT_SECRET must each be at least 16 characters')
+  }
+  if (process.env.NODE_ENV === 'production' && isTwilioMock()) {
+    throw new Error('TWILIO_MOCK cannot be enabled when NODE_ENV=production')
   }
   const validatedKeys = [...REQUIRED_CORE, ...(isTwilioMock() ? [] : [...REQUIRED_TWILIO])]
   console.log(`MamaAlert: environment OK — required keys present: ${validatedKeys.join(', ')}`)

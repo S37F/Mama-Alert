@@ -1,9 +1,7 @@
 /**
- * Server-Sent Events for phone-identified volunteers (no Supabase JWT on the volunteer PWA).
- * Pushes lightweight refresh signals when feed-relevant data changes.
+ * Server-Sent Events keyed by volunteer id (portal JWT identifies the volunteer).
  */
 import type { Request, Response } from 'express'
-import { normalizePhone } from '@/lib/phone'
 
 type SseClient = {
   res: Response
@@ -12,19 +10,17 @@ type SseClient = {
 
 const subscribers = new Map<string, Set<SseClient>>()
 
-function getSet(phoneKey: string): Set<SseClient> {
-  let s = subscribers.get(phoneKey)
+function getSet(volunteerId: string): Set<SseClient> {
+  let s = subscribers.get(volunteerId)
   if (!s) {
     s = new Set()
-    subscribers.set(phoneKey, s)
+    subscribers.set(volunteerId, s)
   }
   return s
 }
 
-/** Subscribe `res` to feed refresh events for this normalized phone. Caller must validate phone first. */
-export function registerVolunteerSse(req: Request, res: Response, phoneRaw: string): void {
-  const phoneKey = normalizePhone(phoneRaw)
-
+/** Subscribe `res` to feed refresh events for this volunteer. Caller must validate identity first. */
+export function registerVolunteerSse(req: Request, res: Response, volunteerId: string): void {
   res.status(200)
   res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
   res.setHeader('Cache-Control', 'no-cache, no-transform')
@@ -43,7 +39,7 @@ export function registerVolunteerSse(req: Request, res: Response, phoneRaw: stri
   }, 25_000)
 
   const client: SseClient = { res, heartbeat }
-  const set = getSet(phoneKey)
+  const set = getSet(volunteerId)
   set.add(client)
 
   res.write('event: connected\ndata: {}\n\n')
@@ -52,7 +48,7 @@ export function registerVolunteerSse(req: Request, res: Response, phoneRaw: stri
     clearInterval(heartbeat)
     set.delete(client)
     if (set.size === 0) {
-      subscribers.delete(phoneKey)
+      subscribers.delete(volunteerId)
     }
   }
 
@@ -60,9 +56,8 @@ export function registerVolunteerSse(req: Request, res: Response, phoneRaw: stri
   res.on('close', cleanup)
 }
 
-export function notifyVolunteerFeedRefresh(phoneRaw: string): void {
-  const phoneKey = normalizePhone(phoneRaw)
-  const set = subscribers.get(phoneKey)
+export function notifyVolunteerFeedRefresh(volunteerId: string): void {
+  const set = subscribers.get(volunteerId)
   if (!set || set.size === 0) {
     return
   }
@@ -79,6 +74,6 @@ export function notifyVolunteerFeedRefresh(phoneRaw: string): void {
     set.delete(c)
   }
   if (set.size === 0) {
-    subscribers.delete(phoneKey)
+    subscribers.delete(volunteerId)
   }
 }

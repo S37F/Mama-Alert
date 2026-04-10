@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { SosPayload } from '@/types/api'
 import type { MapPoint } from '@/types/map'
+import { supabase } from '@/services/supabase'
 
 const baseURL = import.meta.env.VITE_API_URL ?? ''
 
@@ -11,12 +12,41 @@ export const api = axios.create({
 })
 
 let bearerToken: string | null = null
+let volunteerPortalToken: string | null = null
+let hospitalPortalToken: string | null = null
 
 export function setApiBearerToken(token: string | null): void {
   bearerToken = token
 }
 
+export function setVolunteerPortalToken(token: string | null): void {
+  volunteerPortalToken = token
+}
+
+export function setHospitalPortalToken(token: string | null): void {
+  hospitalPortalToken = token
+}
+
 api.interceptors.request.use((config) => {
+  const url = typeof config.url === 'string' ? config.url : ''
+  const full = `${config.baseURL ?? ''}${url}`
+
+  if (full.includes('/api/volunteer/') && !full.includes('/otp/')) {
+    const t = volunteerPortalToken ?? localStorage.getItem('mamaalert_volunteer_portal_token')
+    if (t) {
+      config.headers.Authorization = `Bearer ${t}`
+    }
+    return config
+  }
+
+  if (full.includes('/api/hospital/')) {
+    const t = hospitalPortalToken ?? localStorage.getItem('mamaalert_hospital_portal_token')
+    if (t) {
+      config.headers.Authorization = `Bearer ${t}`
+    }
+    return config
+  }
+
   const t = bearerToken ?? localStorage.getItem('mamaalert_access_token')
   if (t) {
     config.headers.Authorization = `Bearer ${t}`
@@ -24,9 +54,42 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+api.interceptors.response.use(
+  (r) => r,
+  async (error: unknown) => {
+    if (!axios.isAxiosError(error) || !error.config || error.response?.status !== 401) {
+      return Promise.reject(error)
+    }
+    const cfg = error.config as typeof error.config & { _retry?: boolean }
+    const url = typeof cfg.url === 'string' ? cfg.url : ''
+    if (url.includes('/api/volunteer/') || url.includes('/api/hospital/') || url.includes('/api/public/')) {
+      return Promise.reject(error)
+    }
+    if (cfg._retry) {
+      return Promise.reject(error)
+    }
+    cfg._retry = true
+    const rt = localStorage.getItem('mamaalert_refresh_token')
+    if (!rt) {
+      return Promise.reject(error)
+    }
+    const { data, error: refErr } = await supabase.auth.refreshSession({ refresh_token: rt })
+    if (refErr || !data.session?.access_token) {
+      return Promise.reject(error)
+    }
+    localStorage.setItem('mamaalert_access_token', data.session.access_token)
+    if (data.session.refresh_token) {
+      localStorage.setItem('mamaalert_refresh_token', data.session.refresh_token)
+    }
+    bearerToken = data.session.access_token
+    cfg.headers.Authorization = `Bearer ${data.session.access_token}`
+    return api(cfg)
+  },
+)
+
 export function setStoredTokens(access: string, refreshToken: string): void {
-  void refreshToken
   bearerToken = access
+  localStorage.setItem('mamaalert_refresh_token', refreshToken)
 }
 
 export function clearStoredTokens(): void {
@@ -91,10 +154,10 @@ export interface PatientHintsResponse {
   language: string
 }
 
-/** Public: first name + preferred language for SOS screen (rate-limited server-side). */
-export async function postPatientHints(phone: string): Promise<PatientHintsResponse | null> {
+/** Requires SOS link token (same as PWA SOS). */
+export async function postPatientHints(sosToken: string): Promise<PatientHintsResponse | null> {
   try {
-    const response = await api.post<PatientHintsResponse>('/api/public/patient-hints', { phone })
+    const response = await api.post<PatientHintsResponse>('/api/public/patient-hints', { sosToken })
     return response.data
   } catch {
     return null
@@ -133,29 +196,38 @@ export interface VolunteerFeedItem {
   distanceKm: number | null
 }
 
-export async function getVolunteerFeed(phone: string): Promise<VolunteerFeedItem[]> {
-  const response = await api.get<{ items: VolunteerFeedItem[] }>('/api/volunteer/feed', {
-    params: { phone },
-  })
+export async function getVolunteerFeed(): Promise<VolunteerFeedItem[]> {
+  const response = await api.get<{ items: VolunteerFeedItem[] }>('/api/volunteer/feed')
   return response.data.items
 }
 
-/** Absolute or same-origin URL for volunteer live feed (SSE). Uses `VITE_API_URL` when set. */
-export function volunteerSseUrl(phone: string): string {
+/** Absolute or same-origin URL for volunteer live feed (SSE). Pass portal JWT as query (EventSource has no headers). */
+export function volunteerSseUrl(accessToken: string): string {
   const base = import.meta.env.VITE_API_URL ?? ''
   const trimmed = base.replace(/\/$/, '')
-  const q = `phone=${encodeURIComponent(phone)}`
+  const q = `access_token=${encodeURIComponent(accessToken)}`
   if (trimmed.length === 0) {
     return `/api/volunteer/events?${q}`
   }
   return `${trimmed}/api/volunteer/events?${q}`
 }
 
-export async function postVolunteerResponse(body: {
-  phone: string
-  alertId: string
-  response: 'YES' | 'NO'
-}): Promise<void> {
+export async function postVolunteerOtpRequest(phone: string): Promise<void> {
+  await api.post('/api/volunteer/otp/request', { phone })
+}
+
+export async function postVolunteerOtpVerify(phone: string, code: string): Promise<{
+  access_token: string
+  volunteer: { id: string; name: string; language: string; zone_id: string | null }
+}> {
+  const response = await api.post('/api/volunteer/otp/verify', { phone, code })
+  return response.data as {
+    access_token: string
+    volunteer: { id: string; name: string; language: string; zone_id: string | null }
+  }
+}
+
+export async function postVolunteerResponse(body: { alertId: string; response: 'YES' | 'NO' }): Promise<void> {
   await api.post('/api/volunteer/response', body)
 }
 
@@ -171,10 +243,8 @@ export interface HospitalInboxItem {
   etaMinutes: number
 }
 
-export async function getHospitalInbox(hospitalId: string): Promise<HospitalInboxItem[]> {
-  const response = await api.get<{ items: HospitalInboxItem[] }>('/api/hospital/inbox', {
-    params: { hospitalId },
-  })
+export async function getHospitalInbox(): Promise<HospitalInboxItem[]> {
+  const response = await api.get<{ items: HospitalInboxItem[] }>('/api/hospital/inbox')
   return response.data.items
 }
 
@@ -223,9 +293,10 @@ export interface RegisterPatientPayload {
 export async function postRegisterPatient(body: RegisterPatientPayload): Promise<{
   id: string
   status_token: string
+  sos_token: string
 }> {
   try {
-    const response = await api.post<{ id: string; status_token: string }>('/api/register/patient', body)
+    const response = await api.post<{ id: string; status_token: string; sos_token: string }>('/api/register/patient', body)
     return response.data
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -337,18 +408,24 @@ export interface AdminAlertHistoryRow {
   id: string
   patientName: string
   triggeredAt: string
-  responseTimeMs: number | null
+  volunteerConfirmMs: number | null
+  resolveTimeMs: number | null
   volunteerName: string | null
   outcome: string
 }
 
 export async function getAdminAlertsHistory(): Promise<{
   alerts: AdminAlertHistoryRow[]
+  avgVolunteerConfirmMs: number | null
+  avgResolveMs: number | null
   avgResponseMs: number | null
 }> {
-  const response = await api.get<{ alerts: AdminAlertHistoryRow[]; avgResponseMs: number | null }>(
-    '/api/admin/alerts-history',
-  )
+  const response = await api.get<{
+    alerts: AdminAlertHistoryRow[]
+    avgVolunteerConfirmMs: number | null
+    avgResolveMs: number | null
+    avgResponseMs: number | null
+  }>('/api/admin/alerts-history')
   return response.data
 }
 
@@ -366,6 +443,13 @@ export async function getAdminMapPoints(): Promise<AdminMapPoints> {
 
 export async function patchAdminHospital(id: string, receive_alerts: boolean): Promise<void> {
   await api.patch(`/api/admin/hospitals/${encodeURIComponent(id)}`, { receive_alerts })
+}
+
+export async function postAdminHospitalPortalToken(hospitalId: string): Promise<{ token: string }> {
+  const response = await api.post<{ token: string }>(
+    `/api/admin/hospitals/${encodeURIComponent(hospitalId)}/portal-token`,
+  )
+  return response.data
 }
 
 export interface AdminZoneEscalation {

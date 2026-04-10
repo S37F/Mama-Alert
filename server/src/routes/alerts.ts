@@ -46,9 +46,6 @@ alertsRouter.get(
       if (req.healthWorker?.access_level === 'admin') {
         return zoneId !== null && zoneId !== undefined && pZone === zoneId
       }
-      if (zoneId && pZone === zoneId) {
-        return true
-      }
       return pHw === uid
     })
 
@@ -124,7 +121,7 @@ alertsRouter.get(
     const pZone = typeof pRaw.zone_id === 'string' ? pRaw.zone_id : null
     const pHw = typeof pRaw.health_worker_id === 'string' ? pRaw.health_worker_id : null
     const allowedAdmin = req.healthWorker?.access_level === 'admin' && zoneId === pZone
-    const allowedHw = pHw === uid || (zoneId !== null && zoneId !== undefined && pZone === zoneId)
+    const allowedHw = pHw === uid
     if (!allowedAdmin && !allowedHw) {
       res.status(403).json({ error: 'Forbidden' })
       return
@@ -163,7 +160,7 @@ alertsRouter.patch(
     const pZone = typeof pr.zone_id === 'string' ? pr.zone_id : null
     const pHw = typeof pr.health_worker_id === 'string' ? pr.health_worker_id : null
     const allowedAdmin = req.healthWorker?.access_level === 'admin' && zoneId === pZone
-    const allowedHw = pHw === uid || (zoneId !== null && zoneId !== undefined && pZone === zoneId)
+    const allowedHw = pHw === uid
     if (!allowedAdmin && !allowedHw) {
       res.status(403).json({ error: 'Forbidden' })
       return

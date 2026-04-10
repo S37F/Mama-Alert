@@ -9,6 +9,7 @@ import { sendSmsMultipart } from '@/services/twilio'
 import { buildVolunteerAlertSMS } from '@/services/messageBuilder'
 import { notifyVolunteerFeedRefresh } from '@/services/volunteerSseHub'
 import type { Alert } from '@/types/alert'
+import type { PatientSosRow } from '@/types/patientSos'
 
 export interface TriggerSosInput {
   phone: string
@@ -22,53 +23,70 @@ export interface TriggerSosResult {
   volunteersNotified: number
 }
 
-export async function triggerSos(input: TriggerSosInput): Promise<TriggerSosResult> {
-  const row = await fetchPatientForSos(input.phone)
-  if (!row) {
-    const err = new Error('Patient not found')
-    ;(err as Error & { statusCode?: number }).statusCode = 404
-    throw err
+function parseInsertSosResult(raw: unknown): { ok: boolean; reason?: string; alert_id?: string } {
+  if (typeof raw !== 'object' || raw === null) {
+    return { ok: false, reason: 'invalid_rpc' }
   }
+  const o = raw as Record<string, unknown>
+  const out: { ok: boolean; reason?: string; alert_id?: string } = { ok: o.ok === true }
+  if (typeof o.reason === 'string') {
+    out.reason = o.reason
+  }
+  if (typeof o.alert_id === 'string') {
+    out.alert_id = o.alert_id
+  }
+  return out
+}
 
+export async function triggerSosFromPatientRow(
+  row: PatientSosRow,
+  triggerMethod: TriggerSosInput['triggerMethod'],
+  incapacitationSuspected?: boolean,
+): Promise<TriggerSosResult> {
   const patient = patientSosRowToPatient(row)
-  const since = new Date(Date.now() - 10 * 60 * 1000).toISOString()
-  const { data: recent, error: recentErr } = await supabaseAdmin
-    .from('alerts')
-    .select('id')
-    .eq('patient_id', row.id)
-    .in('status', ['active', 'volunteer_responding', 'at_facility'])
-    .gte('triggered_at', since)
-    .limit(1)
-
-  if (recentErr) {
-    throw recentErr
-  }
-  if (recent && recent.length > 0) {
-    const err = new Error('An alert was already triggered recently for this patient')
-    ;(err as Error & { statusCode?: number }).statusCode = 409
-    throw err
-  }
 
   const incapacitation =
-    Boolean(input.incapacitationSuspected) || input.triggerMethod === 'ussd'
+    Boolean(incapacitationSuspected) || triggerMethod === 'ussd'
 
-  const { data: inserted, error: insErr } = await supabaseAdmin
+  const { data: rpcRaw, error: rpcErr } = await supabaseAdmin.rpc('insert_sos_alert_if_allowed', {
+    p_patient_id: row.id,
+    p_incapacitation_suspected: incapacitation,
+    p_cooldown_seconds: 600,
+  })
+
+  if (rpcErr) {
+    logError('sos: insert_sos_alert_if_allowed failed', { patientId: row.id, error: String(rpcErr) })
+    throw rpcErr
+  }
+
+  const parsed = parseInsertSosResult(rpcRaw)
+  if (!parsed.ok) {
+    if (parsed.reason === 'duplicate') {
+      const err = new Error('An alert was already triggered recently for this patient')
+      ;(err as Error & { statusCode?: number }).statusCode = 409
+      throw err
+    }
+    const err = new Error('Alert insert failed')
+    ;(err as Error & { statusCode?: number }).statusCode = 500
+    throw err
+  }
+
+  const alertId = parsed.alert_id
+  if (!alertId) {
+    throw new Error('Alert insert returned no id')
+  }
+
+  const { data: inserted, error: fetchErr } = await supabaseAdmin
     .from('alerts')
-    .insert({
-      patient_id: row.id,
-      status: 'active',
-      priority: 1,
-      wave_number: 1,
-      incapacitation_suspected: incapacitation,
-    })
     .select(
       'id, patient_id, status, priority, triggered_at, resolved_at, responding_volunteer_id, volunteer_confirmed_at, nearest_hospital_id, wave_number, incapacitation_suspected',
     )
+    .eq('id', alertId)
     .single()
 
-  if (insErr || !inserted) {
-    logError('sos: alert insert failed', { patientId: row.id, error: String(insErr) })
-    throw insErr ?? new Error('Alert insert failed')
+  if (fetchErr || !inserted) {
+    logError('sos: fetch alert after insert failed', { patientId: row.id, error: String(fetchErr) })
+    throw fetchErr ?? new Error('Alert fetch failed')
   }
 
   const alertRow: Alert = {
@@ -108,7 +126,7 @@ export async function triggerSos(input: TriggerSosInput): Promise<TriggerSosResu
         })
         continue
       }
-      notifyVolunteerFeedRefresh(v.phone)
+      notifyVolunteerFeedRefresh(v.id)
       const smsBody = buildVolunteerAlertSMS(patient, v, alertRow, v.language)
       await sendSmsMultipart(v.phone, smsBody)
       notified += 1
@@ -118,11 +136,21 @@ export async function triggerSos(input: TriggerSosInput): Promise<TriggerSosResu
   }
 
   scheduleEscalation(alertRow.id, row.id, 0)
-  scheduleIncapacitationFollowUp(alertRow.id, row.id, input.triggerMethod)
+  scheduleIncapacitationFollowUp(alertRow.id, row.id, triggerMethod)
 
   return {
     success: true,
     alertId: alertRow.id,
     volunteersNotified: notified,
   }
+}
+
+export async function triggerSos(input: TriggerSosInput): Promise<TriggerSosResult> {
+  const row = await fetchPatientForSos(input.phone)
+  if (!row) {
+    const err = new Error('Patient not found')
+    ;(err as Error & { statusCode?: number }).statusCode = 404
+    throw err
+  }
+  return triggerSosFromPatientRow(row, input.triggerMethod, input.incapacitationSuspected)
 }
