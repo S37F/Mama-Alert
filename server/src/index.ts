@@ -20,6 +20,7 @@ import { publicPatientRouter } from '@/routes/publicPatient'
 import { workerPortalRouter } from '@/routes/workerPortal'
 import { validateTwilioUssdSignature } from '@/middleware/twilioValidate'
 import { logError } from '@/lib/logger'
+import { supabaseAdmin } from '@/services/supabase'
 
 const app = express()
 const PORT = Number(process.env.PORT) || 3000
@@ -43,6 +44,16 @@ app.use('/api/public', patientHintsRateLimit, publicPatientRouter)
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true })
+})
+
+/** Confirms service role can reach Postgres (replace placeholders in server/.env if this fails). */
+app.get('/api/health/db', async (_req, res) => {
+  const { error } = await supabaseAdmin.from('zones').select('id').limit(1)
+  if (error) {
+    logError('Health DB check failed', { error: error.message })
+    return res.status(503).json({ ok: false, database: 'error', message: error.message })
+  }
+  return res.json({ ok: true, database: 'reachable' })
 })
 
 app.use('/api/sos', sosRateLimit, sosRouter)

@@ -1,4 +1,5 @@
--- MamaAlert Phase 1 — RPC functions (run after schema.sql)
+-- MamaAlert — RPC functions (run after schema.sql, before seed.sql).
+-- Includes get_patient_for_sos (SECURITY DEFINER) for the SOS pipeline.
 -- PostGIS geography + meters (ST_Distance / ST_DWithin on geography use meters)
 -- search_path includes `extensions` because postgis is installed WITH SCHEMA extensions (see schema.sql).
 
@@ -181,6 +182,51 @@ AS $$
   WHERE p.zone_id = p_zone_id
     AND a.status IN ('active', 'volunteer_responding', 'at_facility');
 $$;
+
+-- SOS patient lookup: SECURITY DEFINER so service_role reads coordinates reliably.
+CREATE OR REPLACE FUNCTION public.get_patient_for_sos(p_phone text)
+RETURNS TABLE (
+  id uuid,
+  name text,
+  phone_primary text,
+  language text,
+  landmark text,
+  blood_type text,
+  lat double precision,
+  lng double precision,
+  zone_id uuid,
+  health_worker_id uuid,
+  emergency_contacts jsonb,
+  status_token uuid,
+  risk_flags text[],
+  weeks_pregnant integer
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+  SELECT
+    p.id,
+    p.name,
+    p.phone_primary,
+    p.language,
+    p.landmark,
+    p.blood_type,
+    ST_Y(p.location::geometry)::double precision AS lat,
+    ST_X(p.location::geometry)::double precision AS lng,
+    p.zone_id,
+    p.health_worker_id,
+    p.emergency_contacts,
+    p.status_token,
+    p.risk_flags,
+    p.weeks_pregnant
+  FROM public.patients p
+  WHERE p.phone_primary = trim(p_phone)
+  LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_patient_for_sos(text) TO service_role;
 
 GRANT EXECUTE ON FUNCTION public.admin_patients_in_zone(uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.admin_volunteers_in_zone(uuid) TO service_role;

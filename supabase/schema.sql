@@ -137,6 +137,7 @@ CREATE TABLE public.alerts (
   volunteer_confirmed_at TIMESTAMPTZ,
   nearest_hospital_id UUID REFERENCES public.hospitals (id) ON DELETE SET NULL,
   wave_number INTEGER NOT NULL DEFAULT 1 CHECK (wave_number >= 1),
+  incapacitation_suspected BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
