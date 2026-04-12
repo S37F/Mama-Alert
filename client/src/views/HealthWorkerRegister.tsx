@@ -57,19 +57,9 @@ const formSchema = z
     c1_name: z.string().min(1),
     c1_phone: z.string().min(8),
     c1_rel: z.enum(relationshipValues),
-    c2_name: z.string().optional(),
-    c2_phone: z.string().optional(),
-    c2_rel: z.enum(relationshipValues).optional(),
-  })
-  .superRefine((val, ctx) => {
-    if (val.c2_phone && val.c2_phone.length >= 8) {
-      if (!val.c2_name || val.c2_name.length < 1) {
-        ctx.addIssue({ code: 'custom', path: ['c2_name'], message: 'required' })
-      }
-      if (!val.c2_rel) {
-        ctx.addIssue({ code: 'custom', path: ['c2_rel'], message: 'required' })
-      }
-    }
+    c2_name: z.string().min(1),
+    c2_phone: z.string().min(8).regex(/^\+?[0-9]{8,20}$/),
+    c2_rel: z.enum(relationshipValues),
   })
 
 type FormValues = z.infer<typeof formSchema>
@@ -91,7 +81,12 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
       >,
   )
   const [submitErr, setSubmitErr] = useState<string | null>(null)
-  const [success, setSuccess] = useState<{ id: string; status_token: string; sos_token: string } | null>(null)
+  const [success, setSuccess] = useState<{
+    id: string
+    status_token: string
+    sos_token: string
+    phone_primary: string
+  } | null>(null)
 
   const wrapPage = (inner: ReactNode) =>
     embedded ? (
@@ -117,6 +112,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
       c1_rel: 'husband',
       c2_name: '',
       c2_phone: '',
+      c2_rel: 'mother',
     },
   })
 
@@ -146,14 +142,8 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
     const risk_flags = riskKeys.filter((k) => risk[k])
     const emergency_contacts = [
       { name: values.c1_name, phone: values.c1_phone, relationship: values.c1_rel },
+      { name: values.c2_name, phone: values.c2_phone, relationship: values.c2_rel },
     ]
-    if (values.c2_name && values.c2_phone && values.c2_rel) {
-      emergency_contacts.push({
-        name: values.c2_name,
-        phone: values.c2_phone,
-        relationship: values.c2_rel,
-      })
-    }
 
     try {
       const out = await postRegisterPatient({
@@ -178,7 +168,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
         medication_name: risk.on_medication ? values.medication_name?.trim() || null : null,
         emergency_contacts,
       })
-      setSuccess(out)
+      setSuccess({ ...out, phone_primary: values.phone_primary.trim() })
     } catch (e) {
       setSubmitErr(e instanceof Error ? e.message : t('common.error'))
     }
@@ -197,6 +187,8 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
     }
     const u = new URL(`${window.location.origin}/sos`)
     u.searchParams.set('token', success.sos_token)
+    u.searchParams.set('setup', success.phone_primary)
+    u.searchParams.set('phone', success.phone_primary)
     return u.toString()
   }, [success])
 
@@ -236,6 +228,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
               c1_rel: 'husband',
               c2_name: '',
               c2_phone: '',
+              c2_rel: 'mother',
             })
             setRisk(
               Object.fromEntries(riskKeys.map((k) => [k, false])) as Record<
@@ -447,13 +440,13 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
             <div className="space-y-2 sm:col-span-2">
               <Label>{t('register.fields.relationship')}</Label>
               <Select
-                value={watch('c2_rel') ?? undefined}
+                value={watch('c2_rel')}
                 onValueChange={(v) =>
                   setValue('c2_rel', v as FormValues['c2_rel'], { shouldValidate: true })
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={t('register.fields.relationship')} />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {relationshipValues.map((r) => (

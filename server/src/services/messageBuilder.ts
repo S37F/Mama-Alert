@@ -159,6 +159,31 @@ export function buildFamilyRegistrationWelcomeSms(
   return truncateSmsTwoPart(pickLang(lang, table))
 }
 
+function formatVolunteerWithSkills(volunteer: Volunteer): string {
+  const name = volunteer.name.trim().slice(0, 28)
+  const sk = (volunteer.skills ?? []).filter((s) => s.length > 0).slice(0, 3)
+  const skillSeg = sk.length > 0 ? sk.join(', ').slice(0, 36) : ''
+  return skillSeg ? `${name} (${skillSeg})` : name
+}
+
+function formatWeeksForPreAlert(patient: Patient): string {
+  if (typeof patient.weeks_pregnant === 'number' && Number.isFinite(patient.weeks_pregnant)) {
+    return `${patient.weeks_pregnant} weeks`
+  }
+  return '— weeks'
+}
+
+function formatRiskForPreAlert(flags: string[] | null | undefined): string {
+  if (!flags || flags.length === 0) {
+    return 'none'
+  }
+  return flags
+    .slice(0, 6)
+    .join(', ')
+    .slice(0, 80)
+}
+
+/** SMS to hospital after volunteer confirms (English matches product spec; other langs similar). */
 export function buildClinicPreAlertSMS(
   patient: Patient,
   volunteer: Volunteer,
@@ -166,16 +191,42 @@ export function buildClinicPreAlertSMS(
   lang: string = 'en',
 ): string {
   const bt = patient.blood_type ?? '?'
-  const risk = formatRiskSnippet(patient.risk_flags, 36)
-  const riskSeg = risk ? ` R:${risk}.` : ''
-  const vn = volunteer.name.slice(0, 24)
+  const weeksSeg = formatWeeksForPreAlert(patient)
+  const riskText = formatRiskForPreAlert(patient.risk_flags ?? null)
+  const volLine = formatVolunteerWithSkills(volunteer)
   const table: Record<string, string> = {
-    en: `Maternity pre-alert: ${patient.name}. BT ${bt}.${riskSeg} ETA ~${etaMinutes}m. Vol ${vn}. Reply ARRIVED when patient arrives.`,
-    hi: `प्रसूति: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} मि. ${vn}. ARRIVED भेजें।`,
-    fr: `Maternité: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} min. ${vn}. Répondez ARRIVED à l'arrivée.`,
-    sw: `Maternity: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} dk. ${vn}. Jibu ARRIVED.`,
-    ar: `ولادة: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} د. ${vn}. أرسل ARRIVED.`,
-    pt: `Maternidade: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} min. ${vn}. Responda ARRIVED na chegada.`,
+    en: `PRE-ALERT: ${patient.name}, ${weeksSeg} Blood: ${bt} | Risk: ${riskText} Volunteer: ${volLine} ETA: ~${etaMinutes} minutes Reply ARRIVED when patient reaches you.`,
+    hi: `PRE-ALERT: ${patient.name}, ${weeksSeg} Blood: ${bt} | Risk: ${riskText} Volunteer: ${volLine} ETA: ~${etaMinutes} min. ARRIVED भेजें।`,
+    fr: `PRE-ALERT: ${patient.name}, ${weeksSeg} Blood: ${bt} | Risk: ${riskText} Volontaire: ${volLine} ETA: ~${etaMinutes} min. Répondez ARRIVED.`,
+    sw: `PRE-ALERT: ${patient.name}, ${weeksSeg} Blood: ${bt} | Risk: ${riskText} Volunteer: ${volLine} ETA: ~${etaMinutes} dk. Jibu ARRIVED.`,
+    ar: `PRE-ALERT: ${patient.name}, ${weeksSeg} Blood: ${bt} | Risk: ${riskText} Volunteer: ${volLine} ETA: ~${etaMinutes} د. ARRIVED.`,
+    pt: `PRE-ALERT: ${patient.name}, ${weeksSeg} Blood: ${bt} | Risk: ${riskText} Voluntário: ${volLine} ETA: ~${etaMinutes} min. Responda ARRIVED.`,
+  }
+  return truncateSmsTwoPart(pickLang(lang, table))
+}
+
+/** Confirmation SMS immediately after admin registers a hospital (pure SMS onboarding). */
+export function buildHospitalRegistrationConfirmationSms(hospitalName: string): string {
+  const name = hospitalName.trim().slice(0, 48)
+  return `${name} is now registered on MamaAlert. You will receive pre-alerts for incoming patients. Reply ARRIVED when a patient reaches you.`
+}
+
+/** Family contacts when hospital texts ARRIVED (Twilio webhook). */
+export function buildFamilyPatientArrivedSms(
+  patientFirstName: string,
+  hospitalName: string,
+  token: string,
+  lang: string = 'en',
+): string {
+  const url = statusPageUrl(token)
+  const hn = hospitalName.slice(0, 40)
+  const table: Record<string, string> = {
+    en: `MamaAlert: ${patientFirstName} arrived at ${hn} — being cared for. Status: ${url}`,
+    hi: `MamaAlert: ${patientFirstName} ${hn} पहुंचीं। ${url}`,
+    fr: `MamaAlert: ${patientFirstName} arrivée à ${hn}. ${url}`,
+    sw: `MamaAlert: ${patientFirstName} amefika ${hn}. ${url}`,
+    ar: `MamaAlert: وصلت ${patientFirstName} إلى ${hn}. ${url}`,
+    pt: `MamaAlert: ${patientFirstName} chegou a ${hn}. ${url}`,
   }
   return truncateSmsTwoPart(pickLang(lang, table))
 }

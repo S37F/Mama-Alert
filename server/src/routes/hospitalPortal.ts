@@ -120,3 +120,49 @@ hospitalPortalRouter.post(
     res.json({ success: true })
   }),
 )
+
+const resolveSchema = z.object({
+  alertId: z.string().uuid(),
+})
+
+hospitalPortalRouter.post(
+  '/resolve',
+  asyncHandler(async (req, res) => {
+    const hospitalId = req.hospitalPortal?.hospitalId
+    if (!hospitalId) {
+      res.status(401).json({ error: 'Unauthorized' })
+      return
+    }
+    const parsed = resolveSchema.safeParse(req.body)
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
+      return
+    }
+    const alertId = parsed.data.alertId
+    const alert = await prisma.alert.findFirst({
+      where: {
+        id: alertId,
+        nearestHospitalId: hospitalId,
+        status: { in: ['active', 'volunteer_responding', 'at_facility'] },
+      },
+      select: { id: true },
+    })
+    if (!alert) {
+      res.status(404).json({ error: 'Alert not found' })
+      return
+    }
+    const now = new Date()
+    try {
+      await prisma.alert.update({
+        where: { id: alertId },
+        data: { status: 'resolved', resolvedAt: now, patientArrivedAt: now },
+      })
+    } catch (upErr) {
+      logError('hospital resolve failed', { error: String(upErr) })
+      res.status(500).json({ error: 'Could not resolve alert' })
+      return
+    }
+    logAudit('hospital_resolve', { hospitalId, alertId })
+    res.json({ success: true })
+  }),
+)

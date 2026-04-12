@@ -105,7 +105,9 @@
     "countBadge": "{{n}} active",
     "empty": "No pre-alerts right now.",
     "volunteerTransport": "Volunteer: {{name}}",
-    "awaitingVolunteer": "Awaiting volunteer assignment"
+    "awaitingVolunteer": "Awaiting volunteer assignment",
+    "markResolved": "Mark case resolved",
+    "markResolvedHint": "Use when care is complete. Field health workers cannot close alerts from their dashboard."
   },
   "register": {
     "title": "Register Patient",
@@ -168,6 +170,8 @@
     "alertReceived": "Alert received",
     "volunteerResponding": "{{name}} is on the way",
     "atFacility": "Arrived at {{hospital}}",
+    "arrivedBeingCaredFor": "Arrived at {{hospital}} — being cared for",
+    "enRouteToHospital": "On the way to {{hospital}}",
     "resolved": "All safe",
     "lastUpdate": "Last updated {{time}} ago",
     "findingHelp": "Finding help...",
@@ -256,6 +260,7 @@
     "inviteEmail": "Email (invite)",
     "inviteName": "Display name",
     "invitePhone": "Phone (optional)",
+    "inviteHelp": "Supabase sends a welcome email with a secure link to open /register, set a password, and access the worker dashboard.",
     "sendInvite": "Send invite"
   },
   "demo": {

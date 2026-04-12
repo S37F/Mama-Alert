@@ -190,10 +190,11 @@ export async function insertHospitalWithLocation(input: {
   services: string[]
   is24hr: boolean
   receiveAlerts: boolean
+  preAlertRadiusKm: number | null
 }): Promise<{ id: string }> {
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     INSERT INTO public.hospitals (
-      zone_id, name, type, location, phone_main, phone_emergency, services, is_24hr, receive_alerts
+      zone_id, name, type, location, phone_main, phone_emergency, services, is_24hr, receive_alerts, pre_alert_radius_km
     ) VALUES (
       ${input.zoneId}::uuid,
       ${input.name},
@@ -203,7 +204,8 @@ export async function insertHospitalWithLocation(input: {
       ${input.phoneEmergency},
       ${input.services}::text[],
       ${input.is24hr}::boolean,
-      ${input.receiveAlerts}::boolean
+      ${input.receiveAlerts}::boolean,
+      ${input.preAlertRadiusKm}::integer
     )
     RETURNING id
   `

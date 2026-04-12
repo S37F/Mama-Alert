@@ -222,12 +222,11 @@ alertsRouter.patch(
       res.status(400).json({ error: 'Missing id' })
       return
     }
-    const uid = req.authUserId
     const zoneId = req.healthWorker?.zone_id
 
     const alert = await prisma.alert.findUnique({
       where: { id },
-      include: { patient: { select: { zoneId: true, healthWorkerId: true } } },
+      include: { patient: { select: { zoneId: true } } },
     })
 
     if (!alert || !alert.patient) {
@@ -235,10 +234,8 @@ alertsRouter.patch(
       return
     }
     const pZone = alert.patient.zoneId
-    const pHw = alert.patient.healthWorkerId
     const allowedAdmin = req.healthWorker?.access_level === 'admin' && zoneId === pZone
-    const allowedHw = pHw === uid
-    if (!allowedAdmin && !allowedHw) {
+    if (!allowedAdmin) {
       res.status(403).json({ error: 'Forbidden' })
       return
     }

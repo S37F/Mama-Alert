@@ -104,6 +104,20 @@ export interface LoginResponse {
   zone_id: string | null
 }
 
+export interface AuthMeResponse {
+  user: { id: string; email: string | null }
+  role: string
+  zone_id: string | null
+}
+
+/** Bootstrap staff role after Supabase invite / URL session (Bearer must be current access token). */
+export async function fetchAuthMe(accessToken: string): Promise<AuthMeResponse> {
+  const response = await api.get<AuthMeResponse>('/api/me', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  return response.data
+}
+
 export async function login(email: string, password: string): Promise<LoginResponse> {
   try {
     const response = await api.post<LoginResponse>('/api/login', { email, password })
@@ -323,11 +337,16 @@ export async function postHospitalAck(alertId: string, type: 'ready' | 'more_inf
   await api.post('/api/hospital/ack', { alertId, type })
 }
 
+export async function postHospitalResolve(alertId: string): Promise<void> {
+  await api.post('/api/hospital/resolve', { alertId })
+}
+
 export interface FamilyStatusPayload {
   patientFirstName: string
   alertStatus: string
   volunteerName: string | null
   hospitalName: string | null
+  patientArrivedAt: string | null
   lastUpdated: string | null
 }
 
@@ -356,7 +375,7 @@ export interface RegisterPatientPayload {
   zone_id?: string | null
   risk_flags?: string[]
   medication_name?: string | null
-  emergency_contacts?: { name: string; phone: string; relationship: EmergencyRelationship }[]
+  emergency_contacts: { name: string; phone: string; relationship: EmergencyRelationship }[]
 }
 
 export async function postRegisterPatient(body: RegisterPatientPayload): Promise<{
@@ -421,6 +440,8 @@ export interface RegisterHospitalPayload {
   services?: string[]
   is_24hr?: boolean
   receive_alerts?: boolean
+  /** 10 or 25 (km); omit or null = no distance cap (nearest hospital in wide search). */
+  pre_alert_radius_km?: 10 | 25 | null
   zone_id?: string | null
 }
 

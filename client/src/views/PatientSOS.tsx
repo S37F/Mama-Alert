@@ -223,8 +223,10 @@ export function PatientSOS() {
   const [locationPrompted, setLocationPrompted] = useState(false)
 
   const shortLinkPhone = useMemo(() => {
-    const q = searchParams.get('phone')
-    return q && q.trim().length >= 8 ? q.trim() : ''
+    const fromPhone = searchParams.get('phone')?.trim() ?? ''
+    const fromSetup = searchParams.get('setup')?.trim() ?? ''
+    const q = fromPhone.length >= 8 ? fromPhone : fromSetup.length >= 8 ? fromSetup : ''
+    return q
   }, [searchParams])
 
   const storedPhone = useMemo(() => {
@@ -265,11 +267,13 @@ export function PatientSOS() {
 
   useEffect(() => {
     const p = searchParams.get('phone')
+    const setup = searchParams.get('setup')
     const n = searchParams.get('name')
     const w = searchParams.get('weeks')
     const tok = searchParams.get('token')
-    if (p && p.trim().length >= 8) {
-      localStorage.setItem(LS_PHONE, p.trim())
+    const phoneLike = p && p.trim().length >= 8 ? p.trim() : setup && setup.trim().length >= 8 ? setup.trim() : ''
+    if (phoneLike) {
+      localStorage.setItem(LS_PHONE, phoneLike)
     }
     if (n && n.trim().length > 0) {
       localStorage.setItem(LS_NAME, n.trim())

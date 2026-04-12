@@ -631,6 +631,7 @@ export function AdminZone() {
                     <Label htmlFor="inv-phone">{t('admin.invitePhone')}</Label>
                     <Input id="inv-phone" type="tel" value={invitePhone} onChange={(e) => setInvitePhone(e.target.value)} />
                   </div>
+                  <p className="text-muted-foreground text-xs">{t('admin.inviteHelp')}</p>
                   <Button
                     type="button"
                     variant="secondary"

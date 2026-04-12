@@ -86,10 +86,12 @@ export function FamilyStatus() {
         : t('family.findingHelp'),
     },
     {
-      done: Boolean(data.hospitalName),
-      label: data.hospitalName
-        ? t('family.atFacility', { hospital: data.hospitalName })
-        : t('family.enRouteClinic'),
+      done: Boolean(data.patientArrivedAt),
+      label: data.patientArrivedAt && data.hospitalName
+        ? t('family.arrivedBeingCaredFor', { hospital: data.hospitalName })
+        : data.hospitalName
+          ? t('family.enRouteToHospital', { hospital: data.hospitalName })
+          : t('family.enRouteClinic'),
     },
     {
       done: data.alertStatus === 'resolved',

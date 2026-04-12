@@ -183,7 +183,7 @@ export async function applyVolunteerYes(vol: Volunteer, responseId: string, aler
     logWarn('volunteer-reply: get_patient_for_sos failed', { error: String(rpcErr) })
   }
 
-  const hospital = lat && lng ? await getNearbyHospital(lat, lng, 100_000).catch(() => null) : null
+  const hospital = lat && lng ? await getNearbyHospital(lat, lng).catch(() => null) : null
 
   let claim: { ok: boolean; reason?: string }
   try {
@@ -234,8 +234,11 @@ export async function applyVolunteerYes(vol: Volunteer, responseId: string, aler
 
   if (hospital?.phone_emergency) {
     try {
-      const eta = 25
-      const clinic = buildClinicPreAlertSMS(patient, vol, eta, patient.language)
+      const etaMinutes =
+        typeof hospital.distance_m === 'number'
+          ? Math.min(120, Math.max(10, Math.round((hospital.distance_m / 1000) * 2)))
+          : 25
+      const clinic = buildClinicPreAlertSMS(patient, vol, etaMinutes, patient.language)
       await sendSmsMultipart(hospital.phone_emergency, clinic)
     } catch (err) {
       logError('volunteer-reply: clinic pre-alert SMS failed', { err: String(err) })
@@ -252,6 +255,7 @@ export function toVolunteerRow(row: {
   language: string
   zone_id?: string | null
   zoneId?: string | null
+  skills?: string[] | null
 }): Volunteer {
   const zone_id = row.zone_id ?? row.zoneId ?? null
   return {
@@ -260,5 +264,6 @@ export function toVolunteerRow(row: {
     phone: row.phone,
     language: row.language,
     zone_id,
+    skills: Array.isArray(row.skills) ? row.skills : [],
   }
 }

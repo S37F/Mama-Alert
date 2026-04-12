@@ -10,4 +10,10 @@ if (typeof url !== 'string' || url.trim() === '' || typeof anonKey !== 'string' 
   )
 }
 
-export const supabase = createClient<Database>(url, anonKey)
+export const supabase = createClient<Database>(url, anonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+})

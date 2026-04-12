@@ -134,6 +134,8 @@ model Hospital {
   phoneMain        String?  @map("phone_main")
   phoneEmergency   String?  @map("phone_emergency")
   services         String[] @default([])
+  /// 10 / 25 km pre-alert catchment from patient site; null = no cap (nearest in search radius).
+  preAlertRadiusKm Int?     @map("pre_alert_radius_km")
   is24hr           Boolean  @default(false) @map("is_24hr")
   receiveAlerts    Boolean  @default(true) @map("receive_alerts")
   portalApiKeyHash String?  @map("portal_api_key_hash")
@@ -154,6 +156,7 @@ model Alert {
   priority               Int       @default(1)
   triggeredAt            DateTime  @default(now()) @map("triggered_at") @db.Timestamptz(6)
   resolvedAt             DateTime? @map("resolved_at") @db.Timestamptz(6)
+  patientArrivedAt       DateTime? @map("patient_arrived_at") @db.Timestamptz(6)
   respondingVolunteerId  String?   @map("responding_volunteer_id") @db.Uuid
   volunteerConfirmedAt   DateTime? @map("volunteer_confirmed_at") @db.Timestamptz(6)
   nearestHospitalId      String?   @map("nearest_hospital_id") @db.Uuid

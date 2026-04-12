@@ -278,7 +278,7 @@ volunteerPortalRouter.post(
 
     const volunteer = await prisma.volunteer.findUnique({
       where: { id: volunteerId },
-      select: { id: true, name: true, phone: true, language: true, zoneId: true },
+      select: { id: true, name: true, phone: true, language: true, zoneId: true, skills: true },
     })
 
     if (!volunteer) {

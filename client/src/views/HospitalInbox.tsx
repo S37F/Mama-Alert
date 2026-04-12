@@ -8,7 +8,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
-import { getHospitalInbox, postHospitalAck, setHospitalPortalToken, type HospitalInboxItem } from '@/services/api'
+import {
+  getHospitalInbox,
+  postHospitalAck,
+  postHospitalResolve,
+  setHospitalPortalToken,
+  type HospitalInboxItem,
+} from '@/services/api'
 
 const LS_HOSP_TOKEN = 'mamaalert_hospital_portal_token'
 
@@ -161,7 +167,7 @@ export function HospitalInbox() {
                   : t('hospital.awaitingVolunteer')}
               </p>
               <p className="text-muted-foreground text-sm">{t('hospital.eta', { n: it.etaMinutes })}</p>
-              <div className="flex flex-col gap-2 sm:flex-row">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <Button
                   type="button"
                   className="flex-1 bg-green-600 text-white hover:bg-green-700"
@@ -177,7 +183,16 @@ export function HospitalInbox() {
                 >
                   {t('hospital.moreInfo')}
                 </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => void postHospitalResolve(it.alertId).then(() => void load())}
+                >
+                  {t('hospital.markResolved')}
+                </Button>
               </div>
+              <p className="text-muted-foreground text-xs">{t('hospital.markResolvedHint')}</p>
             </CardContent>
           </Card>
         ))}

@@ -22,6 +22,8 @@ export function App() {
       <DocumentLangSync />
       <Routes>
       <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={<Navigate to="/register" replace />} />
+      <Route path="/app/login" element={<Navigate to="/app/register" replace />} />
 
       <Route path="/sos" element={<PatientSOS />} />
       <Route path="/sos/register" element={<PatientSelfRegister />} />
@@ -68,7 +70,7 @@ export function App() {
       <Route
         path="/app/register"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute role="health_worker">
             <HealthWorkerRegister />
           </ProtectedRoute>
         }
@@ -76,7 +78,7 @@ export function App() {
       <Route
         path="/register"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute role="health_worker">
             <HealthWorkerRegister />
           </ProtectedRoute>
         }

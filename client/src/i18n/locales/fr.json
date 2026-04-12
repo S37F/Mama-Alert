@@ -43,7 +43,9 @@
     "countBadge": "{{n}} active",
     "empty": "No pre-alerts right now.",
     "volunteerTransport": "Volunteer: {{name}}",
-    "awaitingVolunteer": "Awaiting volunteer assignment"
+    "awaitingVolunteer": "Awaiting volunteer assignment",
+    "markResolved": "Mark case resolved",
+    "markResolvedHint": "Use when care is complete. Field health workers cannot close alerts from their dashboard."
   },
   "register": {
     "title": "Enregistrer une patiente",
@@ -110,6 +112,8 @@
     "alertReceived": "Alerte reçue",
     "volunteerResponding": "{{name}} est en route",
     "atFacility": "Arrivée à {{hospital}}",
+    "arrivedBeingCaredFor": "Arrived at {{hospital}} — being cared for",
+    "enRouteToHospital": "On the way to {{hospital}}",
     "resolved": "Tout va bien",
     "lastUpdate": "Dernière mise à jour il y a {{time}}",
     "findingHelp": "Finding help...",

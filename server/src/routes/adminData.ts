@@ -466,7 +466,7 @@ adminDataRouter.post(
     const { email, name, phone } = parsed.data
     const redirectTo =
       typeof process.env.CLIENT_URL === 'string' && process.env.CLIENT_URL.length > 0
-        ? `${process.env.CLIENT_URL.replace(/\/$/, '')}/login`
+        ? `${process.env.CLIENT_URL.replace(/\/$/, '')}/register`
         : undefined
     const invitePayload =
       redirectTo !== undefined

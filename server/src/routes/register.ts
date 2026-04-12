@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { logAudit, logError } from '@/lib/logger'
 import { signSosPatientToken } from '@/lib/sosToken'
-import { requireAdmin, requireAuth } from '@/middleware/auth'
+import { requireAdmin, requireAuth, requireHealthWorker } from '@/middleware/auth'
 
 function isAdminOrHealthWorker(
   res: Response,
@@ -22,7 +22,7 @@ import {
   insertVolunteerWithLocation,
 } from '@/services/db/geoWrites'
 import { sendFamilyWelcomeSmsIfEnabled } from '@/services/familyWelcomeOnRegister'
-import { buildVolunteerWelcomeSms } from '@/services/messageBuilder'
+import { buildHospitalRegistrationConfirmationSms, buildVolunteerWelcomeSms } from '@/services/messageBuilder'
 import { sendSmsMultipart } from '@/services/twilio'
 
 export const registerRouter = Router()
@@ -55,7 +55,7 @@ const patientSchema = z.object({
   zone_id: z.string().uuid().optional().nullable(),
   risk_flags: z.array(z.string()).optional(),
   medication_name: z.string().optional().nullable(),
-  emergency_contacts: z.array(emergencyContactSchema).optional(),
+  emergency_contacts: z.array(emergencyContactSchema).length(2),
 })
 
 const volunteerSchema = z.object({
@@ -82,6 +82,8 @@ const hospitalSchema = z.object({
   services: z.array(z.string()).optional(),
   is_24hr: z.boolean().optional(),
   receive_alerts: z.boolean().optional(),
+  /** 10 or 25 (km); omit or null = whole zone (no per-hospital distance cap). */
+  pre_alert_radius_km: z.union([z.literal(10), z.literal(25), z.null()]).optional(),
   zone_id: z.string().uuid().optional().nullable(),
 })
 
@@ -99,6 +101,7 @@ const SOS_TOKEN_TTL_SEC = 180 * 24 * 60 * 60
 registerRouter.post(
   '/patient',
   requireAuth,
+  requireHealthWorker,
   asyncHandler(async (req, res) => {
     const parsed = patientSchema.safeParse(req.body)
     if (!parsed.success) {
@@ -111,10 +114,7 @@ registerRouter.post(
       res.status(401).json({ error: 'Unauthorized' })
       return
     }
-    const zoneId =
-      req.healthWorker?.access_level === 'admin'
-        ? (body.zone_id ?? req.healthWorker.zone_id ?? null)
-        : (req.healthWorker?.zone_id ?? null)
+    const zoneId = req.healthWorker?.zone_id ?? null
     try {
       const data = await insertPatientWithLocation({
         healthWorkerId: hwId,
@@ -137,13 +137,13 @@ registerRouter.post(
         language: body.language,
         riskFlags: body.risk_flags ?? [],
         medicationName: body.medication_name ?? null,
-        emergencyContacts: body.emergency_contacts ?? [],
+        emergencyContacts: body.emergency_contacts,
       })
       const sos_token = signSosPatientToken(data.id, SOS_TOKEN_TTL_SEC)
       logAudit('patient_registered', { patientId: data.id, healthWorkerId: hwId })
       void sendFamilyWelcomeSmsIfEnabled(
         body.name,
-        body.emergency_contacts ?? [],
+        body.emergency_contacts,
         data.status_token,
         body.language,
       )
@@ -251,8 +251,14 @@ registerRouter.post(
         services: body.services ?? [],
         is24hr: body.is_24hr ?? false,
         receiveAlerts: body.receive_alerts ?? true,
+        preAlertRadiusKm: body.pre_alert_radius_km ?? null,
       })
       logAudit('hospital_registered', { hospitalId: data.id, zoneId: targetZone })
+      const confirmTo = body.phone_emergency?.trim() || body.phone_main?.trim()
+      if (confirmTo && confirmTo.length >= 8) {
+        const msg = buildHospitalRegistrationConfirmationSms(body.name.trim())
+        void sendSmsMultipart(confirmTo, msg)
+      }
       res.status(201).json({ id: data.id })
     } catch (error) {
       logError('register hospital failed', { error: String(error) })

@@ -52,6 +52,39 @@ authRouter.post(
   }),
 )
 
+/** After Supabase invite / magic link, client has tokens; load MamaAlert staff role + zone. */
+authRouter.get(
+  '/me',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const uid = req.authUserId
+    if (!uid) {
+      res.status(401).json({ error: 'Unauthorized' })
+      return
+    }
+    const hw = await prisma.healthWorker.findUnique({
+      where: { userId: uid },
+      select: { accessLevel: true, zoneId: true },
+    })
+    if (!hw) {
+      res.status(403).json({ error: 'Health worker profile not linked to this account' })
+      return
+    }
+    if (!assertAdminHasZone(res, hw.accessLevel, hw.zoneId)) {
+      return
+    }
+    const { data: udata, error: uerr } = await supabaseAuthAdmin.auth.admin.getUserById(uid)
+    if (uerr) {
+      logError('auth /me getUserById failed', { error: String(uerr) })
+    }
+    res.json({
+      user: { id: uid, email: udata?.user?.email ?? null },
+      role: hw.accessLevel,
+      zone_id: hw.zoneId,
+    })
+  }),
+)
+
 authRouter.post(
   '/logout',
   requireAuth,

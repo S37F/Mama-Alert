@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '@/services/supabase'
 import {
   clearStoredTokens,
+  fetchAuthMe,
   login as apiLogin,
   logout as apiLogout,
   setApiBearerToken,
@@ -41,35 +42,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    const applyStaffFromToken = async (accessToken: string) => {
+      try {
+        const me = await fetchAuthMe(accessToken)
+        const r: AppRole = me.role === 'admin' ? 'admin' : 'health_worker'
+        setRole(r)
+        setZoneId(me.zone_id)
+        localStorage.setItem(ROLE_KEY, r)
+        if (me.zone_id) {
+          localStorage.setItem(ZONE_KEY, me.zone_id)
+        } else {
+          localStorage.removeItem(ZONE_KEY)
+        }
+      } catch {
+        setRole(null)
+        setZoneId(null)
+        localStorage.removeItem(ROLE_KEY)
+        localStorage.removeItem(ZONE_KEY)
+      }
+    }
+
     const init = async () => {
       const at = localStorage.getItem(TOKEN_KEY)
       const rt = localStorage.getItem(REFRESH_KEY)
-      if (at && rt) {
+
+      const { data: fromUrl } = await supabase.auth.getSession()
+      let session = fromUrl.session
+      if (!session && at && rt) {
         const { data, error } = await supabase.auth.setSession({
           access_token: at,
           refresh_token: rt,
         })
         if (!error && data.session) {
-          setSession(data.session)
-          setUser(data.session.user)
-          setAccessToken(data.session.access_token)
-          setApiBearerToken(data.session.access_token)
-          const r = localStorage.getItem(ROLE_KEY)
-          setRole(r === 'admin' || r === 'health_worker' ? r : null)
-          setZoneId(localStorage.getItem(ZONE_KEY))
-        } else {
-          clearStoredTokens()
-          setApiBearerToken(null)
-          setAccessToken(null)
-          setSession(null)
-          setUser(null)
+          session = data.session
         }
+      }
+
+      if (session) {
+        setSession(session)
+        setUser(session.user)
+        setAccessToken(session.access_token)
+        setApiBearerToken(session.access_token)
+        localStorage.setItem(TOKEN_KEY, session.access_token)
+        if (session.refresh_token) {
+          localStorage.setItem(REFRESH_KEY, session.refresh_token)
+        }
+        await applyStaffFromToken(session.access_token)
       } else {
-        const { data } = await supabase.auth.getSession()
-        if (data.session) {
-          setSession(data.session)
-          setUser(data.session.user)
-        }
+        clearStoredTokens()
+        setApiBearerToken(null)
+        setAccessToken(null)
+        setSession(null)
+        setUser(null)
+        setRole(null)
+        setZoneId(null)
+        localStorage.removeItem(ROLE_KEY)
+        localStorage.removeItem(ZONE_KEY)
       }
       setIsLoading(false)
     }
@@ -87,10 +115,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (nextSession.refresh_token) {
           localStorage.setItem(REFRESH_KEY, nextSession.refresh_token)
         }
-      }
-      if (!nextSession) {
+        void applyStaffFromToken(nextSession.access_token)
+      } else {
         setAccessToken(null)
         setApiBearerToken(null)
+        setRole(null)
+        setZoneId(null)
+        localStorage.removeItem(ROLE_KEY)
+        localStorage.removeItem(ZONE_KEY)
       }
     })
 

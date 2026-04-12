@@ -43,7 +43,7 @@ smsReplyRouter.post(
 
     const volunteer = await prisma.volunteer.findFirst({
       where: { phoneE164: from },
-      select: { id: true, name: true, phone: true, language: true, zoneId: true },
+      select: { id: true, name: true, phone: true, language: true, zoneId: true, skills: true },
     })
 
     if (volunteer) {
