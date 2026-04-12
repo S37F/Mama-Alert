@@ -15,12 +15,15 @@ function isAdminOrHealthWorker(
   res.status(403).json({ error: 'Forbidden' })
   return false
 }
+import { getPublicAppUrl } from '@/config/publicUrl'
 import {
   insertHospitalWithLocation,
   insertPatientWithLocation,
   insertVolunteerWithLocation,
 } from '@/services/db/geoWrites'
 import { sendFamilyWelcomeSmsIfEnabled } from '@/services/familyWelcomeOnRegister'
+import { buildVolunteerWelcomeSms } from '@/services/messageBuilder'
+import { sendSmsMultipart } from '@/services/twilio'
 
 export const registerRouter = Router()
 
@@ -60,6 +63,8 @@ const volunteerSchema = z.object({
   phone: z.string().min(8).max(20),
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
+  village: z.string().max(120).optional().nullable(),
+  availability_hours: z.string().max(200).optional().nullable(),
   skills: z.array(z.string()).optional(),
   vehicle: z.enum(['none', 'motorcycle', 'car', 'ambulance']).optional(),
   max_radius_km: z.number().int().min(1).max(100).optional(),
@@ -195,12 +200,16 @@ registerRouter.post(
         phone: body.phone.trim(),
         lat: body.lat,
         lng: body.lng,
+        village: body.village?.trim() || null,
+        availabilityHours: body.availability_hours?.trim() || null,
         skills: body.skills ?? [],
         vehicle: body.vehicle ?? 'none',
         maxRadiusKm: body.max_radius_km ?? 5,
         language: body.language ?? 'en',
       })
       logAudit('volunteer_registered', { volunteerId: data.id, zoneId: targetZone })
+      const welcome = buildVolunteerWelcomeSms(body.name.trim(), getPublicAppUrl(), body.language ?? 'en')
+      void sendSmsMultipart(body.phone.trim(), welcome)
       res.status(201).json({ id: data.id })
     } catch (error) {
       logError('register volunteer failed', { error: String(error) })

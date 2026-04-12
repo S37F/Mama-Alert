@@ -157,6 +157,7 @@ export function VolunteerDashboard() {
     setError(null)
     try {
       const out = await postVolunteerOtpVerify(p, otpCode.trim())
+      localStorage.setItem(LS_VOL_PHONE, p)
       localStorage.setItem(LS_VOL_PORTAL, out.access_token)
       setPortalTokenState(out.access_token)
       setVolunteerPortalToken(out.access_token)
@@ -212,7 +213,7 @@ export function VolunteerDashboard() {
     return (
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-4 p-6 text-base outline-none">
         <h1 className="text-2xl font-bold">{t('volunteer.title')}</h1>
-        <p className="text-muted-foreground text-sm">Sign in with the phone number registered as a volunteer. We will text you a one-time code.</p>
+        <p className="text-muted-foreground text-sm">{t('volunteer.loginIntro')}</p>
         <div className="space-y-3 rounded-lg border p-4">
           <Label htmlFor="vol-phone">{t('volunteer.phoneLabel')}</Label>
           <Input
@@ -231,11 +232,11 @@ export function VolunteerDashboard() {
           </p>
           {loginStep === 'phone' ? (
             <Button type="button" className="w-full" disabled={otpBusy} onClick={() => void sendOtp()}>
-              {otpBusy ? t('common.loading') : 'Send code'}
+              {otpBusy ? t('common.loading') : t('sos.access.sendCode')}
             </Button>
           ) : (
             <>
-              <Label htmlFor="vol-otp">One-time code</Label>
+              <Label htmlFor="vol-otp">{t('sos.access.codeLabel')}</Label>
               <Input
                 id="vol-otp"
                 inputMode="numeric"
@@ -245,10 +246,10 @@ export function VolunteerDashboard() {
                 placeholder="123456"
               />
               <Button type="button" className="w-full" disabled={otpBusy} onClick={() => void verifyOtp()}>
-                {otpBusy ? t('common.loading') : 'Verify'}
+                {otpBusy ? t('common.loading') : t('sos.access.verify')}
               </Button>
               <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => setLoginStep('phone')}>
-                Use different number
+                {t('sos.access.useDifferentNumber')}
               </Button>
             </>
           )}
@@ -265,7 +266,7 @@ export function VolunteerDashboard() {
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{items.length}</Badge>
           <Button type="button" variant="outline" size="sm" onClick={logout}>
-            Sign out
+            {t('auth.signOut')}
           </Button>
         </div>
       </div>
@@ -276,6 +277,8 @@ export function VolunteerDashboard() {
           {confirmMsg}
         </p>
       ) : null}
+
+      <p className="text-muted-foreground rounded-md border border-border bg-muted/40 p-3 text-sm">{t('volunteer.smsPrimary')}</p>
 
       {loading && items.length === 0 ? <LoadingSpinner variant="inline" /> : null}
 

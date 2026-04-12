@@ -148,6 +148,8 @@ export async function insertVolunteerWithLocation(input: {
   phone: string
   lat: number
   lng: number
+  village: string | null
+  availabilityHours: string | null
   skills: string[]
   vehicle: string
   maxRadiusKm: number
@@ -155,11 +157,13 @@ export async function insertVolunteerWithLocation(input: {
 }): Promise<{ id: string }> {
   const rows = await prisma.$queryRaw<{ id: string }[]>`
     INSERT INTO public.volunteers (
-      zone_id, name, phone, location, skills, vehicle, max_radius_km, language
+      zone_id, name, phone, village, availability_hours, location, skills, vehicle, max_radius_km, language
     ) VALUES (
       ${input.zoneId}::uuid,
       ${input.name},
       ${input.phone},
+      ${input.village},
+      ${input.availabilityHours},
       ST_SetSRID(ST_MakePoint(${input.lng}, ${input.lat}), 4326)::geography,
       ${input.skills}::text[],
       ${input.vehicle},

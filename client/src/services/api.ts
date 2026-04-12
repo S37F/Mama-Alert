@@ -385,6 +385,8 @@ export interface RegisterVolunteerPayload {
   phone: string
   lat: number
   lng: number
+  village?: string | null
+  availability_hours?: string | null
   skills?: string[]
   vehicle?: 'none' | 'motorcycle' | 'car' | 'ambulance'
   max_radius_km?: number

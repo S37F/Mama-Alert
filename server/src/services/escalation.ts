@@ -155,7 +155,7 @@ async function runEscalationStep(params: {
     logError('escalation: load alert failed', { alertId })
     return
   }
-  if (alertData.status !== 'active') {
+  if (alertData.status !== 'active' || alertData.respondingVolunteerId != null) {
     return
   }
 
@@ -248,13 +248,13 @@ export async function runEscalationTimer(
 ): Promise<void> {
   const alertRow = await prisma.alert.findUnique({
     where: { id: alertId },
-    select: { id: true, status: true, patientId: true, triggeredAt: true },
+    select: { id: true, status: true, patientId: true, triggeredAt: true, respondingVolunteerId: true },
   })
   if (!alertRow) {
     logError('escalation: timer fetch alert failed', { alertId })
     return
   }
-  if (alertRow.status !== 'active') {
+  if (alertRow.status !== 'active' || alertRow.respondingVolunteerId != null) {
     return
   }
   const pat = await prisma.patient.findUnique({

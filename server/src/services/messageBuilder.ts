@@ -63,6 +63,25 @@ export function buildVolunteerAlertSMS(
   return truncateSmsTwoPart(pickLang(lang, table))
 }
 
+export function buildVolunteerWelcomeSms(
+  volunteerName: string,
+  appBase: string,
+  lang: string = 'en',
+): string {
+  const first = volunteerName.split(/\s+/)[0] ?? volunteerName
+  const dash = appBase.replace(/\/$/, '')
+  const opt = dash.length > 0 ? `${dash}/volunteer` : 'optional web dashboard'
+  const table: Record<string, string> = {
+    en: `MamaAlert: Hi ${first}, you are a volunteer. Reply YES or NO to emergency SMS. App (optional): ${opt}`,
+    hi: `MamaAlert: ${first}, आप स्वयंसेवक हैं। SMS में YES/NO। ऐप: ${opt}`,
+    fr: `MamaAlert: ${first}, vous êtes volontaire. Répondez OUI/NON par SMS. App: ${opt}`,
+    sw: `MamaAlert: ${first}, umejiandikisha. Jibu NDIO/HAPANA kwa SMS. App: ${opt}`,
+    ar: `MamaAlert: ${first}، أنت متطوع. أرسل نعم/لا عبر الرسائل. التطبيق: ${opt}`,
+    pt: `MamaAlert: ${first}, você é voluntário. Responda SIM/NÃO por SMS. App: ${opt}`,
+  }
+  return truncateSmsTwoPart(pickLang(lang, table))
+}
+
 export function buildVolunteerDirectionsSMS(
   patient: Patient,
   volunteer: Volunteer,
@@ -266,7 +285,7 @@ export function buildCoordinatorEscalationSMS(
 ): string {
   const shortId = alertId.slice(0, 8)
   const table: Record<string, string> = {
-    en: `ESCALATE ${shortId}: ${patient.name}, ${minutesSince}m no response.`,
+    en: `UNRESPONDED ALERT — ${minutesSince} min, no volunteer. ${patient.name}. Ref ${shortId}`,
     hi: `ESCALATE ${shortId}: ${patient.name}, ${minutesSince} मिनट।`,
     fr: `ESCALADE ${shortId}: ${patient.name}, ${minutesSince} min.`,
     sw: `ESCALATE ${shortId}: ${patient.name}, ${minutesSince}m.`,

@@ -102,6 +102,9 @@ model Volunteer {
   name           String
   phone          String
   phoneE164      String    @default(dbgenerated("normalize_phone_for_match(phone)")) @map("phone_e164")
+  village        String?
+  /// Typical availability, e.g. "weekdays 8am–6pm" (free text).
+  availabilityHours String? @map("availability_hours")
   /// @ignore — geography(Point,4326)
   location       Unsupported("geography(Point,4326)")
   skills         String[]  @default([])

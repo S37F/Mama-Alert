@@ -81,6 +81,8 @@
     }
   },
   "volunteer": {
+    "smsPrimary": "SMS is the primary way to respond to alerts. This dashboard is optional for live updates.",
+    "loginIntro": "Sign in with the phone number your health worker registered. We will text you a one-time code.",
     "title": "Volunteer Dashboard",
     "activeAlert": "Emergency Alert",
     "minutesAgo": "{{n}} minutes ago",
@@ -193,8 +195,17 @@
       "title": "Register a volunteer",
       "submit": "Register volunteer",
       "success": "Volunteer registered.",
+      "welcomeSmsHint": "They will receive a welcome SMS. Emergency alerts always go by SMS; the web app is optional.",
       "registerAnother": "Register another",
-      "phoneInvalid": "Enter a valid phone number (at least 8 digits)."
+      "phoneInvalid": "Enter a valid phone number (at least 8 digits).",
+      "villageRequired": "Enter the volunteer’s village or home area.",
+      "villagePlaceholder": "e.g. Village or neighborhood",
+      "skillsLabel": "Skills",
+      "skillsPlaceholder": "e.g. first aid, driving",
+      "skillsHint": "Separate with commas.",
+      "radiusKm": "Alert radius (km)",
+      "hoursLabel": "Usual availability",
+      "hoursPlaceholder": "e.g. Weekdays 8am–6pm"
     },
     "needsProfile": "Needs profile completion",
     "completeProfile": "Complete profile",
