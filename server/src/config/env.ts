@@ -18,6 +18,32 @@ const REQUIRED_TWILIO = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_NUMB
 
 let validated = false
 
+/**
+ * Supabase transaction pooler (PgBouncer, port 6543): Prisma uses prepared statements by default,
+ * which breaks on pooled connections ("prepared statement s0 already exists"). Appending
+ * `pgbouncer=true` disables that for the client URL.
+ */
+function ensurePgbouncerModeForTransactionPoolerDatabaseUrl(): void {
+  const raw = process.env.DATABASE_URL?.trim()
+  if (!raw || raw.toLowerCase().includes('pgbouncer=true')) {
+    return
+  }
+  try {
+    const normalized = raw.replace(/^postgresql:/i, 'http:').replace(/^postgres:/i, 'http:')
+    const u = new URL(normalized)
+    const port = u.port || '5432'
+    const host = u.hostname.toLowerCase()
+    const isSupabaseTxPooler = host.includes('pooler.supabase.com') || port === '6543'
+    if (!isSupabaseTxPooler) {
+      return
+    }
+    const glue = raw.includes('?') ? '&' : '?'
+    process.env.DATABASE_URL = `${raw}${glue}pgbouncer=true`
+  } catch {
+    // leave DATABASE_URL unchanged if unparsable
+  }
+}
+
 /** When true, SMS/voice are logged only and Twilio env vars are not required (local dev). */
 export function isTwilioMock(): boolean {
   const v = process.env.TWILIO_MOCK
@@ -28,6 +54,8 @@ export function validateEnv(): void {
   if (validated) {
     return
   }
+  // Before copying DATABASE_URL → DIRECT_DATABASE_URL (when unset), fix pooler URL for Prisma.
+  ensurePgbouncerModeForTransactionPoolerDatabaseUrl()
   // Prisma schema defines directUrl; pooler-only deploys often set only DATABASE_URL.
   // Runtime queries use `url`; migrations should still use a direct Postgres URL when run via CLI/CI.
   const dbUrl = process.env.DATABASE_URL?.trim()
