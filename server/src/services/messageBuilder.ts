@@ -122,6 +122,24 @@ export function buildFamilySMS(
   return truncateSmsTwoPart(pickLang(lang, table))
 }
 
+/** SMS to emergency contacts right after patient registration (enrollment + status link). */
+export function buildFamilyRegistrationWelcomeSms(
+  patientFirstName: string,
+  statusToken: string,
+  lang: string = 'en',
+): string {
+  const url = statusPageUrl(statusToken)
+  const table: Record<string, string> = {
+    en: `MamaAlert: ${patientFirstName} is enrolled. If there is an alert, track status here: ${url}`,
+    hi: `MamaAlert: ${patientFirstName} पंजीकृत। अलर्ट पर स्थिति: ${url}`,
+    fr: `MamaAlert: ${patientFirstName} est inscrite. Statut (alerte): ${url}`,
+    sw: `MamaAlert: ${patientFirstName} amesajiliwa. Hali (dharura): ${url}`,
+    ar: `MamaAlert: تسجيل ${patientFirstName}. رابط الحالة: ${url}`,
+    pt: `MamaAlert: ${patientFirstName} registada. Estado (alerta): ${url}`,
+  }
+  return truncateSmsTwoPart(pickLang(lang, table))
+}
+
 export function buildClinicPreAlertSMS(
   patient: Patient,
   volunteer: Volunteer,
@@ -133,14 +151,22 @@ export function buildClinicPreAlertSMS(
   const riskSeg = risk ? ` R:${risk}.` : ''
   const vn = volunteer.name.slice(0, 24)
   const table: Record<string, string> = {
-    en: `Maternity pre-alert: ${patient.name}. BT ${bt}.${riskSeg} ETA ~${etaMinutes}m. Vol ${vn}.`,
-    hi: `प्रसूति: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} मि. ${vn}`,
-    fr: `Maternité: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} min. ${vn}`,
-    sw: `Maternity: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} dk. ${vn}`,
-    ar: `ولادة: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} د. ${vn}`,
-    pt: `Maternidade: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} min. ${vn}`,
+    en: `Maternity pre-alert: ${patient.name}. BT ${bt}.${riskSeg} ETA ~${etaMinutes}m. Vol ${vn}. Reply ARRIVED when patient arrives.`,
+    hi: `प्रसूति: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} मि. ${vn}. ARRIVED भेजें।`,
+    fr: `Maternité: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} min. ${vn}. Répondez ARRIVED à l'arrivée.`,
+    sw: `Maternity: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} dk. ${vn}. Jibu ARRIVED.`,
+    ar: `ولادة: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} د. ${vn}. أرسل ARRIVED.`,
+    pt: `Maternidade: ${patient.name}. BT ${bt}.${riskSeg} ~${etaMinutes} min. ${vn}. Responda ARRIVED na chegada.`,
   }
   return truncateSmsTwoPart(pickLang(lang, table))
+}
+
+/** Twilio SMS reply after hospital texts ARRIVED. */
+export function buildHospitalArrivedAck(kind: 'confirmed' | 'none'): string {
+  if (kind === 'confirmed') {
+    return 'MamaAlert: Patient marked arrived. Alert resolved. Thank you.'
+  }
+  return 'MamaAlert: No open alert found for this facility. If this is a mistake, call your coordinator.'
 }
 
 /** Twilio SMS reply after patient texts SOS keyword. */

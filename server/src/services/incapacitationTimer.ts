@@ -2,6 +2,7 @@
  * Incapacitation follow-up is scheduled via `delayed_jobs` (see delayedJobProcessor).
  */
 import { Prisma } from '@prisma/client'
+import { excludeUssdIncapacitation } from '@/config/incapacitationEnv'
 import { extractFamilyPhones } from '@/lib/emergencyContacts'
 import { logError, logWarn } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
@@ -64,7 +65,7 @@ export function scheduleIncapacitationFollowUp(
   patientId: string,
   triggerMethod: 'pwa' | 'sms' | 'ussd',
 ): void {
-  if (triggerMethod === 'ussd') {
+  if (triggerMethod === 'ussd' && excludeUssdIncapacitation()) {
     return
   }
   void enqueueIncapacitationJob(alertId, patientId)

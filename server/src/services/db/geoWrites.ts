@@ -23,7 +23,11 @@ export async function insertPatientWithLocation(input: {
   riskFlags: string[]
   medicationName: string | null
   emergencyContacts: Prisma.InputJsonValue
+  registrationVerified?: boolean
+  registrationSource?: string
 }): Promise<{ id: string; status_token: string }> {
+  const registrationVerified = input.registrationVerified ?? true
+  const registrationSource = input.registrationSource ?? 'health_worker'
   const rows = await prisma.$queryRaw<{ id: string; status_token: string }[]>`
     INSERT INTO public.patients (
       health_worker_id,
@@ -45,7 +49,9 @@ export async function insertPatientWithLocation(input: {
       language,
       risk_flags,
       medication_name,
-      emergency_contacts
+      emergency_contacts,
+      registration_verified,
+      registration_source
     ) VALUES (
       ${input.healthWorkerId}::uuid,
       ${input.zoneId}::uuid,
@@ -66,7 +72,9 @@ export async function insertPatientWithLocation(input: {
       ${input.language},
       ${input.riskFlags}::text[],
       ${input.medicationName},
-      ${input.emergencyContacts}::jsonb
+      ${input.emergencyContacts}::jsonb,
+      ${registrationVerified}::boolean,
+      ${registrationSource}
     )
     RETURNING id, status_token
   `
@@ -75,6 +83,63 @@ export async function insertPatientWithLocation(input: {
     throw new Error('patient insert returned no row')
   }
   return row
+}
+
+/** Update patient fields for an assigned health worker (location via raw SQL). */
+export async function updatePatientForHealthWorker(input: {
+  patientId: string
+  healthWorkerId: string
+  name?: string
+  village?: string | null
+  weeksPregnant?: number | null
+  riskFlags?: string[]
+  emergencyContacts?: Prisma.InputJsonValue
+  registrationVerified?: boolean
+  lat?: number
+  lng?: number
+}): Promise<void> {
+  const existing = await prisma.patient.findFirst({
+    where: { id: input.patientId, healthWorkerId: input.healthWorkerId },
+    select: { id: true },
+  })
+  if (!existing) {
+    throw Object.assign(new Error('Patient not found'), { statusCode: 404 })
+  }
+
+  const data: Prisma.PatientUpdateInput = {}
+  if (input.name !== undefined) {
+    data.name = input.name
+  }
+  if (input.village !== undefined) {
+    data.village = input.village
+  }
+  if (input.weeksPregnant !== undefined) {
+    data.weeksPregnant = input.weeksPregnant
+  }
+  if (input.riskFlags !== undefined) {
+    data.riskFlags = input.riskFlags
+  }
+  if (input.emergencyContacts !== undefined) {
+    data.emergencyContacts = input.emergencyContacts as Prisma.InputJsonValue
+  }
+  if (input.registrationVerified !== undefined) {
+    data.registrationVerified = input.registrationVerified
+  }
+
+  if (Object.keys(data).length > 0) {
+    await prisma.patient.update({
+      where: { id: input.patientId },
+      data,
+    })
+  }
+
+  if (input.lat !== undefined && input.lng !== undefined) {
+    await prisma.$executeRaw`
+      UPDATE public.patients
+      SET location = ST_SetSRID(ST_MakePoint(${input.lng}, ${input.lat}), 4326)::geography
+      WHERE id = ${input.patientId}::uuid AND health_worker_id = ${input.healthWorkerId}::uuid
+    `
+  }
 }
 
 export async function insertVolunteerWithLocation(input: {

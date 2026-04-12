@@ -11,7 +11,8 @@ import {
   findActivePendingResponseForVolunteer,
   toVolunteerRow,
 } from '@/services/volunteerReply'
-import { buildSmsKeywordAck, buildVolunteerDoneAck } from '@/services/messageBuilder'
+import { buildHospitalArrivedAck, buildSmsKeywordAck, buildVolunteerDoneAck } from '@/services/messageBuilder'
+import { findHospitalIdBySmsFrom, resolveLatestOpenAlertForHospital } from '@/services/hospitalSmsReply'
 import { fetchPatientForSos } from '@/services/patientQueries'
 import { triggerSos } from '@/services/sosService'
 import { prisma } from '@/lib/prisma'
@@ -71,6 +72,17 @@ smsReplyRouter.post(
         res
           .type('text/xml')
           .send(ok ? twimlMessage(buildVolunteerDoneAck(vol.language)) : '<Response></Response>')
+        return
+      }
+    }
+
+    if (answer === 'ARRIVED') {
+      const hospitalId = await findHospitalIdBySmsFrom(from)
+      if (hospitalId) {
+        const ok = await resolveLatestOpenAlertForHospital(hospitalId)
+        res
+          .type('text/xml')
+          .send(twimlMessage(buildHospitalArrivedAck(ok ? 'confirmed' : 'none')))
         return
       }
     }

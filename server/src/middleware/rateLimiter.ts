@@ -37,3 +37,20 @@ export const volunteerOtpRequestRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 })
+
+export const patientOtpRequestRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: { error: 'Too many OTP requests' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
+/** Public self-registration — keep strict to limit abuse. */
+export const patientSelfRegisterRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 6,
+  message: { error: 'Too many registration attempts' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})

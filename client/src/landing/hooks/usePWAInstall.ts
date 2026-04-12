@@ -23,7 +23,7 @@ export function usePWAInstall() {
   const install = useCallback(async () => {
     const ev = getInstallPrompt()
     if (!ev) {
-      window.location.href = '/app'
+      window.location.href = '/sos'
       return
     }
     setIsInstalling(true)

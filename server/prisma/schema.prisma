@@ -70,14 +70,30 @@ model Patient {
   medicationName     String?  @map("medication_name")
   emergencyContacts  Json     @default("[]") @map("emergency_contacts")
   patientStatus      String   @default("active") @map("patient_status")
+  registrationVerified Boolean @default(true) @map("registration_verified")
+  registrationSource   String   @default("health_worker") @map("registration_source")
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   healthWorker HealthWorker @relation(fields: [healthWorkerId], references: [userId], onDelete: Restrict)
   zone         Zone?        @relation(fields: [zoneId], references: [id], onDelete: SetNull)
-  alerts       Alert[]
+  alerts          Alert[]
+  otpChallenges   PatientOtpChallenge[]
 
   @@map("patients")
+}
+
+model PatientOtpChallenge {
+  id         String    @id @default(uuid()) @db.Uuid
+  patientId  String    @map("patient_id") @db.Uuid
+  codeHash   String    @map("code_hash")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("patient_otp_challenges")
 }
 
 model Volunteer {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,13 +14,22 @@ import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { SOSButton, type SosVisualStatus } from '@/components/SOSButton'
 import { useOfflineQueue } from '@/hooks/useOfflineQueue'
-import { ApiHttpError, postPatientHints, postSos } from '@/services/api'
+import {
+  ApiHttpError,
+  getPatientVolunteersNearbyCount,
+  postPatientHints,
+  postPatientOtpRequest,
+  postPatientOtpVerify,
+  postSos,
+} from '@/services/api'
 
 const LS_PHONE = 'mamaalert_patient_phone'
 const LS_NAME = 'mamaalert_patient_display_name'
 const LS_WEEKS = 'mamaalert_patient_weeks'
 const LS_SOS_TOKEN = 'mamaalert_sos_token'
 const LS_NOTIF_PROMPTED = 'mamaalert_notifications_prompted_v1'
+const LS_ONBOARDING = 'mamaalert_patient_onboarding_v1'
+const ONBOARDING_STEP_COUNT = 3
 
 const LANGS = [
   { code: 'en', label: 'English' },
@@ -50,8 +60,161 @@ function normalizePhoneInput(value: string): string {
   return withPlus.replace(/\s+/g, ' ').trim()
 }
 
+function PhoneOtpPanel({
+  onBack,
+  onVerified,
+  t,
+  countryHint,
+}: {
+  onBack: () => void
+  onVerified: (data: {
+    token: string
+    phone: string
+    firstName: string
+    weeksPregnant: number | null
+  }) => void
+  t: TFunction
+  countryHint: string
+}) {
+  const [phone, setPhone] = useState('')
+  const [code, setCode] = useState('')
+  const [sent, setSent] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const compactPhone = () => normalizePhoneInput(phone).replace(/\s/g, '')
+
+  const sendCode = async () => {
+    setErr(null)
+    const p = compactPhone()
+    if (p.length < 8) {
+      setErr(t('sos.access.phoneInvalid'))
+      return
+    }
+    setLoading(true)
+    try {
+      await postPatientOtpRequest(p)
+      setSent(true)
+    } catch {
+      setErr(t('sos.access.sendCodeFailed'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const verify = async () => {
+    setErr(null)
+    const p = compactPhone()
+    const c = code.trim()
+    if (c.length < 4) {
+      setErr(t('sos.access.codeInvalid'))
+      return
+    }
+    setLoading(true)
+    try {
+      const out = await postPatientOtpVerify(p, c)
+      onVerified({
+        token: out.sos_token,
+        phone: p,
+        firstName: out.firstName,
+        weeksPregnant: out.weeksPregnant,
+      })
+    } catch {
+      setErr(t('sos.access.verifyFailed'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="w-full max-w-sm space-y-4 rounded-lg border border-border p-4">
+      <Button type="button" variant="ghost" size="sm" className="px-0" onClick={onBack}>
+        {t('sos.access.back')}
+      </Button>
+      <p className="text-muted-foreground text-sm">{t('sos.access.phoneHelp', { dialCode: countryHint })}</p>
+      <div className="space-y-2">
+        <Label htmlFor="otp-phone">{t('sos.phoneLabel')}</Label>
+        <Input
+          id="otp-phone"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          value={phone}
+          onChange={(e) => setPhone(normalizePhoneInput(e.target.value))}
+          disabled={sent}
+          placeholder={countryHint}
+        />
+      </div>
+      {!sent ? (
+        <Button type="button" className="w-full" disabled={loading} onClick={() => void sendCode()}>
+          {loading ? t('common.loading') : t('sos.access.sendCode')}
+        </Button>
+      ) : (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="otp-code">{t('sos.access.codeLabel')}</Label>
+            <Input
+              id="otp-code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+              placeholder="000000"
+            />
+          </div>
+          <Button type="button" className="w-full" disabled={loading} onClick={() => void verify()}>
+            {loading ? t('common.loading') : t('sos.access.verify')}
+          </Button>
+          <Button type="button" variant="link" className="h-auto p-0 text-sm" onClick={() => { setSent(false); setCode('') }}>
+            {t('sos.access.useDifferentNumber')}
+          </Button>
+        </>
+      )}
+      {err ? <p className="text-destructive text-center text-sm">{err}</p> : null}
+    </div>
+  )
+}
+
+function OnboardingVolunteerStep({ sosToken, t }: { sosToken: string; t: TFunction }) {
+  const [count, setCount] = useState<number | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      try {
+        const n = await getPatientVolunteersNearbyCount(sosToken)
+        if (!cancelled) {
+          setCount(n)
+        }
+      } catch {
+        if (!cancelled) {
+          setFailed(true)
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [sosToken])
+
+  if (failed) {
+    return <p className="text-muted-foreground text-center text-base leading-relaxed">{t('sos.onboarding.volunteersUnknown')}</p>
+  }
+  if (count === null) {
+    return <p className="text-muted-foreground text-center text-base leading-relaxed">{t('sos.onboarding.volunteersLoading')}</p>
+  }
+  const display = count >= 12 ? '12+' : String(count)
+  return (
+    <p className="text-muted-foreground text-center text-base leading-relaxed">
+      {t('sos.onboarding.volunteersNear', { n: display })}
+    </p>
+  )
+}
+
 export function PatientSOS() {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { addToQueue, processPending } = useOfflineQueue()
 
@@ -59,13 +222,17 @@ export function PatientSOS() {
   const [showHowItWorks, setShowHowItWorks] = useState(false)
   const [locationPrompted, setLocationPrompted] = useState(false)
 
-  const storedPhone = useMemo(() => {
+  const shortLinkPhone = useMemo(() => {
     const q = searchParams.get('phone')
-    if (q && q.trim().length >= 8) {
-      return q.trim()
+    return q && q.trim().length >= 8 ? q.trim() : ''
+  }, [searchParams])
+
+  const storedPhone = useMemo(() => {
+    if (shortLinkPhone) {
+      return shortLinkPhone
     }
     return localStorage.getItem(LS_PHONE) ?? ''
-  }, [searchParams])
+  }, [searchParams, shortLinkPhone])
 
   const effectivePhone = manualPhone.trim().length >= 8 ? manualPhone.trim() : storedPhone
   const helpPhone = import.meta.env.VITE_HELP_PHONE ?? '112'
@@ -124,6 +291,7 @@ export function PatientSOS() {
   }, [searchParams])
 
   const missingToken = sosToken.length < 24
+  const phoneOnlyShortLink = Boolean(shortLinkPhone && missingToken)
 
   useEffect(() => {
     if (missingToken || effectivePhone.length < 8) {
@@ -178,6 +346,57 @@ export function PatientSOS() {
       cancelled = true
     }
   }, [sosToken, i18n])
+
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [onboardingStep, setOnboardingStep] = useState(1)
+  const [accessMode, setAccessMode] = useState<'menu' | 'phone'>('menu')
+
+  useEffect(() => {
+    if (!missingToken) {
+      setAccessMode('menu')
+    }
+  }, [missingToken])
+
+  useEffect(() => {
+    if (missingToken) {
+      setShowOnboarding(false)
+      return
+    }
+    try {
+      setShowOnboarding(localStorage.getItem(LS_ONBOARDING) !== '1')
+    } catch {
+      setShowOnboarding(false)
+    }
+  }, [missingToken])
+
+  const finishOnboarding = useCallback(() => {
+    try {
+      localStorage.setItem(LS_ONBOARDING, '1')
+    } catch {
+      /* private mode / quota */
+    }
+    setShowOnboarding(false)
+  }, [])
+
+  const onPhoneAccessVerified = useCallback(
+    (data: { token: string; phone: string; firstName: string; weeksPregnant: number | null }) => {
+      try {
+        localStorage.setItem(LS_SOS_TOKEN, data.token)
+        localStorage.setItem(LS_PHONE, data.phone)
+        localStorage.setItem(LS_NAME, data.firstName)
+        if (data.weeksPregnant !== null) {
+          localStorage.setItem(LS_WEEKS, String(data.weeksPregnant))
+        }
+      } catch {
+        /* ignore */
+      }
+      const u = new URL(`${window.location.origin}/sos`)
+      u.searchParams.set('token', data.token)
+      u.searchParams.set('phone', data.phone)
+      navigate(`${u.pathname}${u.search}`, { replace: true })
+    },
+    [navigate],
+  )
 
   const [status, setStatus] = useState<SosVisualStatus>('idle')
   const [duplicateCooldown, setDuplicateCooldown] = useState(false)
@@ -279,6 +498,58 @@ export function PatientSOS() {
     }
   }, [addToQueue, sosToken, isOnline, requestLocationAccess])
 
+  if (!missingToken && showOnboarding) {
+    const titleKey =
+      onboardingStep === 1
+        ? 'sos.onboarding.step1Title'
+        : onboardingStep === 2
+          ? 'sos.onboarding.step2Title'
+          : 'sos.onboarding.step3Title'
+    return (
+      <main id="main-content" tabIndex={-1} className="flex min-h-[100dvh] flex-col bg-background px-4 py-12 outline-none">
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6">
+          <p className="text-muted-foreground text-center text-sm">
+            {t('sos.onboarding.stepCounter', { current: onboardingStep, total: ONBOARDING_STEP_COUNT })}
+          </p>
+          <h1 className="text-center text-2xl font-semibold tracking-tight">{t(titleKey)}</h1>
+          {onboardingStep === 1 ? (
+            <>
+              <p className="text-muted-foreground text-center text-base leading-relaxed">{t('sos.onboarding.step1Body')}</p>
+              <div className="flex justify-center py-2">
+                <SOSButton preview status="idle" onTrigger={async () => {}} />
+              </div>
+            </>
+          ) : null}
+          {onboardingStep === 2 ? (
+            <>
+              <p className="text-muted-foreground text-center text-base leading-relaxed">{t('sos.onboarding.step2Intro')}</p>
+              <OnboardingVolunteerStep sosToken={sosToken} t={t} />
+            </>
+          ) : null}
+          {onboardingStep === 3 ? (
+            <p className="text-muted-foreground text-center text-base leading-relaxed">{t('sos.onboarding.step3Body')}</p>
+          ) : null}
+          <div className="flex flex-wrap justify-center gap-3 pt-2">
+            {onboardingStep > 1 ? (
+              <Button type="button" variant="outline" onClick={() => setOnboardingStep((s) => s - 1)}>
+                {t('sos.onboarding.back')}
+              </Button>
+            ) : null}
+            {onboardingStep < ONBOARDING_STEP_COUNT ? (
+              <Button type="button" onClick={() => setOnboardingStep((s) => s + 1)}>
+                {t('sos.onboarding.next')}
+              </Button>
+            ) : (
+              <Button type="button" onClick={finishOnboarding}>
+                {t('sos.onboarding.start')}
+              </Button>
+            )}
+          </div>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main id="main-content" tabIndex={-1} className="relative flex min-h-[100dvh] flex-col bg-background outline-none">
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
@@ -304,12 +575,60 @@ export function PatientSOS() {
         </div>
 
         {missingToken ? (
-          <div className="w-full max-w-sm space-y-3 rounded-lg border border-border p-4 text-center">
-            <p className="text-muted-foreground text-sm">
-              Open your SOS link from your health worker (includes a <code className="text-xs">token</code> in the URL), or
-              ask them to resend it.
-            </p>
-          </div>
+          accessMode === 'menu' ? (
+            phoneOnlyShortLink ? (
+              <div className="w-full max-w-sm space-y-4 rounded-lg border border-border p-4">
+                <h2 className="text-center text-lg font-semibold">{t('sos.shortLink.title')}</h2>
+                <p className="text-muted-foreground text-center text-sm">{t('sos.shortLink.body')}</p>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={() => {
+                      setManualPhone(shortLinkPhone)
+                      setAccessMode('phone')
+                    }}
+                  >
+                    {t('sos.shortLink.signInCta')}
+                  </Button>
+                  <Link
+                    to="/sos/register"
+                    className={cn(buttonVariants({ variant: 'secondary' }), 'inline-flex w-full items-center justify-center')}
+                  >
+                    {t('sos.access.selfRegister')}
+                  </Link>
+                </div>
+                <p className="text-muted-foreground border-t border-border pt-3 text-center text-xs">
+                  {t('sos.access.haveLink')}
+                </p>
+              </div>
+            ) : (
+              <div className="w-full max-w-sm space-y-4 rounded-lg border border-border p-4">
+                <p className="text-muted-foreground text-center text-sm">{t('sos.access.intro')}</p>
+                <div className="flex flex-col gap-2">
+                  <Button type="button" className="w-full" onClick={() => setAccessMode('phone')}>
+                    {t('sos.access.signInPhone')}
+                  </Button>
+                  <Link
+                    to="/sos/register"
+                    className={cn(buttonVariants({ variant: 'secondary' }), 'inline-flex w-full items-center justify-center')}
+                  >
+                    {t('sos.access.selfRegister')}
+                  </Link>
+                </div>
+                <p className="text-muted-foreground border-t border-border pt-3 text-center text-xs">
+                  {t('sos.access.haveLink')}
+                </p>
+              </div>
+            )
+          ) : (
+            <PhoneOtpPanel
+              t={t}
+              countryHint={countryHint}
+              onBack={() => setAccessMode('menu')}
+              onVerified={onPhoneAccessVerified}
+            />
+          )
         ) : null}
 
         {!missingToken ? (

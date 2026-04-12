@@ -72,12 +72,16 @@ function isSosPayload(payload) {
   if (!payload || typeof payload !== 'object') {
     return false
   }
-  const phone = payload.phone
   const method = payload.triggerMethod
-  return (
-    typeof phone === 'string' &&
-    (method === 'pwa' || method === 'sms' || method === 'ussd')
-  )
+  if (method !== 'pwa' && method !== 'sms' && method !== 'ussd') {
+    return false
+  }
+  const token = payload.sosToken
+  if (typeof token === 'string' && token.length >= 24) {
+    return true
+  }
+  const phone = payload.phone
+  return typeof phone === 'string' && phone.length >= 8
 }
 
 async function processPendingSOS() {
@@ -106,13 +110,23 @@ async function processPendingSOS() {
     if (!row || !row.id || !isSosPayload(row.payload)) {
       continue
     }
-    const { phone, triggerMethod } = row.payload
+    const { sosToken, phone, incapacitationSuspected } = row.payload
     const url = `${base}/api/sos`
+    const body =
+      typeof sosToken === 'string' && sosToken.length >= 24
+        ? {
+            sosToken,
+            triggerMethod: 'pwa',
+            ...(typeof incapacitationSuspected === 'boolean'
+              ? { incapacitationSuspected }
+              : {}),
+          }
+        : { phone, triggerMethod: 'pwa' }
     try {
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, triggerMethod }),
+        body: JSON.stringify(body),
         credentials: 'omit',
       })
       if (res.ok || res.status === 201 || res.status === 409) {

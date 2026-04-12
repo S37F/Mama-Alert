@@ -164,6 +164,77 @@ export async function postPatientHints(sosToken: string): Promise<PatientHintsRe
   }
 }
 
+export async function getPatientVolunteersNearbyCount(sosToken: string): Promise<number> {
+  const response = await api.get<{ count: number }>('/api/public/patient-volunteers-nearby', {
+    params: { sosToken },
+  })
+  return response.data.count
+}
+
+export interface PublicZoneRow {
+  id: string
+  name: string
+}
+
+export async function getPublicZones(): Promise<PublicZoneRow[]> {
+  const response = await api.get<{ zones: PublicZoneRow[] }>('/api/public/zones')
+  return response.data.zones
+}
+
+export async function postPatientOtpRequest(phone: string): Promise<void> {
+  await api.post('/api/public/patient-otp/request', { phone })
+}
+
+export interface PatientOtpVerifyResponse {
+  sos_token: string
+  firstName: string
+  language: string
+  weeksPregnant: number | null
+}
+
+export async function postPatientOtpVerify(phone: string, code: string): Promise<PatientOtpVerifyResponse> {
+  const response = await api.post<PatientOtpVerifyResponse>('/api/public/patient-otp/verify', { phone, code })
+  return response.data
+}
+
+export type EmergencyRelationship = 'husband' | 'mother' | 'sister' | 'neighbour' | 'other'
+
+export interface PatientSelfRegisterPayload {
+  name: string
+  phone_primary: string
+  zone_id?: string
+  lat?: number
+  lng?: number
+  language: string
+  weeks_pregnant?: number | null
+  village?: string
+  emergency_contacts?: { name: string; phone: string; relationship: EmergencyRelationship }[]
+}
+
+export async function postPatientSelfRegister(
+  body: PatientSelfRegisterPayload,
+): Promise<{ id: string; status_token: string; sos_token: string; registration_verified?: boolean }> {
+  try {
+    const response = await api.post<{
+      id: string
+      status_token: string
+      sos_token: string
+      registration_verified?: boolean
+    }>('/api/public/patient-self-register', body)
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const d = error.response?.data
+      const msg =
+        typeof d === 'object' && d !== null && 'error' in d && typeof (d as { error: unknown }).error === 'string'
+          ? (d as { error: string }).error
+          : 'Registration failed'
+      throw new Error(msg)
+    }
+    throw error
+  }
+}
+
 export async function postSos(payload: SosPayload): Promise<SosSuccessResponse> {
   try {
     const response = await api.post<SosSuccessResponse>('/api/sos', payload)
@@ -264,8 +335,6 @@ export async function getFamilyStatus(token: string): Promise<FamilyStatusPayloa
   const response = await api.get<FamilyStatusPayload>(`/api/status/${encodeURIComponent(token)}`)
   return response.data
 }
-
-export type EmergencyRelationship = 'husband' | 'mother' | 'sister' | 'neighbour' | 'other'
 
 export interface RegisterPatientPayload {
   name: string
@@ -505,11 +574,30 @@ export interface WorkerPatientRow {
   lastAncDate: string | null
   overdueAnc: boolean
   phonePrimary: string
+  village: string | null
+  registrationVerified: boolean
+  registrationSource: string
 }
 
 export async function getWorkerPatients(): Promise<WorkerPatientRow[]> {
   const response = await api.get<{ patients: WorkerPatientRow[] }>('/api/worker/patients')
   return response.data.patients
+}
+
+export async function patchWorkerPatient(
+  patientId: string,
+  body: {
+    name?: string
+    village?: string | null
+    weeks_pregnant?: number | null
+    lat?: number
+    lng?: number
+    risk_flags?: string[]
+    emergency_contacts?: { name: string; phone: string; relationship: EmergencyRelationship }[]
+    complete_profile?: boolean
+  },
+): Promise<void> {
+  await api.patch(`/api/worker/patients/${encodeURIComponent(patientId)}`, body)
 }
 
 export interface WorkerVolunteerRow {

@@ -10,9 +10,11 @@ export type SosVisualStatus = 'idle' | 'sending' | 'sent' | 'offline' | 'error'
 interface SOSButtonProps {
   onTrigger: () => Promise<void>
   status: SosVisualStatus
+  /** Non-interactive preview (e.g. first-run onboarding). */
+  preview?: boolean
 }
 
-export function SOSButton({ onTrigger, status }: SOSButtonProps) {
+export function SOSButton({ onTrigger, status, preview = false }: SOSButtonProps) {
   const { t } = useTranslation()
 
   const label =
@@ -35,12 +37,12 @@ export function SOSButton({ onTrigger, status }: SOSButtonProps) {
           ? 'bg-red-800 hover:bg-red-900'
           : 'bg-[#DC2626] hover:bg-red-700'
 
-  const pulse = status === 'idle'
+  const pulse = status === 'idle' && !preview
 
   return (
     <button
       type="button"
-      disabled={status === 'sending' || status === 'sent'}
+      disabled={preview || status === 'sending' || status === 'sent'}
       onClick={() => void onTrigger()}
       className={cn(
         'flex min-h-[200px] min-w-[200px] max-h-[min(85vw,320px)] max-w-[min(85vw,320px)] flex-col items-center justify-center rounded-full px-6 text-center text-lg font-bold text-white shadow-lg transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-red-300 disabled:opacity-90',

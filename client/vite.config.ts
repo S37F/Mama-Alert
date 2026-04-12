@@ -17,9 +17,9 @@ export default defineConfig({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/app',
-        scope: '/app',
-        id: '/app',
+        start_url: '/sos',
+        scope: '/',
+        id: '/sos',
         icons: [
           {
             src: '/icon-192.png',
@@ -43,6 +43,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//],
         additionalManifestEntries: [],
         importScripts: ['sw-sos.js'],
         runtimeCaching: [

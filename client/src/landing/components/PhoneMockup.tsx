@@ -54,7 +54,7 @@ function ScreenPatientSos() {
   return (
     <iframe
       title="MamaAlert patient SOS preview"
-      src="/app"
+      src="/sos"
       style={{
         width: '100%',
         height: '100%',

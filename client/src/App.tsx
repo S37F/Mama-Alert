@@ -9,8 +9,11 @@ import { HealthWorkerDashboard } from '@/views/HealthWorkerDashboard'
 import { HealthWorkerRegister } from '@/views/HealthWorkerRegister'
 import { HospitalInbox } from '@/views/HospitalInbox'
 import { PatientSOS } from '@/views/PatientSOS'
+import { PatientSelfRegister } from '@/views/PatientSelfRegister'
 import { VolunteerDashboard } from '@/views/VolunteerDashboard'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+
+const hospitalPortalEnabled = import.meta.env.VITE_ENABLE_HOSPITAL_PORTAL === 'true'
 
 export function App() {
   return (
@@ -20,11 +23,24 @@ export function App() {
       <Routes>
       <Route path="/" element={<LandingPage />} />
 
+      <Route path="/sos" element={<PatientSOS />} />
+      <Route path="/sos/register" element={<PatientSelfRegister />} />
       <Route path="/app" element={<PatientSOS />} />
+      <Route path="/app/sos" element={<PatientSOS />} />
+      <Route path="/app/sos/register" element={<PatientSelfRegister />} />
       <Route path="/app/volunteer" element={<VolunteerDashboard />} />
-      <Route path="/app/hospital" element={<HospitalInbox />} />
       <Route path="/volunteer" element={<VolunteerDashboard />} />
-      <Route path="/hospital" element={<HospitalInbox />} />
+      {hospitalPortalEnabled ? (
+        <>
+          <Route path="/app/hospital" element={<HospitalInbox />} />
+          <Route path="/hospital" element={<HospitalInbox />} />
+        </>
+      ) : (
+        <>
+          <Route path="/app/hospital" element={<Navigate to="/" replace />} />
+          <Route path="/hospital" element={<Navigate to="/" replace />} />
+        </>
+      )}
       <Route
         path="/app/worker"
         element={
@@ -40,6 +56,14 @@ export function App() {
             <HealthWorkerDashboard />
           </ProtectedRoute>
         }
+      />
+      <Route
+        path="/dashboard"
+        element={<Navigate to="/worker" replace />}
+      />
+      <Route
+        path="/app/dashboard"
+        element={<Navigate to="/app/worker" replace />}
       />
       <Route
         path="/app/register"

@@ -17,6 +17,7 @@ import { statusRouter } from '@/routes/status'
 import { ussdRouter } from '@/routes/ussd'
 import { generalRateLimit, patientHintsRateLimit, sosRateLimit } from '@/middleware/rateLimiter'
 import { publicPatientRouter } from '@/routes/publicPatient'
+import { publicPatientAccessRouter } from '@/routes/publicPatientAccess'
 import { workerPortalRouter } from '@/routes/workerPortal'
 import { validateTwilioUssdSignature } from '@/middleware/twilioValidate'
 import { logError } from '@/lib/logger'
@@ -41,7 +42,7 @@ app.use(
 app.use(generalRateLimit)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-app.use('/api/public', patientHintsRateLimit, publicPatientRouter)
+app.use('/api/public', patientHintsRateLimit, publicPatientRouter, publicPatientAccessRouter)
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true })

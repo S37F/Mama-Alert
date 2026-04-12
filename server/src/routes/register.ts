@@ -1,14 +1,26 @@
-import { Router } from 'express'
+import { Router, type Response } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { logAudit, logError } from '@/lib/logger'
 import { signSosPatientToken } from '@/lib/sosToken'
 import { requireAdmin, requireAuth } from '@/middleware/auth'
+
+function isAdminOrHealthWorker(
+  res: Response,
+  level: string | undefined,
+): level is 'admin' | 'health_worker' {
+  if (level === 'admin' || level === 'health_worker') {
+    return true
+  }
+  res.status(403).json({ error: 'Forbidden' })
+  return false
+}
 import {
   insertHospitalWithLocation,
   insertPatientWithLocation,
   insertVolunteerWithLocation,
 } from '@/services/db/geoWrites'
+import { sendFamilyWelcomeSmsIfEnabled } from '@/services/familyWelcomeOnRegister'
 
 export const registerRouter = Router()
 
@@ -124,6 +136,12 @@ registerRouter.post(
       })
       const sos_token = signSosPatientToken(data.id, SOS_TOKEN_TTL_SEC)
       logAudit('patient_registered', { patientId: data.id, healthWorkerId: hwId })
+      void sendFamilyWelcomeSmsIfEnabled(
+        body.name,
+        body.emergency_contacts ?? [],
+        data.status_token,
+        body.language,
+      )
       res.status(201).json({ id: data.id, status_token: data.status_token, sos_token })
     } catch (error) {
       logError('register patient failed', { error: String(error) })
@@ -135,23 +153,40 @@ registerRouter.post(
 registerRouter.post(
   '/volunteer',
   requireAuth,
-  requireAdmin,
   asyncHandler(async (req, res) => {
+    const level = req.healthWorker?.access_level
+    if (!isAdminOrHealthWorker(res, level)) {
+      return
+    }
     const parsed = volunteerSchema.safeParse(req.body)
     if (!parsed.success) {
       res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
       return
     }
     const body = parsed.data
-    const adminZone = req.healthWorker?.zone_id ?? null
-    const targetZone = body.zone_id ?? adminZone
-    if (!targetZone) {
-      res.status(400).json({ error: 'zone_id is required for volunteer registration' })
-      return
-    }
-    if (adminZone && body.zone_id && body.zone_id !== adminZone) {
-      res.status(403).json({ error: 'Cannot register volunteer outside your zone' })
-      return
+    const staffZone = req.healthWorker?.zone_id ?? null
+
+    let targetZone: string | null
+    if (level === 'health_worker') {
+      if (!staffZone) {
+        res.status(403).json({ error: 'Health worker must be assigned to a zone to register volunteers' })
+        return
+      }
+      if (body.zone_id && body.zone_id !== staffZone) {
+        res.status(403).json({ error: 'Cannot register volunteer outside your zone' })
+        return
+      }
+      targetZone = staffZone
+    } else {
+      targetZone = body.zone_id ?? staffZone
+      if (!targetZone) {
+        res.status(400).json({ error: 'zone_id is required for volunteer registration' })
+        return
+      }
+      if (staffZone && body.zone_id && body.zone_id !== staffZone) {
+        res.status(403).json({ error: 'Cannot register volunteer outside your zone' })
+        return
+      }
     }
     try {
       const data = await insertVolunteerWithLocation({

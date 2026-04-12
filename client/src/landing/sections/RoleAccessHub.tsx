@@ -37,15 +37,16 @@ type RoleCardDef = {
   pathHint?: string
 }
 
-const ROLE_CARDS: RoleCardDef[] = [
+function buildRoleCards(hospitalPortalEnabled: boolean): RoleCardDef[] {
+  return [
   {
     roleKey: 'patient',
     title: 'Patient SOS',
     badge: 'No account',
     Icon: HeartPulse,
-    body: 'One tap raises an alert with location so responders and facilities can act immediately—built for stress and low literacy, not forms or passwords.',
-    actions: [{ to: '/app', label: 'Open SOS screen', variant: 'terra' }],
-    pathHint: '/app',
+    body: 'One tap raises an alert with location so responders and facilities can act immediately—no password. Sign in with your phone (SMS code), self-register where your program allows it, or open the private link from your health worker.',
+    actions: [{ to: '/sos', label: 'Open SOS screen', variant: 'terra' }],
+    pathHint: '/sos',
   },
   {
     roleKey: 'volunteer',
@@ -61,9 +62,11 @@ const ROLE_CARDS: RoleCardDef[] = [
     title: 'Hospital inbox',
     badge: 'Facility access',
     Icon: Building2,
-    body: 'See pre-alerts before arrival, confirm bed and team readiness, and stay in sync with the field response.',
-    actions: [{ to: '/hospital', label: 'Open hospital inbox', variant: 'terra' }],
-    pathHint: '/hospital',
+    body: hospitalPortalEnabled
+      ? 'See pre-alerts before arrival, confirm bed and team readiness, and stay in sync with the field response.'
+      : 'Receive maternity pre-alert SMS with patient summary, blood type, and ETA. Reply ARRIVED when the patient arrives to close the alert—no web app required.',
+    actions: hospitalPortalEnabled ? [{ to: '/hospital', label: 'Open hospital inbox', variant: 'terra' }] : [],
+    pathHint: hospitalPortalEnabled ? '/hospital' : 'SMS: reply ARRIVED',
   },
   {
     roleKey: 'worker',
@@ -75,7 +78,7 @@ const ROLE_CARDS: RoleCardDef[] = [
       { to: '/register', label: 'Patient registration', variant: 'ghost' },
       { to: '/worker', label: 'Worker dashboard', variant: 'terra' },
     ],
-    pathHint: '/register · /worker',
+    pathHint: '/register · /worker · /dashboard',
   },
   {
     roleKey: 'family',
@@ -95,9 +98,12 @@ const ROLE_CARDS: RoleCardDef[] = [
     pathHint: '/admin',
   },
 ]
+}
 
 export function RoleAccessHub() {
   const { ref, inView } = useScrollReveal(0.12)
+  const hospitalPortalEnabled = import.meta.env.VITE_ENABLE_HOSPITAL_PORTAL === 'true'
+  const roleCards = useMemo(() => buildRoleCards(hospitalPortalEnabled), [hospitalPortalEnabled])
   const roleEntries = useMemo(() => Object.entries(ROLE_TARGETS) as [RoleKey, string][], [])
   const [activeRole, setActiveRole] = useState<RoleKey>('patient')
 
@@ -179,7 +185,7 @@ export function RoleAccessHub() {
         </motion.div>
 
         <div className="landing-role-access-grid">
-          {ROLE_CARDS.map(({ roleKey, title, badge, Icon, body, actions, pathHint }) => (
+          {roleCards.map(({ roleKey, title, badge, Icon, body, actions, pathHint }) => (
             <article
               key={roleKey}
               id={ROLE_TARGETS[roleKey]}

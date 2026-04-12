@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -7,20 +7,177 @@ import { Badge } from '@/components/ui/badge'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { useAlertsRealtimeRefresh } from '@/hooks/useAlertsRealtimeRefresh'
 import { useAuth } from '@/hooks/useAuth'
 import { useZoneId } from '@/hooks/useZoneId'
+import { useGeolocation } from '@/hooks/useGeolocation'
 import {
   getCoordinatorAlerts,
   getWorkerPatients,
   getWorkerVolunteers,
+  patchWorkerPatient,
   type CoordinatorAlertItem,
+  type EmergencyRelationship,
   type WorkerPatientRow,
   type WorkerVolunteerRow,
 } from '@/services/api'
 import { HealthWorkerRegister } from '@/views/HealthWorkerRegister'
+import { WorkerVolunteerRegisterForm } from '@/views/WorkerVolunteerRegisterForm'
+
+const relationshipValues: EmergencyRelationship[] = [
+  'husband',
+  'mother',
+  'sister',
+  'neighbour',
+  'other',
+]
+
+function CompletePatientDialog({
+  patient,
+  open,
+  onClose,
+  onSaved,
+  t,
+}: {
+  patient: WorkerPatientRow | null
+  open: boolean
+  onClose: () => void
+  onSaved: () => void
+  t: (key: string) => string
+}) {
+  const { lat, lng, error: geoErr, isLoading: geoLoading, capture: captureLocation } = useGeolocation()
+  const [village, setVillage] = useState('')
+  const [cName, setCName] = useState('')
+  const [cPhone, setCPhone] = useState('')
+  const [cRel, setCRel] = useState<EmergencyRelationship>('husband')
+  const [saving, setSaving] = useState(false)
+  const [formErr, setFormErr] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (patient) {
+      setVillage(patient.village ?? '')
+      setCName('')
+      setCPhone('')
+      setCRel('husband')
+      setFormErr(null)
+    }
+  }, [patient])
+
+  const save = async () => {
+    if (!patient) {
+      return
+    }
+    const v = village.trim()
+    if (v.length < 1) {
+      setFormErr(t('sos.selfReg.villageRequired'))
+      return
+    }
+    if (!cName.trim() || cPhone.trim().length < 8) {
+      setFormErr(t('sos.selfReg.contactRequired'))
+      return
+    }
+    setSaving(true)
+    setFormErr(null)
+    try {
+      await patchWorkerPatient(patient.id, {
+        village: v,
+        emergency_contacts: [{ name: cName.trim(), phone: cPhone.trim(), relationship: cRel }],
+        complete_profile: true,
+        ...(lat !== null && lng !== null ? { lat, lng } : {}),
+      })
+      onSaved()
+      onClose()
+    } catch (e) {
+      setFormErr(e instanceof Error ? e.message : t('common.error'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t('worker.completeProfileTitle')}</DialogTitle>
+          <DialogDescription>{t('worker.completeProfileDesc')}</DialogDescription>
+        </DialogHeader>
+        {patient ? (
+          <div className="space-y-3">
+            <p className="text-muted-foreground text-xs">
+              {patient.name} · {patient.phonePrimary}
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="cp-village">{t('register.fields.village')}</Label>
+              <Input id="cp-village" value={village} onChange={(e) => setVillage(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cp-cn">{t('register.fields.contactName')}</Label>
+              <Input id="cp-cn" value={cName} onChange={(e) => setCName(e.target.value)} />
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="cp-cp">{t('register.fields.contactPhone')}</Label>
+                <Input id="cp-cp" type="tel" value={cPhone} onChange={(e) => setCPhone(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('register.fields.relationship')}</Label>
+                <Select value={cRel} onValueChange={(v) => setCRel(v as EmergencyRelationship)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {relationshipValues.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {t(`register.relationship.${r}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button type="button" variant="secondary" size="sm" disabled={geoLoading} onClick={captureLocation}>
+              {geoLoading ? t('common.loading') : t('register.captureLocation')}
+            </Button>
+            {geoErr ? <p className="text-destructive text-xs">{geoErr}</p> : null}
+            {lat !== null && lng !== null ? (
+              <p className="text-muted-foreground text-xs">
+                {lat.toFixed(5)}, {lng.toFixed(5)}
+              </p>
+            ) : null}
+            {formErr ? <p className="text-destructive text-sm">{formErr}</p> : null}
+          </div>
+        ) : null}
+        <DialogFooter className="border-0 bg-transparent p-0 sm:justify-end">
+          <Button type="button" variant="outline" onClick={onClose}>
+            {t('sos.access.back')}
+          </Button>
+          <Button type="button" disabled={saving || !patient} onClick={() => void save()}>
+            {saving ? t('common.loading') : t('worker.saveProfile')}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 export function HealthWorkerDashboard() {
   const { t } = useTranslation()
@@ -32,6 +189,12 @@ export function HealthWorkerDashboard() {
   const [alerts, setAlerts] = useState<CoordinatorAlertItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [completePatient, setCompletePatient] = useState<WorkerPatientRow | null>(null)
+
+  const incompletePatients = useMemo(
+    () => patients.filter((p) => !p.registrationVerified),
+    [patients],
+  )
 
   const load = useCallback(async () => {
     setError(null)
@@ -81,7 +244,7 @@ export function HealthWorkerDashboard() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('worker.title')}</h1>
         <div className="flex gap-2">
-          <Link to="/app/register" className={cn(buttonVariants({ variant: 'outline' }))}>
+          <Link to="/register" className={cn(buttonVariants({ variant: 'outline' }))}>
             {t('worker.openRegister')}
           </Link>
           <Button type="button" variant="outline" onClick={() => void logout()}>
@@ -129,6 +292,42 @@ export function HealthWorkerDashboard() {
 
           <Card>
             <CardHeader>
+              <CardTitle>{t('worker.needsProfile')}</CardTitle>
+            </CardHeader>
+            <CardContent className="overflow-x-auto">
+              {incompletePatients.length === 0 ? (
+                <p className="text-muted-foreground text-sm">—</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('register.fields.name')}</TableHead>
+                      <TableHead>{t('worker.phoneCol')}</TableHead>
+                      <TableHead>{t('register.fields.village')}</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {incompletePatients.map((p) => (
+                      <TableRow key={p.id}>
+                        <TableCell>{p.name}</TableCell>
+                        <TableCell className="whitespace-nowrap text-xs">{p.phonePrimary}</TableCell>
+                        <TableCell>{p.village ?? '—'}</TableCell>
+                        <TableCell className="text-right">
+                          <Button type="button" size="sm" variant="secondary" onClick={() => setCompletePatient(p)}>
+                            {t('worker.completeProfile')}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>{t('worker.myPatients')}</CardTitle>
             </CardHeader>
             <CardContent className="overflow-x-auto">
@@ -169,10 +368,9 @@ export function HealthWorkerDashboard() {
             <CardHeader>
               <CardTitle>{t('worker.zoneVolunteers')}</CardTitle>
             </CardHeader>
-            <CardContent>
-              {!zoneId ? (
-                <p className="text-muted-foreground text-sm">{t('worker.noZoneVolunteers')}</p>
-              ) : volunteers.length === 0 ? (
+            <CardContent className="space-y-6">
+              <WorkerVolunteerRegisterForm zoneId={zoneId} onRegistered={() => void load()} />
+              {!zoneId ? null : volunteers.length === 0 ? (
                 <p className="text-muted-foreground text-sm">—</p>
               ) : (
                 <Table>
@@ -202,6 +400,14 @@ export function HealthWorkerDashboard() {
           <HealthWorkerRegister embedded />
         </TabsContent>
       </Tabs>
+
+      <CompletePatientDialog
+        patient={completePatient}
+        open={completePatient !== null}
+        onClose={() => setCompletePatient(null)}
+        onSaved={() => void load()}
+        t={t}
+      />
     </main>
   )
 }

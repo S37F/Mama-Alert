@@ -195,7 +195,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
     if (!success) {
       return ''
     }
-    const u = new URL(`${window.location.origin}/app`)
+    const u = new URL(`${window.location.origin}/sos`)
     u.searchParams.set('token', success.sos_token)
     return u.toString()
   }, [success])

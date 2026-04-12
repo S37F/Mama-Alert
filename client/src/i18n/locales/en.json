@@ -22,7 +22,63 @@
     "networkOfflineHint": "You're offline — alerts will queue until you're back online.",
     "helpCall": "Call help",
     "helpHow": "How it works",
-    "howItWorks": "Tap SOS once to send an emergency alert. If network is weak, your alert is saved and sent automatically when signal returns."
+    "howItWorks": "Tap SOS once to send an emergency alert. If network is weak, your alert is saved and sent automatically when signal returns.",
+    "access": {
+      "intro": "Sign in with the phone number on your record, register yourself if your program allows it, or open the SOS link your health worker sent you.",
+      "signInPhone": "Sign in with phone number",
+      "selfRegister": "Register myself",
+      "haveLink": "Have a link? Open it on this device — it contains a private token. You can also ask your health worker to resend it.",
+      "phoneHelp": "We will text a code to this number. Use the same number you gave when you registered (include country code, e.g. {{dialCode}}).",
+      "sendCode": "Send code",
+      "codeLabel": "Code from SMS",
+      "verify": "Verify and continue",
+      "useDifferentNumber": "Use a different number",
+      "back": "Back",
+      "phoneInvalid": "Enter a valid phone number with country code.",
+      "codeInvalid": "Enter the code from your SMS.",
+      "sendCodeFailed": "Could not send the code. Try again later.",
+      "verifyFailed": "Invalid or expired code. Request a new code and try again."
+    },
+    "shortLink": {
+      "title": "Use your full SOS link or sign in",
+      "body": "This page only has your phone number. Sign in with SMS to unlock your secure SOS token, or ask your health worker to resend the complete link.",
+      "signInCta": "Sign in with this phone number"
+    },
+    "selfReg": {
+      "title": "Self-registration",
+      "subtitle": "If your area allows it, you can enroll without a link from a health worker. One trusted contact will get the read-only status link by SMS when enabled on the server.",
+      "back": "Back to SOS",
+      "zoneLabel": "Your area / program",
+      "zonePlaceholder": "Choose your area",
+      "pickZone": "Choose your area.",
+      "contactRequired": "Add at least one family or trusted contact with a valid phone number.",
+      "contactHint": "This person can receive the secure status link during an alert (and a welcome SMS when your server enables it).",
+      "zonesError": "Could not load areas. Check your connection and try again.",
+      "submit": "Complete registration",
+      "registrationType": "Registration type",
+      "modeFull": "Full registration",
+      "modeMinimal": "Quick registration",
+      "minimalHint": "Only basic details. Your health worker will be notified to finish your profile.",
+      "villageLabel": "Village or community",
+      "villagePlaceholder": "e.g. Village name",
+      "villageRequired": "Enter your village or community."
+    },
+    "onboarding": {
+      "stepCounter": "Step {{current}} of {{total}}",
+      "step1Title": "Your SOS button",
+      "step1Body": "This red button is only for emergencies. You will use it if you need urgent maternal help.",
+      "step2Title": "Help nearby",
+      "step2Intro": "Volunteers in your area can be notified when you send an alert.",
+      "step2Body": "Save a number we can call if volunteers need to reach you. You can change it anytime before sending an alert.",
+      "volunteersLoading": "Counting volunteers near your registered location…",
+      "volunteersUnknown": "We could not load the volunteer count right now. Help may still be available when you send an alert.",
+      "volunteersNear": "About {{n}} volunteers are within about 5 km of your registered location and may respond.",
+      "step3Title": "Tap once",
+      "step3Body": "Tap SOS once if you need help. If you have no signal, your alert is saved and sends automatically when you are back online.",
+      "next": "Next",
+      "back": "Back",
+      "start": "Start"
+    }
   },
   "volunteer": {
     "title": "Volunteer Dashboard",
@@ -132,7 +188,20 @@
     "weeksShort": "{{n}} wks",
     "ancOverdue": "ANC overdue",
     "openRegister": "Open full registration page",
-    "weeksCol": "Weeks"
+    "weeksCol": "Weeks",
+    "volunteerReg": {
+      "title": "Register a volunteer",
+      "submit": "Register volunteer",
+      "success": "Volunteer registered.",
+      "registerAnother": "Register another",
+      "phoneInvalid": "Enter a valid phone number (at least 8 digits)."
+    },
+    "needsProfile": "Needs profile completion",
+    "completeProfile": "Complete profile",
+    "completeProfileTitle": "Finish patient profile",
+    "completeProfileDesc": "Add village, at least one emergency contact, and optionally update map location.",
+    "saveProfile": "Save and mark verified",
+    "phoneCol": "Phone"
   },
   "admin": {
     "title": "Zone Admin",
