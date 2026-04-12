@@ -1,7 +1,6 @@
--- MamaAlert Phase 1 — schema (run in Supabase SQL editor before functions.sql and seed.sql)
--- Fresh DB: optionally run reset_public_schema.sql first, then this file, functions.sql,
--- grant_public_privileges.sql, then seed.sql.
--- Requires: PostGIS
+-- Prisma migration 20260211120000_mamaalert_init: full DDL + RPCs + grants.
+-- Source: supabase/schema.sql + functions.sql + grant_public_privileges.sql.
+-- Requires: PostGIS; health_workers references auth.users (Supabase).
 
 CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA extensions;
 
@@ -38,7 +37,7 @@ CREATE TABLE public.zones (
 );
 
 -- ---------------------------------------------------------------------------
--- health_workers — linked to Supabase Auth
+-- health_workers Ã¢â‚¬â€ linked to Supabase Auth
 -- ---------------------------------------------------------------------------
 CREATE TABLE public.health_workers (
   user_id UUID PRIMARY KEY REFERENCES auth.users (id) ON DELETE CASCADE,
@@ -187,7 +186,7 @@ CREATE INDEX alert_responses_alert_id_idx ON public.alert_responses (alert_id);
 CREATE INDEX alert_responses_volunteer_id_idx ON public.alert_responses (volunteer_id);
 
 -- ---------------------------------------------------------------------------
--- Hospital acks + volunteer OTP (portal auth); RLS on — no policies = PostgREST denies non–service-role
+-- Hospital acks + volunteer OTP (portal auth); RLS on Ã¢â‚¬â€ no policies = PostgREST denies nonÃ¢â‚¬â€œservice-role
 -- ---------------------------------------------------------------------------
 CREATE TABLE public.hospital_alert_acks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -617,6 +616,430 @@ CREATE POLICY alert_responses_update
 
 -- ---------------------------------------------------------------------------
 -- Realtime: alerts visible to authenticated subscribers with SELECT policy
--- (enable replication if needed — Supabase usually adds tables to supabase_realtime publication)
+-- (enable replication if needed Ã¢â‚¬â€ Supabase usually adds tables to supabase_realtime publication)
 -- ---------------------------------------------------------------------------
-ALTER PUBLICATION supabase_realtime ADD TABLE public.alerts;
+-- Supabase only: add alerts to Realtime publication (skip if publication missing)
+DO $mamaalert_pub$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    BEGIN
+      EXECUTE 'ALTER PUBLICATION supabase_realtime ADD TABLE public.alerts';
+    EXCEPTION
+      WHEN duplicate_object THEN NULL;
+      WHEN OTHERS THEN NULL;
+    END;
+  END IF;
+END
+$mamaalert_pub$;
+
+
+-- MamaAlert Ã¢â‚¬â€ RPC functions (run after schema.sql, before seed.sql).
+-- Includes get_patient_for_sos (SECURITY DEFINER) for the SOS pipeline.
+-- PostGIS geography + meters (ST_Distance / ST_DWithin on geography use meters)
+-- search_path includes `extensions` because postgis is installed WITH SCHEMA extensions (see schema.sql).
+
+CREATE OR REPLACE FUNCTION public.get_nearby_volunteers(
+  patient_lat double precision,
+  patient_lng double precision,
+  radius_meters double precision
+)
+RETURNS TABLE (
+  id uuid,
+  name text,
+  phone text,
+  skills text[],
+  vehicle text,
+  distance_m double precision,
+  language text
+)
+LANGUAGE sql
+STABLE
+SET search_path = public, extensions
+AS $$
+  -- Coordinate order: longitude first, latitude second (same as ST_Point(lon, lat); this file uses ST_MakePoint).
+  SELECT
+    v.id,
+    v.name,
+    v.phone,
+    v.skills,
+    v.vehicle,
+    ST_Distance(
+      v.location,
+      ST_SetSRID(ST_MakePoint(patient_lng, patient_lat), 4326)::geography
+    )::double precision AS distance_m,
+    v.language
+  FROM public.volunteers v
+  WHERE v.is_active = true
+    AND ST_DWithin(
+      v.location,
+      ST_SetSRID(ST_MakePoint(patient_lng, patient_lat), 4326)::geography,
+      radius_meters
+    )
+  ORDER BY distance_m ASC;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_nearby_hospitals(
+  patient_lat double precision,
+  patient_lng double precision,
+  radius_meters double precision
+)
+RETURNS TABLE (
+  id uuid,
+  name text,
+  phone_emergency text,
+  services text[],
+  is_24hr boolean,
+  distance_m double precision
+)
+LANGUAGE sql
+STABLE
+SET search_path = public, extensions
+AS $$
+  SELECT
+    h.id,
+    h.name,
+    h.phone_emergency,
+    h.services,
+    h.is_24hr,
+    ST_Distance(
+      h.location,
+      ST_SetSRID(ST_MakePoint(patient_lng, patient_lat), 4326)::geography
+    )::double precision AS distance_m
+  FROM public.hospitals h
+  WHERE h.receive_alerts = true
+    AND ST_DWithin(
+      h.location,
+      ST_SetSRID(ST_MakePoint(patient_lng, patient_lat), 4326)::geography,
+      radius_meters
+    )
+  ORDER BY distance_m ASC
+  LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_nearby_volunteers(double precision, double precision, double precision) TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_nearby_hospitals(double precision, double precision, double precision) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.distance_volunteer_to_patient(
+  p_volunteer_id uuid,
+  p_patient_id uuid
+)
+RETURNS double precision
+LANGUAGE sql
+STABLE
+SET search_path = public, extensions
+AS $$
+  SELECT ST_Distance(v.location, p.location)::double precision
+  FROM public.volunteers v
+  CROSS JOIN public.patients p
+  WHERE v.id = p_volunteer_id AND p.id = p_patient_id;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.distance_volunteer_to_patient(uuid, uuid) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.admin_patients_in_zone(p_zone_id uuid)
+RETURNS TABLE (
+  id uuid,
+  name text,
+  lat double precision,
+  lng double precision
+)
+LANGUAGE sql
+STABLE
+SET search_path = public, extensions
+AS $$
+  SELECT
+    p.id,
+    p.name,
+    ST_Y(p.location::geometry)::double precision AS lat,
+    ST_X(p.location::geometry)::double precision AS lng
+  FROM public.patients p
+  WHERE p.zone_id = p_zone_id;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_volunteers_in_zone(p_zone_id uuid)
+RETURNS TABLE (
+  id uuid,
+  name text,
+  lat double precision,
+  lng double precision
+)
+LANGUAGE sql
+STABLE
+SET search_path = public, extensions
+AS $$
+  SELECT
+    v.id,
+    v.name,
+    ST_Y(v.location::geometry)::double precision AS lat,
+    ST_X(v.location::geometry)::double precision AS lng
+  FROM public.volunteers v
+  WHERE v.zone_id = p_zone_id;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_hospitals_in_zone(p_zone_id uuid)
+RETURNS TABLE (
+  id uuid,
+  name text,
+  lat double precision,
+  lng double precision,
+  receive_alerts boolean
+)
+LANGUAGE sql
+STABLE
+SET search_path = public, extensions
+AS $$
+  SELECT
+    h.id,
+    h.name,
+    ST_Y(h.location::geometry)::double precision AS lat,
+    ST_X(h.location::geometry)::double precision AS lng,
+    h.receive_alerts
+  FROM public.hospitals h
+  WHERE h.zone_id = p_zone_id;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_active_alert_points(p_zone_id uuid)
+RETURNS TABLE (
+  alert_id uuid,
+  lat double precision,
+  lng double precision
+)
+LANGUAGE sql
+STABLE
+SET search_path = public, extensions
+AS $$
+  SELECT
+    a.id AS alert_id,
+    ST_Y(p.location::geometry)::double precision AS lat,
+    ST_X(p.location::geometry)::double precision AS lng
+  FROM public.alerts a
+  INNER JOIN public.patients p ON p.id = a.patient_id
+  WHERE p.zone_id = p_zone_id
+    AND a.status IN ('active', 'volunteer_responding', 'at_facility');
+$$;
+
+-- SOS patient lookup: SECURITY DEFINER so service_role reads coordinates reliably.
+CREATE OR REPLACE FUNCTION public.get_patient_for_sos(p_phone text)
+RETURNS TABLE (
+  id uuid,
+  name text,
+  phone_primary text,
+  language text,
+  landmark text,
+  blood_type text,
+  lat double precision,
+  lng double precision,
+  zone_id uuid,
+  health_worker_id uuid,
+  emergency_contacts jsonb,
+  status_token uuid,
+  risk_flags text[],
+  weeks_pregnant integer
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+  SELECT
+    p.id,
+    p.name,
+    p.phone_primary,
+    p.language,
+    p.landmark,
+    p.blood_type,
+    ST_Y(p.location::geometry)::double precision AS lat,
+    ST_X(p.location::geometry)::double precision AS lng,
+    p.zone_id,
+    p.health_worker_id,
+    p.emergency_contacts,
+    p.status_token,
+    p.risk_flags,
+    p.weeks_pregnant
+  FROM public.patients p
+  WHERE p.phone_e164 = public.normalize_phone_for_match(trim(p_phone))
+  LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_patient_for_sos(text) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.get_patient_for_sos_by_id(p_id uuid)
+RETURNS TABLE (
+  id uuid,
+  name text,
+  phone_primary text,
+  language text,
+  landmark text,
+  blood_type text,
+  lat double precision,
+  lng double precision,
+  zone_id uuid,
+  health_worker_id uuid,
+  emergency_contacts jsonb,
+  status_token uuid,
+  risk_flags text[],
+  weeks_pregnant integer
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+  SELECT
+    p.id,
+    p.name,
+    p.phone_primary,
+    p.language,
+    p.landmark,
+    p.blood_type,
+    ST_Y(p.location::geometry)::double precision AS lat,
+    ST_X(p.location::geometry)::double precision AS lng,
+    p.zone_id,
+    p.health_worker_id,
+    p.emergency_contacts,
+    p.status_token,
+    p.risk_flags,
+    p.weeks_pregnant
+  FROM public.patients p
+  WHERE p.id = p_id
+  LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_patient_for_sos_by_id(uuid) TO service_role;
+
+-- Atomic volunteer YES (race-safe); optional nearest hospital id
+CREATE OR REPLACE FUNCTION public.claim_alert_for_volunteer(
+  p_alert_id uuid,
+  p_volunteer_id uuid,
+  p_response_id uuid,
+  p_nearest_hospital_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+DECLARE
+  v_status text;
+  v_rows int;
+BEGIN
+  SELECT a.status INTO v_status FROM public.alerts a WHERE a.id = p_alert_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'alert_not_found');
+  END IF;
+  IF v_status IS DISTINCT FROM 'active' THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'alert_not_active', 'status', v_status);
+  END IF;
+
+  PERFORM 1
+  FROM public.alert_responses ar
+  WHERE ar.id = p_response_id
+    AND ar.alert_id = p_alert_id
+    AND ar.volunteer_id = p_volunteer_id
+    AND ar.response IS NULL
+  FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'response_invalid');
+  END IF;
+
+  UPDATE public.alerts
+  SET
+    status = 'volunteer_responding',
+    responding_volunteer_id = p_volunteer_id,
+    volunteer_confirmed_at = now(),
+    nearest_hospital_id = COALESCE(p_nearest_hospital_id, nearest_hospital_id),
+    updated_at = now()
+  WHERE id = p_alert_id AND status = 'active';
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  IF v_rows = 0 THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'lost_race');
+  END IF;
+
+  UPDATE public.alert_responses
+  SET response = 'YES', responded_at = now()
+  WHERE id = p_response_id;
+
+  RETURN jsonb_build_object('ok', true);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.claim_alert_for_volunteer(uuid, uuid, uuid, uuid) TO service_role;
+
+CREATE OR REPLACE FUNCTION public.insert_sos_alert_if_allowed(
+  p_patient_id uuid,
+  p_incapacitation_suspected boolean,
+  p_cooldown_seconds int DEFAULT 600
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+DECLARE
+  v_recent int;
+  v_id uuid;
+BEGIN
+  PERFORM pg_advisory_xact_lock(hashtext(p_patient_id::text));
+
+  SELECT count(*)::int INTO v_recent
+  FROM public.alerts
+  WHERE patient_id = p_patient_id
+    AND status IN ('active', 'volunteer_responding', 'at_facility')
+    AND triggered_at >= (now() - make_interval(secs => p_cooldown_seconds));
+
+  IF v_recent > 0 THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'duplicate');
+  END IF;
+
+  INSERT INTO public.alerts (
+    patient_id,
+    status,
+    priority,
+    wave_number,
+    incapacitation_suspected
+  )
+  VALUES (
+    p_patient_id,
+    'active',
+    1,
+    1,
+    p_incapacitation_suspected
+  )
+  RETURNING id INTO v_id;
+
+  RETURN jsonb_build_object('ok', true, 'alert_id', v_id);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.insert_sos_alert_if_allowed(uuid, boolean, int) TO service_role;
+
+GRANT EXECUTE ON FUNCTION public.admin_patients_in_zone(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.admin_volunteers_in_zone(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.admin_hospitals_in_zone(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.admin_active_alert_points(uuid) TO service_role;
+
+
+-- =============================================================================
+-- Re-apply Supabase-friendly privileges on everything in `public`
+-- =============================================================================
+-- Run after schema.sql and functions.sql (and after any migration that creates
+-- new objects). Safe to run multiple times.
+--
+-- The SQL Editor often uses a new session per run, so default privileges from
+-- reset_public_schema.sql may not attach to objects created in a later script.
+-- This file fixes that for PostgREST + RLS clients.
+-- =============================================================================
+
+GRANT USAGE ON SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON SCHEMA public TO postgres, anon, authenticated, service_role;
+
+GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+GRANT ALL ON ALL ROUTINES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT ALL ON TABLES TO postgres, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT ALL ON SEQUENCES TO postgres, anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  GRANT ALL ON ROUTINES TO postgres, anon, authenticated, service_role;

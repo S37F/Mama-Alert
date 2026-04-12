@@ -1,14 +1,14 @@
-// Source of truth for DDL remains supabase/schema.sql + functions.sql.
-// Use `npx prisma generate` after pulling or editing this file to match the DB.
-// Geography columns are @ignore — use src/services/db/geoWrites.ts and $queryRaw for geo RPCs.
+// Database DDL: `npx prisma migrate deploy` (uses DIRECT_DATABASE_URL on Supabase).
+// Prisma Client queries use DATABASE_URL (pooler OK). Migrations need direct Postgres (port 5432).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
 }
 
 model Zone {
