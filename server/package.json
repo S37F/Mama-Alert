@@ -9,7 +9,8 @@
     "env:init": "node scripts/init-dev-env.cjs",
     "predev": "node scripts/init-dev-env.cjs",
     "dev": "ts-node-dev -r tsconfig-paths/register --respawn --transpile-only src/index.ts",
-    "build": "tsc && tsc-alias -p tsconfig.json",
+    "postinstall": "prisma generate",
+    "build": "prisma generate && tsc && tsc-alias -p tsconfig.json",
     "start": "node dist/index.js"
   },
   "keywords": [],
@@ -17,6 +18,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@prisma/client": "^6.19.3",
     "@supabase/supabase-js": "^2.101.1",
     "africastalking": "^0.7.9",
     "cors": "^2.8.6",
@@ -25,6 +27,7 @@
     "express-rate-limit": "^8.3.2",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
+    "prisma": "^6.19.3",
     "twilio": "^5.13.1",
     "zod": "^4.3.6"
   },

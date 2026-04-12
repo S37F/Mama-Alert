@@ -3,7 +3,8 @@ import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { logError } from '@/lib/logger'
 import { assertAdminHasZone, requireAuth } from '@/middleware/auth'
-import { supabaseAdmin } from '@/services/supabase'
+import { prisma } from '@/lib/prisma'
+import { supabaseAuthAdmin } from '@/services/supabaseAuth'
 import { supabaseAnon } from '@/services/supabaseAnon'
 
 export const authRouter = Router()
@@ -27,16 +28,15 @@ authRouter.post(
       res.status(401).json({ error: error?.message ?? 'Login failed' })
       return
     }
-    const { data: hw, error: hwErr } = await supabaseAdmin
-      .from('health_workers')
-      .select('access_level, zone_id')
-      .eq('user_id', data.user.id)
-      .maybeSingle()
-    if (hwErr || !hw) {
+    const hw = await prisma.healthWorker.findUnique({
+      where: { userId: data.user.id },
+      select: { accessLevel: true, zoneId: true },
+    })
+    if (!hw) {
       res.status(403).json({ error: 'Health worker profile not linked to this account' })
       return
     }
-    if (!assertAdminHasZone(res, hw.access_level, hw.zone_id)) {
+    if (!assertAdminHasZone(res, hw.accessLevel, hw.zoneId)) {
       return
     }
     res.json({
@@ -46,8 +46,8 @@ authRouter.post(
       expires_in: data.session.expires_in,
       token_type: data.session.token_type,
       user: { id: data.user.id, email: data.user.email },
-      role: hw.access_level,
-      zone_id: hw.zone_id,
+      role: hw.accessLevel,
+      zone_id: hw.zoneId,
     })
   }),
 )
@@ -62,7 +62,7 @@ authRouter.post(
       res.status(401).json({ error: 'Unauthorized' })
       return
     }
-    const { error: signOutErr } = await supabaseAdmin.auth.admin.signOut(token, 'global')
+    const { error: signOutErr } = await supabaseAuthAdmin.auth.admin.signOut(token, 'global')
     if (signOutErr) {
       logError('auth: admin signOut failed', { error: String(signOutErr) })
     }

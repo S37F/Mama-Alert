@@ -1,8 +1,10 @@
 /**
  * Incapacitation follow-up is scheduled via `delayed_jobs` (see delayedJobProcessor).
  */
+import { Prisma } from '@prisma/client'
 import { extractFamilyPhones } from '@/lib/emergencyContacts'
 import { logError, logWarn } from '@/lib/logger'
+import { prisma } from '@/lib/prisma'
 import { patientSosRowToPatient } from '@/services/patientMapper'
 import { fetchPatientForSos } from '@/services/patientQueries'
 import {
@@ -10,7 +12,6 @@ import {
   buildVolunteerAlertSMS,
 } from '@/services/messageBuilder'
 import { getNearbyVolunteers } from '@/services/geo'
-import { supabaseAdmin } from '@/services/supabase'
 import { sendSmsMultipart } from '@/services/twilio'
 import { notifyVolunteerFeedRefresh } from '@/services/volunteerSseHub'
 import type { Alert } from '@/types/alert'
@@ -25,40 +26,36 @@ function incapacitationDelayMs(): number {
 }
 
 async function alreadyContactedVolunteerIds(alertId: string): Promise<Set<string>> {
-  const { data, error } = await supabaseAdmin
-    .from('alert_responses')
-    .select('volunteer_id')
-    .eq('alert_id', alertId)
-  if (error) {
-    logError('incapacitation: list alert_responses failed', { alertId, error: String(error) })
+  try {
+    const rows = await prisma.alertResponse.findMany({
+      where: { alertId },
+      select: { volunteerId: true },
+    })
+    return new Set(rows.map((r) => r.volunteerId))
+  } catch (err) {
+    logError('incapacitation: list alert_responses failed', { alertId, error: String(err) })
     return new Set()
   }
-  const ids = new Set<string>()
-  if (data) {
-    for (const row of data) {
-      if (row && typeof row.volunteer_id === 'string') {
-        ids.add(row.volunteer_id)
-      }
-    }
-  }
-  return ids
 }
 
-/**
- * After PWA/SMS SOS: if no volunteer confirms within INCAPACITATION_DELAY_MS, bump priority,
- * SMS family, and notify additional volunteers within 10 km (excluding already contacted).
- */
 async function enqueueIncapacitationJob(alertId: string, patientId: string): Promise<void> {
   const delay = incapacitationDelayMs()
-  const runAfter = new Date(Date.now() + delay).toISOString()
-  const { error } = await supabaseAdmin.from('delayed_jobs').insert({
-    dedupe_key: `incap:${alertId}`,
-    job_type: 'incapacitation',
-    payload: { alertId, patientId },
-    run_after: runAfter,
-  })
-  if (error && !String(error.message).includes('duplicate')) {
-    logError('incapacitation: delayed_jobs insert failed', { alertId, error: String(error) })
+  const runAfter = new Date(Date.now() + delay)
+  const payload: Prisma.InputJsonValue = { alertId, patientId }
+  try {
+    await prisma.delayedJob.create({
+      data: {
+        dedupeKey: `incap:${alertId}`,
+        jobType: 'incapacitation',
+        payload,
+        runAfter,
+      },
+    })
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      return
+    }
+    logError('incapacitation: delayed_jobs insert failed', { alertId, error: String(e) })
   }
 }
 
@@ -74,37 +71,45 @@ export function scheduleIncapacitationFollowUp(
 }
 
 export async function runIncapacitationStep(alertId: string, patientId: string): Promise<void> {
-  const { data: alertData, error: alertErr } = await supabaseAdmin
-    .from('alerts')
-    .select(
-      'id, patient_id, status, priority, triggered_at, resolved_at, responding_volunteer_id, volunteer_confirmed_at, nearest_hospital_id, wave_number, incapacitation_suspected',
-    )
-    .eq('id', alertId)
-    .single()
+  const alertData = await prisma.alert.findUnique({
+    where: { id: alertId },
+    select: {
+      id: true,
+      patientId: true,
+      status: true,
+      priority: true,
+      triggeredAt: true,
+      resolvedAt: true,
+      respondingVolunteerId: true,
+      volunteerConfirmedAt: true,
+      nearestHospitalId: true,
+      waveNumber: true,
+      incapacitationSuspected: true,
+    },
+  })
 
-  if (alertErr || !alertData) {
-    logError('incapacitation: load alert failed', { alertId, error: String(alertErr) })
+  if (!alertData) {
+    logError('incapacitation: load alert failed', { alertId })
     return
   }
   if (alertData.status !== 'active') {
     return
   }
-  if (alertData.responding_volunteer_id != null || alertData.volunteer_confirmed_at != null) {
+  if (alertData.respondingVolunteerId != null || alertData.volunteerConfirmedAt != null) {
     return
   }
 
-  const { data: patMin, error: patErr } = await supabaseAdmin
-    .from('patients')
-    .select('phone_primary')
-    .eq('id', patientId)
-    .maybeSingle()
+  const patMin = await prisma.patient.findUnique({
+    where: { id: patientId },
+    select: { phonePrimary: true },
+  })
 
-  if (patErr || !patMin || typeof patMin.phone_primary !== 'string') {
-    logError('incapacitation: load patient phone failed', { patientId, error: String(patErr) })
+  if (!patMin?.phonePrimary) {
+    logError('incapacitation: load patient phone failed', { patientId })
     return
   }
 
-  const geoRow = await fetchPatientForSos(patMin.phone_primary)
+  const geoRow = await fetchPatientForSos(patMin.phonePrimary)
   if (!geoRow) {
     logWarn('incapacitation: patient geo missing', { patientId })
     return
@@ -114,24 +119,24 @@ export async function runIncapacitationStep(alertId: string, patientId: string):
 
   const alertRow: Alert = {
     id: alertData.id,
-    patient_id: alertData.patient_id,
+    patient_id: alertData.patientId,
     status: alertData.status as Alert['status'],
     priority: alertData.priority as Alert['priority'],
-    triggered_at: alertData.triggered_at,
-    resolved_at: alertData.resolved_at,
-    responding_volunteer_id: alertData.responding_volunteer_id,
-    volunteer_confirmed_at: alertData.volunteer_confirmed_at,
-    nearest_hospital_id: alertData.nearest_hospital_id,
-    wave_number: alertData.wave_number,
-    incapacitation_suspected: Boolean(alertData.incapacitation_suspected),
+    triggered_at: alertData.triggeredAt.toISOString(),
+    resolved_at: alertData.resolvedAt?.toISOString() ?? null,
+    responding_volunteer_id: null,
+    volunteer_confirmed_at: null,
+    nearest_hospital_id: alertData.nearestHospitalId,
+    wave_number: alertData.waveNumber,
+    incapacitation_suspected: Boolean(alertData.incapacitationSuspected),
   }
 
-  const { error: upErr } = await supabaseAdmin
-    .from('alerts')
-    .update({ priority: 2, incapacitation_suspected: true })
-    .eq('id', alertId)
-    .eq('status', 'active')
-  if (upErr) {
+  try {
+    await prisma.alert.updateMany({
+      where: { id: alertId, status: 'active' },
+      data: { priority: 2, incapacitationSuspected: true },
+    })
+  } catch (upErr) {
     logError('incapacitation: update alert failed', { alertId, error: String(upErr) })
     return
   }
@@ -162,20 +167,14 @@ export async function runIncapacitationStep(alertId: string, patientId: string):
   const fresh = volunteers.filter((v) => !contacted.has(v.id))
   for (const v of fresh) {
     try {
-      const { error: rErr } = await supabaseAdmin.from('alert_responses').insert({
-        alert_id: alertId,
-        volunteer_id: v.id,
-        wave_number: 2,
-        response: null,
-      })
-      if (rErr) {
-        logError('incapacitation: alert_response insert failed', {
+      await prisma.alertResponse.create({
+        data: {
           alertId,
           volunteerId: v.id,
-          error: String(rErr),
-        })
-        continue
-      }
+          waveNumber: 2,
+          response: null,
+        },
+      })
       notifyVolunteerFeedRefresh(v.id)
       const smsBody = buildVolunteerAlertSMS(patientForFamily, v, alertRow, v.language)
       await sendSmsMultipart(v.phone, smsBody)

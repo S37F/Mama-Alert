@@ -4,6 +4,7 @@
  * USSD-style menus are handled via Twilio (SMS and/or Voice) at POST /api/ussd.
  */
 const REQUIRED_CORE = [
+  'DATABASE_URL',
   'SUPABASE_URL',
   'SUPABASE_SERVICE_ROLE_KEY',
   'SUPABASE_ANON_KEY',
@@ -47,7 +48,9 @@ export function validateEnv(): void {
     throw new Error('TWILIO_MOCK cannot be enabled when NODE_ENV=production')
   }
   const validatedKeys = [...REQUIRED_CORE, ...(isTwilioMock() ? [] : [...REQUIRED_TWILIO])]
-  console.log(`MamaAlert: environment OK — required keys present: ${validatedKeys.join(', ')}`)
+  console.log(
+    `MamaAlert: environment OK — required keys present: ${validatedKeys.join(', ')} (DB via Prisma, auth via Supabase)`,
+  )
   validated = true
 }
 

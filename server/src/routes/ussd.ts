@@ -5,7 +5,7 @@ import { asyncHandler } from '@/lib/asyncHandler'
 import { logError } from '@/lib/logger'
 import { normalizePhone } from '@/lib/phone'
 import { fetchPatientForSos } from '@/services/patientQueries'
-import { supabaseAdmin } from '@/services/supabase'
+import { prisma } from '@/lib/prisma'
 import { sendSMS } from '@/services/twilio'
 import { triggerSos } from '@/services/sosService'
 
@@ -120,12 +120,11 @@ ussdRouter.post(
           sendSmsTwiml(res, 'We could not find your profile.')
           return
         }
-        const { data: hw, error } = await supabaseAdmin
-          .from('health_workers')
-          .select('phone')
-          .eq('user_id', row.health_worker_id)
-          .maybeSingle()
-        if (error || !hw?.phone) {
+        const hw = await prisma.healthWorker.findUnique({
+          where: { userId: row.health_worker_id },
+          select: { phone: true },
+        })
+        if (!hw?.phone) {
           sendSmsTwiml(res, 'No health worker phone on file.')
           return
         }
@@ -189,12 +188,11 @@ ussdRouter.post(
           sendVoiceSay(res, 'We could not find your profile.')
           return
         }
-        const { data: hw, error } = await supabaseAdmin
-          .from('health_workers')
-          .select('phone')
-          .eq('user_id', row.health_worker_id)
-          .maybeSingle()
-        if (error || !hw?.phone) {
+        const hw = await prisma.healthWorker.findUnique({
+          where: { userId: row.health_worker_id },
+          select: { phone: true },
+        })
+        if (!hw?.phone) {
           sendVoiceSay(res, 'No health worker phone on file.')
           return
         }

@@ -1,5 +1,8 @@
+import type { Patient as PatientModel } from '@prisma/client'
 import { extractFamilyPhones } from '@/lib/emergencyContacts'
 import { logAudit, logError, logWarn } from '@/lib/logger'
+import { prisma } from '@/lib/prisma'
+import { rpcClaimAlertForVolunteer, rpcGetPatientForSos } from '@/services/db/rpc'
 import { getNearbyHospital } from '@/services/geo'
 import {
   buildClinicPreAlertSMS,
@@ -7,7 +10,6 @@ import {
   buildPatientConfirmationSMS,
   buildVolunteerDirectionsSMS,
 } from '@/services/messageBuilder'
-import { supabaseAdmin } from '@/services/supabase'
 import { sendSMS, sendSmsMultipart } from '@/services/twilio'
 import { notifyVolunteerFeedRefresh } from '@/services/volunteerSseHub'
 import type { PatientSosRow } from '@/types/patientSos'
@@ -16,6 +18,29 @@ import type { Volunteer } from '@/types/volunteer'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+/** Map Prisma patient row to the snake_case shape `mapPatientFromJoin` expects. */
+export function patientModelToJoinRaw(p: PatientModel): Record<string, unknown> {
+  return {
+    id: p.id,
+    name: p.name,
+    phone_primary: p.phonePrimary,
+    phone_secondary: p.phoneSecondary,
+    village: p.village,
+    landmark: p.landmark,
+    weeks_pregnant: p.weeksPregnant,
+    due_date: p.dueDate ? p.dueDate.toISOString().slice(0, 10) : null,
+    blood_type: p.bloodType,
+    language: p.language,
+    status_token: p.statusToken,
+    health_worker_id: p.healthWorkerId,
+    zone_id: p.zoneId,
+    age: p.age,
+    risk_flags: p.riskFlags,
+    emergency_contacts: p.emergencyContacts,
+    last_anc_date: p.lastAncDate ? p.lastAncDate.toISOString().slice(0, 10) : null,
+  }
 }
 
 export function mapPatientFromJoin(raw: unknown): Patient | null {
@@ -65,70 +90,61 @@ export function mapPatientFromJoin(raw: unknown): Patient | null {
 export async function findActivePendingResponseForVolunteer(
   volunteerId: string,
 ): Promise<{ responseId: string; alertId: string } | null> {
-  const { data: responses, error: rErr } = await supabaseAdmin
-    .from('alert_responses')
-    .select('id, alert_id, sent_at')
-    .eq('volunteer_id', volunteerId)
-    .is('response', null)
-    .order('sent_at', { ascending: false })
-    .limit(10)
+  const responses = await prisma.alertResponse.findMany({
+    where: { volunteerId, response: null },
+    orderBy: { sentAt: 'desc' },
+    take: 10,
+    select: { id: true, alertId: true },
+  })
 
-  if (rErr || !responses || responses.length === 0) {
+  if (responses.length === 0) {
     return null
   }
 
   for (const row of responses) {
-    const { data: al } = await supabaseAdmin.from('alerts').select('status').eq('id', row.alert_id).maybeSingle()
+    const al = await prisma.alert.findUnique({
+      where: { id: row.alertId },
+      select: { status: true },
+    })
     if (al?.status === 'active') {
-      return { responseId: row.id, alertId: row.alert_id }
+      return { responseId: row.id, alertId: row.alertId }
     }
   }
   return null
 }
 
 export async function applyVolunteerDone(volunteerId: string): Promise<boolean> {
-  const { data: alert, error } = await supabaseAdmin
-    .from('alerts')
-    .select('id, status')
-    .eq('responding_volunteer_id', volunteerId)
-    .eq('status', 'volunteer_responding')
-    .order('triggered_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const alert = await prisma.alert.findFirst({
+    where: { respondingVolunteerId: volunteerId, status: 'volunteer_responding' },
+    orderBy: { triggeredAt: 'desc' },
+    select: { id: true },
+  })
 
-  if (error || !alert) {
+  if (!alert) {
     return false
   }
 
-  const { data: updated, error: upErr } = await supabaseAdmin
-    .from('alerts')
-    .update({ status: 'at_facility' })
-    .eq('id', alert.id)
-    .eq('status', 'volunteer_responding')
-    .select('id')
-    .maybeSingle()
+  const updated = await prisma.alert.updateMany({
+    where: { id: alert.id, status: 'volunteer_responding' },
+    data: { status: 'at_facility' },
+  })
 
-  return !upErr && !!updated
+  return updated.count > 0
 }
 
 export async function applyVolunteerNo(responseId: string): Promise<void> {
-  const { data: before, error: loadErr } = await supabaseAdmin
-    .from('alert_responses')
-    .select('volunteer_id, volunteers ( phone )')
-    .eq('id', responseId)
-    .maybeSingle()
-  if (loadErr) {
-    logError('volunteer-reply: NO prefetch failed', { error: String(loadErr) })
-  }
-  let volunteerId: string | null =
-    before && typeof before.volunteer_id === 'string' ? before.volunteer_id : null
+  const before = await prisma.alertResponse.findUnique({
+    where: { id: responseId },
+    select: { volunteerId: true },
+  })
+  const volunteerId = before?.volunteerId ?? null
 
-  const nowIso = new Date().toISOString()
-  const { error: upErr } = await supabaseAdmin
-    .from('alert_responses')
-    .update({ response: 'NO', responded_at: nowIso })
-    .eq('id', responseId)
-  if (upErr) {
+  try {
+    await prisma.alertResponse.update({
+      where: { id: responseId },
+      data: { response: 'NO', respondedAt: new Date() },
+    })
+  } catch (upErr) {
     logError('volunteer-reply: NO update failed', { error: String(upErr) })
     return
   }
@@ -138,18 +154,17 @@ export async function applyVolunteerNo(responseId: string): Promise<void> {
 }
 
 export async function applyVolunteerYes(vol: Volunteer, responseId: string, alertId: string): Promise<void> {
-  const { data: alertJoin, error: aErr } = await supabaseAdmin
-    .from('alerts')
-    .select('*, patients(*)')
-    .eq('id', alertId)
-    .single()
+  const alertJoin = await prisma.alert.findUnique({
+    where: { id: alertId },
+    include: { patient: true },
+  })
 
-  if (aErr || !alertJoin) {
-    logError('volunteer-reply: load alert failed', { error: String(aErr) })
+  if (!alertJoin?.patient) {
+    logError('volunteer-reply: load alert failed', { alertId })
     return
   }
 
-  const patientRaw = alertJoin.patients
+  const patientRaw = patientModelToJoinRaw(alertJoin.patient)
   const patient = mapPatientFromJoin(patientRaw)
   if (!patient) {
     return
@@ -157,30 +172,32 @@ export async function applyVolunteerYes(vol: Volunteer, responseId: string, aler
 
   let lat = 0
   let lng = 0
-  const { data: rpcRows, error: rpcErr } = await supabaseAdmin.rpc('get_patient_for_sos', {
-    p_phone: patient.phone_primary,
-  })
-  if (!rpcErr && rpcRows && Array.isArray(rpcRows) && rpcRows.length > 0) {
-    const pr = rpcRows[0] as PatientSosRow
-    lat = pr.lat
-    lng = pr.lng
+  try {
+    const rpcRows = await rpcGetPatientForSos(patient.phone_primary)
+    if (rpcRows && rpcRows.length > 0) {
+      const pr = rpcRows[0] as PatientSosRow
+      lat = pr.lat
+      lng = pr.lng
+    }
+  } catch (rpcErr) {
+    logWarn('volunteer-reply: get_patient_for_sos failed', { error: String(rpcErr) })
   }
 
   const hospital = lat && lng ? await getNearbyHospital(lat, lng, 100_000).catch(() => null) : null
 
-  const { data: claimRaw, error: claimErr } = await supabaseAdmin.rpc('claim_alert_for_volunteer', {
-    p_alert_id: alertId,
-    p_volunteer_id: vol.id,
-    p_response_id: responseId,
-    p_nearest_hospital_id: hospital?.id ?? null,
-  })
-
-  if (claimErr) {
+  let claim: { ok: boolean; reason?: string }
+  try {
+    claim = await rpcClaimAlertForVolunteer(
+      alertId,
+      vol.id,
+      responseId,
+      hospital?.id ?? null,
+    )
+  } catch (claimErr) {
     logError('volunteer-reply: claim RPC failed', { error: String(claimErr) })
     return
   }
 
-  const claim = claimRaw as { ok?: boolean; reason?: string }
   if (!claim?.ok) {
     logWarn('volunteer-reply: claim rejected', { reason: claim?.reason, alertId })
     return
@@ -204,7 +221,7 @@ export async function applyVolunteerYes(vol: Volunteer, responseId: string, aler
     logError('volunteer-reply: patient confirmation SMS failed', { err: String(err) })
   }
 
-  const contacts = isRecord(patientRaw) ? patientRaw.emergency_contacts : undefined
+  const contacts = patientRaw.emergency_contacts
   const phones = extractFamilyPhones(contacts)
   const famMsg = buildFamilySMS(patient, vol.name, patient.status_token, patient.language)
   for (const ph of phones) {
@@ -233,13 +250,15 @@ export function toVolunteerRow(row: {
   name: string
   phone: string
   language: string
-  zone_id: string | null
+  zone_id?: string | null
+  zoneId?: string | null
 }): Volunteer {
+  const zone_id = row.zone_id ?? row.zoneId ?? null
   return {
     id: row.id,
     name: row.name,
     phone: row.phone,
     language: row.language,
-    zone_id: row.zone_id,
+    zone_id,
   }
 }

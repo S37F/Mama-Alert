@@ -1,51 +1,34 @@
-import { supabaseAdmin } from '@/services/supabase'
+import {
+  rpcGetNearbyHospitals,
+  rpcGetNearbyVolunteers,
+  type NearbyHospitalRpcRow,
+  type NearbyVolunteerRpcRow,
+} from '@/services/db/rpc'
 import type { Hospital } from '@/types/hospital'
 import type { Volunteer } from '@/types/volunteer'
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
+function mapVolunteerRow(row: NearbyVolunteerRpcRow): Volunteer {
+  return {
+    id: row.id,
+    name: row.name,
+    phone: row.phone,
+    language: row.language,
+    zone_id: null,
+    skills: Array.isArray(row.skills) ? row.skills : [],
+    vehicle: typeof row.vehicle === 'string' ? row.vehicle : 'none',
+    distance_m: row.distance_m,
+  }
 }
 
-function mapVolunteerRow(row: unknown): Volunteer | null {
-  if (!isRecord(row)) {
-    return null
+function mapHospitalRow(row: NearbyHospitalRpcRow): Hospital {
+  return {
+    id: row.id,
+    name: row.name,
+    phone_emergency: row.phone_emergency,
+    services: Array.isArray(row.services) ? row.services : [],
+    is_24hr: row.is_24hr,
+    distance_m: row.distance_m,
   }
-  const id = row.id
-  const name = row.name
-  const phone = row.phone
-  const language = row.language
-  if (typeof id !== 'string' || typeof name !== 'string' || typeof phone !== 'string') {
-    return null
-  }
-  const lang = typeof language === 'string' ? language : 'en'
-  const skills = Array.isArray(row.skills) ? row.skills.filter((s): s is string => typeof s === 'string') : []
-  const vehicle = typeof row.vehicle === 'string' ? row.vehicle : 'none'
-  const base = {
-    id,
-    name,
-    phone,
-    language: lang,
-    zone_id: typeof row.zone_id === 'string' ? row.zone_id : null,
-    skills,
-    vehicle,
-  }
-  return typeof row.distance_m === 'number' ? { ...base, distance_m: row.distance_m } : base
-}
-
-function mapHospitalRow(row: unknown): Hospital | null {
-  if (!isRecord(row)) {
-    return null
-  }
-  const id = row.id
-  const name = row.name
-  if (typeof id !== 'string' || typeof name !== 'string') {
-    return null
-  }
-  const phone_emergency = typeof row.phone_emergency === 'string' ? row.phone_emergency : null
-  const services = Array.isArray(row.services) ? row.services.filter((s): s is string => typeof s === 'string') : []
-  const is_24hr = typeof row.is_24hr === 'boolean' ? row.is_24hr : false
-  const base = { id, name, phone_emergency, services, is_24hr }
-  return typeof row.distance_m === 'number' ? { ...base, distance_m: row.distance_m } : base
 }
 
 export async function getNearbyVolunteers(
@@ -53,25 +36,11 @@ export async function getNearbyVolunteers(
   lng: number,
   radiusMeters: number,
 ): Promise<Volunteer[]> {
-  const { data, error } = await supabaseAdmin.rpc('get_nearby_volunteers', {
-    patient_lat: lat,
-    patient_lng: lng,
-    radius_meters: radiusMeters,
-  })
-  if (error) {
-    throw error
-  }
+  const data = await rpcGetNearbyVolunteers(lat, lng, radiusMeters)
   if (!data || !Array.isArray(data)) {
     return []
   }
-  const out: Volunteer[] = []
-  for (const row of data) {
-    const v = mapVolunteerRow(row)
-    if (v) {
-      out.push(v)
-    }
-  }
-  return out
+  return data.map((row) => mapVolunteerRow(row))
 }
 
 export async function getNearbyHospital(
@@ -79,16 +48,9 @@ export async function getNearbyHospital(
   lng: number,
   radiusMeters: number = 50_000,
 ): Promise<Hospital | null> {
-  const { data, error } = await supabaseAdmin.rpc('get_nearby_hospitals', {
-    patient_lat: lat,
-    patient_lng: lng,
-    radius_meters: radiusMeters,
-  })
-  if (error) {
-    throw error
-  }
+  const data = await rpcGetNearbyHospitals(lat, lng, radiusMeters)
   if (!data || !Array.isArray(data) || data.length === 0) {
     return null
   }
-  return mapHospitalRow(data[0])
+  return mapHospitalRow(data[0] as NearbyHospitalRpcRow)
 }

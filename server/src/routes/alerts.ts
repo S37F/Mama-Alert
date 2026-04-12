@@ -1,15 +1,65 @@
 import { Router } from 'express'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { logError } from '@/lib/logger'
+import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/middleware/auth'
-import { supabaseAdmin } from '@/services/supabase'
 
 export const alertsRouter = Router()
 
 alertsRouter.use(requireAuth)
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
+function patientToSnake(p: {
+  id: string
+  healthWorkerId: string
+  zoneId: string | null
+  name: string
+  age: number | null
+  phonePrimary: string
+  phoneSecondary: string | null
+  village: string | null
+  landmark: string | null
+  weeksPregnant: number | null
+  dueDate: Date | null
+  bloodType: string | null
+  language: string
+  statusToken: string
+  riskFlags: string[]
+  emergencyContacts: unknown
+  patientStatus: string
+  medicationName: string | null
+  prevPregnancies: number | null
+  prevBirths: number | null
+  prevCsection: boolean
+  lastAncDate: Date | null
+  createdAt: Date
+  updatedAt: Date
+}): Record<string, unknown> {
+  return {
+    id: p.id,
+    health_worker_id: p.healthWorkerId,
+    zone_id: p.zoneId,
+    name: p.name,
+    age: p.age,
+    phone_primary: p.phonePrimary,
+    phone_secondary: p.phoneSecondary,
+    village: p.village,
+    landmark: p.landmark,
+    weeks_pregnant: p.weeksPregnant,
+    due_date: p.dueDate ? p.dueDate.toISOString().slice(0, 10) : null,
+    blood_type: p.bloodType,
+    language: p.language,
+    status_token: p.statusToken,
+    risk_flags: p.riskFlags,
+    emergency_contacts: p.emergencyContacts,
+    patient_status: p.patientStatus,
+    medication_name: p.medicationName,
+    prev_pregnancies: p.prevPregnancies,
+    prev_births: p.prevBirths,
+    prev_csection: p.prevCsection,
+    last_anc_date: p.lastAncDate ? p.lastAncDate.toISOString().slice(0, 10) : null,
+    created_at: p.createdAt.toISOString(),
+    updated_at: p.updatedAt.toISOString(),
+  }
 }
 
 alertsRouter.get(
@@ -22,67 +72,72 @@ alertsRouter.get(
       return
     }
 
-    const { data: rows, error } = await supabaseAdmin
-      .from('alerts')
-      .select(
-        'id, status, priority, triggered_at, patient_id, responding_volunteer_id, patients (name, landmark, weeks_pregnant, zone_id, health_worker_id)',
-      )
-      .in('status', ['active', 'volunteer_responding', 'at_facility'])
-      .order('triggered_at', { ascending: false })
+    try {
+      const rows = await prisma.alert.findMany({
+        where: { status: { in: ['active', 'volunteer_responding', 'at_facility'] } },
+        orderBy: { triggeredAt: 'desc' },
+        include: {
+          patient: {
+            select: {
+              name: true,
+              landmark: true,
+              weeksPregnant: true,
+              zoneId: true,
+              healthWorkerId: true,
+            },
+          },
+        },
+      })
 
-    if (error) {
-      logError('alerts list failed', { error: String(error) })
-      res.status(500).json({ error: 'Failed to load alerts' })
-      return
-    }
+      const filtered = rows.filter((row) => {
+        const p = row.patient
+        if (!p) {
+          return false
+        }
+        const pZone = p.zoneId
+        const pHw = p.healthWorkerId
+        if (req.healthWorker?.access_level === 'admin') {
+          return zoneId !== null && zoneId !== undefined && pZone === zoneId
+        }
+        return pHw === uid
+      })
 
-    const filtered = (rows ?? []).filter((row) => {
-      const p = row.patients
-      if (!isRecord(p)) {
-        return false
-      }
-      const pZone = typeof p.zone_id === 'string' ? p.zone_id : null
-      const pHw = typeof p.health_worker_id === 'string' ? p.health_worker_id : null
-      if (req.healthWorker?.access_level === 'admin') {
-        return zoneId !== null && zoneId !== undefined && pZone === zoneId
-      }
-      return pHw === uid
-    })
-
-    const volIds = [
-      ...new Set(
-        filtered
-          .map((r) => r.responding_volunteer_id)
-          .filter((id): id is string => typeof id === 'string'),
-      ),
-    ]
-    let volNames: Record<string, string> = {}
-    if (volIds.length > 0) {
-      const { data: vols } = await supabaseAdmin.from('volunteers').select('id, name').in('id', volIds)
-      if (vols) {
+      const volIds = [
+        ...new Set(
+          filtered.map((r) => r.respondingVolunteerId).filter((id): id is string => typeof id === 'string'),
+        ),
+      ]
+      let volNames: Record<string, string> = {}
+      if (volIds.length > 0) {
+        const vols = await prisma.volunteer.findMany({
+          where: { id: { in: volIds } },
+          select: { id: true, name: true },
+        })
         volNames = Object.fromEntries(vols.map((v) => [v.id, v.name]))
       }
+
+      const out = filtered.map((r) => {
+        const p = r.patient
+        const rid = r.respondingVolunteerId
+        return {
+          id: r.id,
+          status: r.status,
+          priority: r.priority,
+          triggered_at: r.triggeredAt.toISOString(),
+          patient: {
+            name: p?.name ?? '',
+            landmark: p?.landmark ?? null,
+            weeks_pregnant: p?.weeksPregnant ?? null,
+          },
+          responding_volunteer_name: typeof rid === 'string' && volNames[rid] ? volNames[rid] : null,
+        }
+      })
+
+      res.json(out)
+    } catch (err) {
+      logError('alerts list failed', { error: String(err) })
+      res.status(500).json({ error: 'Failed to load alerts' })
     }
-
-    const out = filtered.map((r) => {
-      const p: Record<string, unknown> = isRecord(r.patients) ? r.patients : {}
-      const rid = r.responding_volunteer_id
-      return {
-        id: r.id,
-        status: r.status,
-        priority: r.priority,
-        triggered_at: r.triggered_at,
-        patient: {
-          name: typeof p.name === 'string' ? p.name : '',
-          landmark: typeof p.landmark === 'string' ? p.landmark : null,
-          weeks_pregnant: typeof p.weeks_pregnant === 'number' ? p.weeks_pregnant : null,
-        },
-        responding_volunteer_name:
-          typeof rid === 'string' && volNames[rid] ? volNames[rid] : null,
-      }
-    })
-
-    res.json(out)
   }),
 )
 
@@ -97,27 +152,26 @@ alertsRouter.get(
     const uid = req.authUserId
     const zoneId = req.healthWorker?.zone_id
 
-    const { data: alert, error } = await supabaseAdmin
-      .from('alerts')
-      .select('*, patients (*)')
-      .eq('id', id)
-      .maybeSingle()
+    const alert = await prisma.alert.findUnique({
+      where: { id },
+      include: {
+        patient: true,
+      },
+    })
 
-    if (error || !alert) {
+    if (!alert || !alert.patient) {
       res.status(404).json({ error: 'Alert not found' })
       return
     }
 
-    const { data: responses } = await supabaseAdmin
-      .from('alert_responses')
-      .select('id, alert_id, volunteer_id, response, sent_at, responded_at, wave_number, volunteers (id, name, phone)')
-      .eq('alert_id', id)
+    const responses = await prisma.alertResponse.findMany({
+      where: { alertId: id },
+      include: {
+        volunteer: { select: { id: true, name: true, phone: true } },
+      },
+    })
 
-    const pRaw = alert.patients
-    if (!isRecord(pRaw)) {
-      res.status(404).json({ error: 'Alert not found' })
-      return
-    }
+    const pRaw = patientToSnake(alert.patient)
     const pZone = typeof pRaw.zone_id === 'string' ? pRaw.zone_id : null
     const pHw = typeof pRaw.health_worker_id === 'string' ? pRaw.health_worker_id : null
     const allowedAdmin = req.healthWorker?.access_level === 'admin' && zoneId === pZone
@@ -127,7 +181,36 @@ alertsRouter.get(
       return
     }
 
-    res.json({ ...alert, alert_responses: responses ?? [] })
+    const alertJson = {
+      id: alert.id,
+      patient_id: alert.patientId,
+      status: alert.status,
+      priority: alert.priority,
+      triggered_at: alert.triggeredAt.toISOString(),
+      resolved_at: alert.resolvedAt?.toISOString() ?? null,
+      responding_volunteer_id: alert.respondingVolunteerId,
+      volunteer_confirmed_at: alert.volunteerConfirmedAt?.toISOString() ?? null,
+      nearest_hospital_id: alert.nearestHospitalId,
+      wave_number: alert.waveNumber,
+      incapacitation_suspected: alert.incapacitationSuspected,
+      created_at: alert.createdAt.toISOString(),
+      updated_at: alert.updatedAt.toISOString(),
+      patients: pRaw,
+      alert_responses: responses.map((r) => ({
+        id: r.id,
+        alert_id: r.alertId,
+        volunteer_id: r.volunteerId,
+        response: r.response,
+        sent_at: r.sentAt.toISOString(),
+        responded_at: r.respondedAt?.toISOString() ?? null,
+        wave_number: r.waveNumber,
+        volunteers: r.volunteer
+          ? { id: r.volunteer.id, name: r.volunteer.name, phone: r.volunteer.phone }
+          : null,
+      })),
+    }
+
+    res.json(alertJson)
   }),
 )
 
@@ -142,23 +225,17 @@ alertsRouter.patch(
     const uid = req.authUserId
     const zoneId = req.healthWorker?.zone_id
 
-    const { data: alert, error: fetchErr } = await supabaseAdmin
-      .from('alerts')
-      .select('id, patient_id, patients (zone_id, health_worker_id)')
-      .eq('id', id)
-      .maybeSingle()
+    const alert = await prisma.alert.findUnique({
+      where: { id },
+      include: { patient: { select: { zoneId: true, healthWorkerId: true } } },
+    })
 
-    if (fetchErr || !alert) {
+    if (!alert || !alert.patient) {
       res.status(404).json({ error: 'Alert not found' })
       return
     }
-    const pr = alert.patients
-    if (!isRecord(pr)) {
-      res.status(404).json({ error: 'Alert not found' })
-      return
-    }
-    const pZone = typeof pr.zone_id === 'string' ? pr.zone_id : null
-    const pHw = typeof pr.health_worker_id === 'string' ? pr.health_worker_id : null
+    const pZone = alert.patient.zoneId
+    const pHw = alert.patient.healthWorkerId
     const allowedAdmin = req.healthWorker?.access_level === 'admin' && zoneId === pZone
     const allowedHw = pHw === uid
     if (!allowedAdmin && !allowedHw) {
@@ -166,13 +243,13 @@ alertsRouter.patch(
       return
     }
 
-    const now = new Date().toISOString()
-    const { error: upErr } = await supabaseAdmin
-      .from('alerts')
-      .update({ status: 'resolved', resolved_at: now })
-      .eq('id', id)
-
-    if (upErr) {
+    const now = new Date()
+    try {
+      await prisma.alert.update({
+        where: { id },
+        data: { status: 'resolved', resolvedAt: now },
+      })
+    } catch (upErr) {
       logError('alert resolve failed', { error: String(upErr) })
       res.status(500).json({ error: 'Could not resolve alert' })
       return

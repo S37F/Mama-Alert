@@ -21,7 +21,7 @@ import { workerPortalRouter } from '@/routes/workerPortal'
 import { validateTwilioUssdSignature } from '@/middleware/twilioValidate'
 import { logError } from '@/lib/logger'
 import { startDelayedJobPoller } from '@/services/delayedJobProcessor'
-import { supabaseAdmin } from '@/services/supabase'
+import { prisma } from '@/lib/prisma'
 
 const app = express()
 const PORT = Number(process.env.PORT) || 3000
@@ -56,9 +56,10 @@ app.get('/api/health/db', async (req, res) => {
       return res.status(404).json({ ok: false })
     }
   }
-  const { error } = await supabaseAdmin.from('zones').select('id').limit(1)
-  if (error) {
-    logError('Health DB check failed', { error: error.message })
+  try {
+    await prisma.zone.findFirst({ select: { id: true } })
+  } catch (err) {
+    logError('Health DB check failed', { error: String(err) })
     return res.status(503).json({ ok: false, database: 'error' })
   }
   return res.json({ ok: true, database: 'reachable' })

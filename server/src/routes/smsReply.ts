@@ -14,7 +14,7 @@ import {
 import { buildSmsKeywordAck, buildVolunteerDoneAck } from '@/services/messageBuilder'
 import { fetchPatientForSos } from '@/services/patientQueries'
 import { triggerSos } from '@/services/sosService'
-import { supabaseAdmin } from '@/services/supabase'
+import { prisma } from '@/lib/prisma'
 import { validateTwilioSignature } from '@/middleware/twilioValidate'
 
 export const smsReplyRouter = Router()
@@ -40,13 +40,12 @@ smsReplyRouter.post(
     const answer = bodyRaw.trim().toUpperCase()
     const keywords = getSmsSosKeywordSet()
 
-    const { data: volunteer, error: vErr } = await supabaseAdmin
-      .from('volunteers')
-      .select('id, name, phone, language, zone_id')
-      .eq('phone_e164', from)
-      .maybeSingle()
+    const volunteer = await prisma.volunteer.findFirst({
+      where: { phoneE164: from },
+      select: { id: true, name: true, phone: true, language: true, zoneId: true },
+    })
 
-    if (!vErr && volunteer) {
+    if (volunteer) {
       const vol = toVolunteerRow(volunteer)
       const target = await findActivePendingResponseForVolunteer(vol.id)
       if (target) {

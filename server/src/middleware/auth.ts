@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express'
 import { asyncHandler } from '@/lib/asyncHandler'
-import { supabaseAdmin } from '@/services/supabase'
+import { prisma } from '@/lib/prisma'
+import { supabaseAuthAdmin } from '@/services/supabaseAuth'
 
 /** Zone admins must have `zone_id` set; health workers may omit it. */
 export function assertAdminHasZone(res: Response, accessLevel: string, zoneId: string | null): boolean {
@@ -18,32 +19,31 @@ export const requireAuth = asyncHandler(async (req: Request, res: Response, next
     res.status(401).json({ error: 'Unauthorized' })
     return
   }
-  const { data, error } = await supabaseAdmin.auth.getUser(token)
+  const { data, error } = await supabaseAuthAdmin.auth.getUser(token)
   if (error || !data.user) {
     res.status(401).json({ error: 'Invalid session' })
     return
   }
-  const { data: hw, error: hwErr } = await supabaseAdmin
-    .from('health_workers')
-    .select('access_level, zone_id')
-    .eq('user_id', data.user.id)
-    .maybeSingle()
-  if (hwErr || !hw) {
+  const hw = await prisma.healthWorker.findUnique({
+    where: { userId: data.user.id },
+    select: { accessLevel: true, zoneId: true },
+  })
+  if (!hw) {
     res.status(403).json({ error: 'Health worker profile not found' })
     return
   }
-  const level = hw.access_level
+  const level = hw.accessLevel
   if (level !== 'health_worker' && level !== 'admin') {
     res.status(403).json({ error: 'Invalid access level' })
     return
   }
-  if (!assertAdminHasZone(res, level, hw.zone_id)) {
+  if (!assertAdminHasZone(res, level, hw.zoneId)) {
     return
   }
   req.authUserId = data.user.id
   req.healthWorker = {
     access_level: level,
-    zone_id: hw.zone_id,
+    zone_id: hw.zoneId,
   }
   next()
 })

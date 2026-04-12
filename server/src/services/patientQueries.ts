@@ -1,5 +1,5 @@
 import { normalizePhone } from '@/lib/phone'
-import { supabaseAdmin } from '@/services/supabase'
+import { rpcGetPatientForSos, rpcGetPatientForSosById } from '@/services/db/rpc'
 import type { PatientSosRow } from '@/types/patientSos'
 
 function isPatientSosRow(value: unknown): value is PatientSosRow {
@@ -21,13 +21,8 @@ function isPatientSosRow(value: unknown): value is PatientSosRow {
 
 export async function fetchPatientForSos(phone: string): Promise<PatientSosRow | null> {
   const normalized = normalizePhone(phone)
-  const { data, error } = await supabaseAdmin.rpc('get_patient_for_sos', {
-    p_phone: normalized,
-  })
-  if (error) {
-    throw error
-  }
-  if (!data || !Array.isArray(data) || data.length === 0) {
+  const data = await rpcGetPatientForSos(normalized)
+  if (!data || data.length === 0) {
     return null
   }
   const row = data[0]
@@ -35,13 +30,8 @@ export async function fetchPatientForSos(phone: string): Promise<PatientSosRow |
 }
 
 export async function fetchPatientForSosById(patientId: string): Promise<PatientSosRow | null> {
-  const { data, error } = await supabaseAdmin.rpc('get_patient_for_sos_by_id', {
-    p_id: patientId,
-  })
-  if (error) {
-    throw error
-  }
-  if (!data || !Array.isArray(data) || data.length === 0) {
+  const data = await rpcGetPatientForSosById(patientId)
+  if (!data || data.length === 0) {
     return null
   }
   const row = data[0]

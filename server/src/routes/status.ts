@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { asyncHandler } from '@/lib/asyncHandler'
-import { supabaseAdmin } from '@/services/supabase'
+import { prisma } from '@/lib/prisma'
 
 export const statusRouter = Router()
 
@@ -13,24 +13,27 @@ statusRouter.get(
       return
     }
 
-    const { data: patient, error } = await supabaseAdmin
-      .from('patients')
-      .select('id, name')
-      .eq('status_token', token)
-      .maybeSingle()
+    const patient = await prisma.patient.findUnique({
+      where: { statusToken: token },
+      select: { id: true, name: true },
+    })
 
-    if (error || !patient) {
+    if (!patient) {
       res.status(404).json({ error: 'Not found' })
       return
     }
 
-    const { data: latest } = await supabaseAdmin
-      .from('alerts')
-      .select('status, triggered_at, updated_at, responding_volunteer_id, nearest_hospital_id')
-      .eq('patient_id', patient.id)
-      .order('triggered_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+    const latest = await prisma.alert.findFirst({
+      where: { patientId: patient.id },
+      orderBy: { triggeredAt: 'desc' },
+      select: {
+        status: true,
+        triggeredAt: true,
+        updatedAt: true,
+        respondingVolunteerId: true,
+        nearestHospitalId: true,
+      },
+    })
 
     const firstName = patient.name.split(/\s+/)[0] ?? patient.name
 
@@ -41,21 +44,19 @@ statusRouter.get(
 
     if (latest) {
       alertStatus = latest.status
-      lastUpdated = latest.updated_at ?? latest.triggered_at
-      if (latest.responding_volunteer_id) {
-        const { data: v } = await supabaseAdmin
-          .from('volunteers')
-          .select('name')
-          .eq('id', latest.responding_volunteer_id)
-          .maybeSingle()
+      lastUpdated = latest.updatedAt.toISOString() ?? latest.triggeredAt.toISOString()
+      if (latest.respondingVolunteerId) {
+        const v = await prisma.volunteer.findUnique({
+          where: { id: latest.respondingVolunteerId },
+          select: { name: true },
+        })
         volunteerName = v?.name ?? null
       }
-      if (latest.nearest_hospital_id) {
-        const { data: h } = await supabaseAdmin
-          .from('hospitals')
-          .select('name')
-          .eq('id', latest.nearest_hospital_id)
-          .maybeSingle()
+      if (latest.nearestHospitalId) {
+        const h = await prisma.hospital.findUnique({
+          where: { id: latest.nearestHospitalId },
+          select: { name: true },
+        })
         hospitalName = h?.name ?? null
       }
     }

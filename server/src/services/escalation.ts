@@ -1,8 +1,10 @@
 /**
- * Hackathon escalation: uses setTimeout. Production should use Bull/BullMQ or similar.
+ * Escalation steps are scheduled via `delayed_jobs` (see delayedJobProcessor).
  */
+import { Prisma } from '@prisma/client'
 import { isTwilioMock } from '@/config/env'
 import { logError, logWarn } from '@/lib/logger'
+import { prisma } from '@/lib/prisma'
 import { patientSosRowToPatient } from '@/services/patientMapper'
 import { fetchPatientForSos } from '@/services/patientQueries'
 import {
@@ -11,7 +13,6 @@ import {
   buildVolunteerAlertSMS,
 } from '@/services/messageBuilder'
 import { getNearbyVolunteers } from '@/services/geo'
-import { supabaseAdmin } from '@/services/supabase'
 import { sendSMS, sendSmsMultipart, sendVoiceConfirmation } from '@/services/twilio'
 import { notifyVolunteerFeedRefresh } from '@/services/volunteerSseHub'
 import type { Alert } from '@/types/alert'
@@ -48,53 +49,44 @@ export async function loadEscalationConfig(patientId: string): Promise<Escalatio
     r1: 10_000,
     r2: 20_000,
   }
-  const { data: pat, error: pErr } = await supabaseAdmin
-    .from('patients')
-    .select('zone_id')
-    .eq('id', patientId)
-    .maybeSingle()
-  if (pErr || !pat?.zone_id || typeof pat.zone_id !== 'string') {
+  const pat = await prisma.patient.findUnique({
+    where: { id: patientId },
+    select: { zoneId: true },
+  })
+  if (!pat?.zoneId) {
     return defaults
   }
-  const { data: z, error: zErr } = await supabaseAdmin
-    .from('zones')
-    .select('escalation_r1_m, escalation_r2_m, escalation_delay_ms')
-    .eq('id', pat.zone_id)
-    .maybeSingle()
-  if (zErr || !z) {
+  const z = await prisma.zone.findUnique({
+    where: { id: pat.zoneId },
+    select: { escalationR1M: true, escalationR2M: true, escalationDelayMs: true },
+  })
+  if (!z) {
     return defaults
   }
   const clampR = (m: unknown): number | null =>
     typeof m === 'number' && Number.isFinite(m) && m >= 5_000 && m <= 50_000 ? m : null
   const delayMs =
-    typeof z.escalation_delay_ms === 'number' && z.escalation_delay_ms >= 30_000
-      ? z.escalation_delay_ms
+    typeof z.escalationDelayMs === 'number' && z.escalationDelayMs >= 30_000
+      ? z.escalationDelayMs
       : defaults.delayMs
   return {
     delayMs,
-    r1: clampR(z.escalation_r1_m) ?? defaults.r1,
-    r2: clampR(z.escalation_r2_m) ?? defaults.r2,
+    r1: clampR(z.escalationR1M) ?? defaults.r1,
+    r2: clampR(z.escalationR2M) ?? defaults.r2,
   }
 }
 
 async function alreadyContactedVolunteerIds(alertId: string): Promise<Set<string>> {
-  const { data, error } = await supabaseAdmin
-    .from('alert_responses')
-    .select('volunteer_id')
-    .eq('alert_id', alertId)
-  if (error) {
-    logError('escalation: list alert_responses failed', { alertId, error: String(error) })
+  try {
+    const rows = await prisma.alertResponse.findMany({
+      where: { alertId },
+      select: { volunteerId: true },
+    })
+    return new Set(rows.map((r) => r.volunteerId))
+  } catch (err) {
+    logError('escalation: list alert_responses failed', { alertId, error: String(err) })
     return new Set()
   }
-  const ids = new Set<string>()
-  if (data) {
-    for (const row of data) {
-      if (row && typeof row.volunteer_id === 'string') {
-        ids.add(row.volunteer_id)
-      }
-    }
-  }
-  return ids
 }
 
 async function notifyNewVolunteers(
@@ -106,25 +98,23 @@ async function notifyNewVolunteers(
 ): Promise<void> {
   for (const v of volunteers) {
     try {
-      const { error: insErr } = await supabaseAdmin.from('alert_responses').insert({
-        alert_id: alertId,
-        volunteer_id: v.id,
-        wave_number: waveNumber,
-        response: null,
-      })
-      if (insErr) {
-        logError('escalation: insert alert_response failed', {
+      await prisma.alertResponse.create({
+        data: {
           alertId,
           volunteerId: v.id,
-          error: String(insErr),
-        })
-        continue
-      }
+          waveNumber,
+          response: null,
+        },
+      })
       notifyVolunteerFeedRefresh(v.id)
       const body = buildVolunteerAlertSMS(patient, v, alertRow, v.language)
       await sendSmsMultipart(v.phone, body)
     } catch (err) {
-      logError('escalation: volunteer SMS failed', { alertId, volunteerId: v.id, err: String(err) })
+      logError('escalation: insert alert_response failed', {
+        alertId,
+        volunteerId: v.id,
+        error: String(err),
+      })
     }
   }
 }
@@ -145,15 +135,24 @@ async function runEscalationStep(params: {
   }
   const patient = patientSosRowToPatient(row)
 
-  const { data: alertData, error: alertErr } = await supabaseAdmin
-    .from('alerts')
-    .select(
-      'id, patient_id, status, priority, triggered_at, resolved_at, responding_volunteer_id, volunteer_confirmed_at, nearest_hospital_id, wave_number, incapacitation_suspected',
-    )
-    .eq('id', alertId)
-    .single()
-  if (alertErr || !alertData) {
-    logError('escalation: load alert failed', { alertId, error: String(alertErr) })
+  const alertData = await prisma.alert.findUnique({
+    where: { id: alertId },
+    select: {
+      id: true,
+      patientId: true,
+      status: true,
+      priority: true,
+      triggeredAt: true,
+      resolvedAt: true,
+      respondingVolunteerId: true,
+      volunteerConfirmedAt: true,
+      nearestHospitalId: true,
+      waveNumber: true,
+      incapacitationSuspected: true,
+    },
+  })
+  if (!alertData) {
+    logError('escalation: load alert failed', { alertId })
     return
   }
   if (alertData.status !== 'active') {
@@ -162,16 +161,16 @@ async function runEscalationStep(params: {
 
   const alertRow: Alert = {
     id: alertData.id,
-    patient_id: alertData.patient_id,
+    patient_id: alertData.patientId,
     status: alertData.status as Alert['status'],
     priority: alertData.priority as Alert['priority'],
-    triggered_at: alertData.triggered_at,
-    resolved_at: alertData.resolved_at,
-    responding_volunteer_id: alertData.responding_volunteer_id,
-    volunteer_confirmed_at: alertData.volunteer_confirmed_at,
-    nearest_hospital_id: alertData.nearest_hospital_id,
-    wave_number: alertData.wave_number,
-    incapacitation_suspected: Boolean(alertData.incapacitation_suspected),
+    triggered_at: alertData.triggeredAt.toISOString(),
+    resolved_at: alertData.resolvedAt?.toISOString() ?? null,
+    responding_volunteer_id: alertData.respondingVolunteerId,
+    volunteer_confirmed_at: alertData.volunteerConfirmedAt?.toISOString() ?? null,
+    nearest_hospital_id: alertData.nearestHospitalId,
+    wave_number: alertData.waveNumber,
+    incapacitation_suspected: Boolean(alertData.incapacitationSuspected),
   }
 
   const contacted = await alreadyContactedVolunteerIds(alertId)
@@ -185,11 +184,12 @@ async function runEscalationStep(params: {
 
   const fresh = volunteers.filter((v) => !contacted.has(v.id))
 
-  const { error: upErr } = await supabaseAdmin
-    .from('alerts')
-    .update({ priority: nextPriority, wave_number: nextWaveNumber })
-    .eq('id', alertId)
-  if (upErr) {
+  try {
+    await prisma.alert.update({
+      where: { id: alertId },
+      data: { priority: nextPriority, waveNumber: nextWaveNumber },
+    })
+  } catch (upErr) {
     logError('escalation: update alert priority failed', { alertId, error: String(upErr) })
   }
 
@@ -214,15 +214,22 @@ async function enqueueEscalationDelayedJob(alertId: string, patientId: string, w
     logError('escalation: loadEscalationConfig failed', { patientId, err: String(err) })
     cfg = { delayMs: defaultEscalationDelayMs(), r1: 10_000, r2: 20_000 }
   }
-  const runAfter = new Date(Date.now() + cfg.delayMs).toISOString()
-  const { error } = await supabaseAdmin.from('delayed_jobs').insert({
-    dedupe_key: `escalation:${alertId}:${wave}`,
-    job_type: 'escalation',
-    payload: { alertId, patientId, wave },
-    run_after: runAfter,
-  })
-  if (error && !String(error.message).includes('duplicate')) {
-    logError('escalation: delayed_jobs insert failed', { alertId, error: String(error) })
+  const runAfter = new Date(Date.now() + cfg.delayMs)
+  const payload: Prisma.InputJsonValue = { alertId, patientId, wave }
+  try {
+    await prisma.delayedJob.create({
+      data: {
+        dedupeKey: `escalation:${alertId}:${wave}`,
+        jobType: 'escalation',
+        payload,
+        runAfter,
+      },
+    })
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+      return
+    }
+    logError('escalation: delayed_jobs insert failed', { alertId, error: String(e) })
   }
 }
 
@@ -239,30 +246,28 @@ export async function runEscalationTimer(
   wave: number,
   cfg: EscalationRadiiConfig,
 ): Promise<void> {
-  const { data: alertRow, error } = await supabaseAdmin
-    .from('alerts')
-    .select('id, status, patient_id, triggered_at')
-    .eq('id', alertId)
-    .single()
-  if (error || !alertRow) {
-    logError('escalation: timer fetch alert failed', { alertId, error: String(error) })
+  const alertRow = await prisma.alert.findUnique({
+    where: { id: alertId },
+    select: { id: true, status: true, patientId: true, triggeredAt: true },
+  })
+  if (!alertRow) {
+    logError('escalation: timer fetch alert failed', { alertId })
     return
   }
   if (alertRow.status !== 'active') {
     return
   }
-  const { data: pat, error: pErr } = await supabaseAdmin
-    .from('patients')
-    .select('phone_primary')
-    .eq('id', alertRow.patient_id)
-    .single()
-  if (pErr || !pat?.phone_primary) {
-    logError('escalation: missing patient phone', { alertId, error: String(pErr) })
+  const pat = await prisma.patient.findUnique({
+    where: { id: alertRow.patientId },
+    select: { phonePrimary: true },
+  })
+  if (!pat?.phonePrimary) {
+    logError('escalation: missing patient phone', { alertId })
     return
   }
-  const phone = pat.phone_primary
+  const phone = pat.phonePrimary
 
-  const triggered = new Date(alertRow.triggered_at).getTime()
+  const triggered = alertRow.triggeredAt.getTime()
   const minutesSince = Math.max(0, Math.floor((Date.now() - triggered) / 60_000))
 
   if (wave === 0) {
@@ -274,7 +279,7 @@ export async function runEscalationTimer(
       nextPriority: 2,
       minutesSinceStart: minutesSince,
     })
-    scheduleEscalation(alertId, alertRow.patient_id, 1)
+    scheduleEscalation(alertId, alertRow.patientId, 1)
   } else if (wave === 1) {
     await runEscalationStep({
       alertId,
@@ -284,9 +289,12 @@ export async function runEscalationTimer(
       nextPriority: 3,
       minutesSinceStart: minutesSince,
     })
-    scheduleEscalation(alertId, alertRow.patient_id, 2)
+    scheduleEscalation(alertId, alertRow.patientId, 2)
   } else if (wave === 2) {
-    const { data: a } = await supabaseAdmin.from('alerts').select('status').eq('id', alertId).single()
+    const a = await prisma.alert.findUnique({
+      where: { id: alertId },
+      select: { status: true },
+    })
     if (a?.status === 'active') {
       logWarn('CRITICAL: alert still active after full escalation — manual follow-up required', {
         alertId,

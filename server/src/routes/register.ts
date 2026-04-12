@@ -4,7 +4,11 @@ import { asyncHandler } from '@/lib/asyncHandler'
 import { logAudit, logError } from '@/lib/logger'
 import { signSosPatientToken } from '@/lib/sosToken'
 import { requireAdmin, requireAuth } from '@/middleware/auth'
-import { supabaseAdmin } from '@/services/supabase'
+import {
+  insertHospitalWithLocation,
+  insertPatientWithLocation,
+  insertVolunteerWithLocation,
+} from '@/services/db/geoWrites'
 
 export const registerRouter = Router()
 
@@ -64,8 +68,12 @@ const hospitalSchema = z.object({
   zone_id: z.string().uuid().optional().nullable(),
 })
 
-function geographyPointWkt(lng: number, lat: number): string {
-  return `SRID=4326;POINT(${lng} ${lat})`
+function parseDateOnly(s: string | null | undefined): Date | null {
+  if (s === undefined || s === null || s === '') {
+    return null
+  }
+  const d = new Date(s)
+  return Number.isNaN(d.getTime()) ? null : d
 }
 
 /** SOS link token TTL (seconds) — ~6 months. */
@@ -90,41 +98,37 @@ registerRouter.post(
       req.healthWorker?.access_level === 'admin'
         ? (body.zone_id ?? req.healthWorker.zone_id ?? null)
         : (req.healthWorker?.zone_id ?? null)
-    const { data, error } = await supabaseAdmin
-      .from('patients')
-      .insert({
-        health_worker_id: hwId,
-        zone_id: zoneId,
+    try {
+      const data = await insertPatientWithLocation({
+        healthWorkerId: hwId,
+        zoneId,
         name: body.name,
         age: body.age ?? null,
-        phone_primary: body.phone_primary.trim(),
-        phone_secondary: body.phone_secondary?.trim() ?? null,
+        phonePrimary: body.phone_primary.trim(),
+        phoneSecondary: body.phone_secondary?.trim() ?? null,
         village: body.village ?? null,
         landmark: body.landmark ?? null,
-        location: geographyPointWkt(body.lng, body.lat),
-        weeks_pregnant: body.weeks_pregnant ?? null,
-        due_date: body.due_date ?? null,
-        prev_pregnancies: body.prev_pregnancies ?? null,
-        prev_births: body.prev_births ?? null,
-        prev_csection: body.prev_csection ?? false,
-        last_anc_date: body.last_anc_date ?? null,
-        blood_type: body.blood_type ?? null,
+        lat: body.lat,
+        lng: body.lng,
+        weeksPregnant: body.weeks_pregnant ?? null,
+        dueDate: parseDateOnly(body.due_date),
+        prevPregnancies: body.prev_pregnancies ?? null,
+        prevBirths: body.prev_births ?? null,
+        prevCsection: body.prev_csection ?? false,
+        lastAncDate: parseDateOnly(body.last_anc_date),
+        bloodType: body.blood_type ?? null,
         language: body.language,
-        risk_flags: body.risk_flags ?? [],
-        medication_name: body.medication_name ?? null,
-        emergency_contacts: body.emergency_contacts ?? [],
+        riskFlags: body.risk_flags ?? [],
+        medicationName: body.medication_name ?? null,
+        emergencyContacts: body.emergency_contacts ?? [],
       })
-      .select('id, status_token')
-      .single()
-
-    if (error) {
+      const sos_token = signSosPatientToken(data.id, SOS_TOKEN_TTL_SEC)
+      logAudit('patient_registered', { patientId: data.id, healthWorkerId: hwId })
+      res.status(201).json({ id: data.id, status_token: data.status_token, sos_token })
+    } catch (error) {
       logError('register patient failed', { error: String(error) })
-      res.status(400).json({ error: 'Could not register patient', details: error.message })
-      return
+      res.status(400).json({ error: 'Could not register patient', details: String(error) })
     }
-    const sos_token = signSosPatientToken(data.id, SOS_TOKEN_TTL_SEC)
-    logAudit('patient_registered', { patientId: data.id, healthWorkerId: hwId })
-    res.status(201).json({ id: data.id, status_token: data.status_token, sos_token })
   }),
 )
 
@@ -149,28 +153,24 @@ registerRouter.post(
       res.status(403).json({ error: 'Cannot register volunteer outside your zone' })
       return
     }
-    const { data, error } = await supabaseAdmin
-      .from('volunteers')
-      .insert({
+    try {
+      const data = await insertVolunteerWithLocation({
+        zoneId: targetZone,
         name: body.name,
         phone: body.phone.trim(),
-        location: geographyPointWkt(body.lng, body.lat),
+        lat: body.lat,
+        lng: body.lng,
         skills: body.skills ?? [],
         vehicle: body.vehicle ?? 'none',
-        max_radius_km: body.max_radius_km ?? 5,
+        maxRadiusKm: body.max_radius_km ?? 5,
         language: body.language ?? 'en',
-        zone_id: targetZone,
       })
-      .select('id')
-      .single()
-
-    if (error) {
+      logAudit('volunteer_registered', { volunteerId: data.id, zoneId: targetZone })
+      res.status(201).json({ id: data.id })
+    } catch (error) {
       logError('register volunteer failed', { error: String(error) })
-      res.status(400).json({ error: 'Could not register volunteer', details: error.message })
-      return
+      res.status(400).json({ error: 'Could not register volunteer', details: String(error) })
     }
-    logAudit('volunteer_registered', { volunteerId: data.id, zoneId: targetZone })
-    res.status(201).json({ id: data.id })
   }),
 )
 
@@ -195,28 +195,24 @@ registerRouter.post(
       res.status(403).json({ error: 'Cannot register hospital outside your zone' })
       return
     }
-    const { data, error } = await supabaseAdmin
-      .from('hospitals')
-      .insert({
+    try {
+      const data = await insertHospitalWithLocation({
+        zoneId: targetZone,
         name: body.name,
         type: body.type ?? 'PHC',
-        location: geographyPointWkt(body.lng, body.lat),
-        phone_main: body.phone_main ?? null,
-        phone_emergency: body.phone_emergency ?? null,
+        lat: body.lat,
+        lng: body.lng,
+        phoneMain: body.phone_main ?? null,
+        phoneEmergency: body.phone_emergency ?? null,
         services: body.services ?? [],
-        is_24hr: body.is_24hr ?? false,
-        receive_alerts: body.receive_alerts ?? true,
-        zone_id: targetZone,
+        is24hr: body.is_24hr ?? false,
+        receiveAlerts: body.receive_alerts ?? true,
       })
-      .select('id')
-      .single()
-
-    if (error) {
+      logAudit('hospital_registered', { hospitalId: data.id, zoneId: targetZone })
+      res.status(201).json({ id: data.id })
+    } catch (error) {
       logError('register hospital failed', { error: String(error) })
-      res.status(400).json({ error: 'Could not register hospital', details: error.message })
-      return
+      res.status(400).json({ error: 'Could not register hospital', details: String(error) })
     }
-    logAudit('hospital_registered', { hospitalId: data.id, zoneId: targetZone })
-    res.status(201).json({ id: data.id })
   }),
 )

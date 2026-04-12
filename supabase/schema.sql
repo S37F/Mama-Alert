@@ -1,4 +1,6 @@
 -- MamaAlert Phase 1 — schema (run in Supabase SQL editor before functions.sql and seed.sql)
+-- Fresh DB: optionally run reset_public_schema.sql first, then this file, functions.sql,
+-- grant_public_privileges.sql, then seed.sql.
 -- Requires: PostGIS
 
 CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA extensions;

@@ -1,65 +1,68 @@
 import { Router } from 'express'
 import { z } from 'zod'
+import type { Prisma } from '@prisma/client'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { logAudit, logError } from '@/lib/logger'
+import { prisma } from '@/lib/prisma'
 import { signHospitalPortalToken } from '@/lib/portalJwt'
 import { requireAdmin, requireAuth } from '@/middleware/auth'
-import { supabaseAdmin } from '@/services/supabase'
+import {
+  rpcAdminActiveAlertPoints,
+  rpcAdminHospitalsInZone,
+  rpcAdminPatientsInZone,
+  rpcAdminVolunteersInZone,
+} from '@/services/db/rpc'
+import { supabaseAuthAdmin } from '@/services/supabaseAuth'
 
 export const adminDataRouter = Router()
 
 adminDataRouter.use(requireAuth)
 adminDataRouter.use(requireAdmin)
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
 adminDataRouter.get(
   '/patients',
   asyncHandler(async (req, res) => {
     const zoneId = req.healthWorker?.zone_id
-    let q = supabaseAdmin
-      .from('patients')
-      .select(
-        'id, name, weeks_pregnant, risk_flags, last_anc_date, health_worker_id, health_workers ( name )',
-      )
-      .order('name', { ascending: true })
+    try {
+      const data = await prisma.patient.findMany({
+        where: zoneId ? { zoneId } : {},
+        orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          weeksPregnant: true,
+          riskFlags: true,
+          lastAncDate: true,
+          healthWorkerId: true,
+          healthWorker: { select: { name: true } },
+        },
+      })
 
-    if (zoneId) {
-      q = q.eq('zone_id', zoneId)
-    }
+      const rows = data.map((row) => {
+        const hwName = row.healthWorker?.name ?? ''
+        const lastAnc = row.lastAncDate ? row.lastAncDate.toISOString().slice(0, 10) : null
+        let overdueAnc = false
+        if (lastAnc) {
+          const d = new Date(lastAnc)
+          const days = (Date.now() - d.getTime()) / (24 * 60 * 60 * 1000)
+          overdueAnc = days > 28
+        }
+        return {
+          id: row.id,
+          name: row.name,
+          healthWorkerName: hwName,
+          weeksPregnant: row.weeksPregnant,
+          riskFlags: row.riskFlags,
+          lastAncDate: lastAnc,
+          overdueAnc,
+        }
+      })
 
-    const { data, error } = await q
-
-    if (error) {
-      logError('admin patients failed', { error: String(error) })
+      res.json({ patients: rows })
+    } catch (err) {
+      logError('admin patients failed', { error: String(err) })
       res.status(500).json({ error: 'Failed to load patients' })
-      return
     }
-
-    const rows = (data ?? []).map((row) => {
-      const hw = row.health_workers
-      const hwName = isRecord(hw) && typeof hw.name === 'string' ? hw.name : ''
-      const lastAnc = typeof row.last_anc_date === 'string' ? row.last_anc_date : null
-      let overdueAnc = false
-      if (lastAnc) {
-        const d = new Date(lastAnc)
-        const days = (Date.now() - d.getTime()) / (24 * 60 * 60 * 1000)
-        overdueAnc = days > 28
-      }
-      return {
-        id: row.id,
-        name: row.name,
-        healthWorkerName: hwName,
-        weeksPregnant: typeof row.weeks_pregnant === 'number' ? row.weeks_pregnant : null,
-        riskFlags: Array.isArray(row.risk_flags) ? row.risk_flags : [],
-        lastAncDate: lastAnc,
-        overdueAnc,
-      }
-    })
-
-    res.json({ patients: rows })
   }),
 )
 
@@ -67,24 +70,34 @@ adminDataRouter.get(
   '/volunteers',
   asyncHandler(async (req, res) => {
     const zoneId = req.healthWorker?.zone_id
-    let q = supabaseAdmin
-      .from('volunteers')
-      .select('id, name, skills, vehicle, max_radius_km, is_active, last_response_at')
-      .order('name', { ascending: true })
-
-    if (zoneId) {
-      q = q.eq('zone_id', zoneId)
-    }
-
-    const { data, error } = await q
-
-    if (error) {
-      logError('admin volunteers failed', { error: String(error) })
+    try {
+      const data = await prisma.volunteer.findMany({
+        where: zoneId ? { zoneId } : {},
+        orderBy: { name: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          skills: true,
+          vehicle: true,
+          maxRadiusKm: true,
+          isActive: true,
+          lastResponseAt: true,
+        },
+      })
+      const volunteers = data.map((v) => ({
+        id: v.id,
+        name: v.name,
+        skills: v.skills,
+        vehicle: v.vehicle,
+        max_radius_km: v.maxRadiusKm,
+        is_active: v.isActive,
+        last_response_at: v.lastResponseAt?.toISOString() ?? null,
+      }))
+      res.json({ volunteers })
+    } catch (err) {
+      logError('admin volunteers failed', { error: String(err) })
       res.status(500).json({ error: 'Failed to load volunteers' })
-      return
     }
-
-    res.json({ volunteers: data ?? [] })
   }),
 )
 
@@ -103,23 +116,23 @@ adminDataRouter.patch(
     }
 
     const zoneId = req.healthWorker?.zone_id
-    const { data: vol, error: fErr } = await supabaseAdmin
-      .from('volunteers')
-      .select('id, zone_id')
-      .eq('id', id)
-      .maybeSingle()
+    const vol = await prisma.volunteer.findUnique({
+      where: { id },
+      select: { id: true, zoneId: true },
+    })
 
-    if (fErr || !vol) {
+    if (!vol) {
       res.status(404).json({ error: 'Volunteer not found' })
       return
     }
-    if (zoneId && vol.zone_id !== zoneId) {
+    if (zoneId && vol.zoneId !== zoneId) {
       res.status(403).json({ error: 'Out of zone' })
       return
     }
 
-    const { error: uErr } = await supabaseAdmin.from('volunteers').update({ is_active: active }).eq('id', id)
-    if (uErr) {
+    try {
+      await prisma.volunteer.update({ where: { id }, data: { isActive: active } })
+    } catch {
       res.status(500).json({ error: 'Update failed' })
       return
     }
@@ -132,96 +145,94 @@ adminDataRouter.get(
   asyncHandler(async (req, res) => {
     const zoneId = req.healthWorker?.zone_id
 
-    const { data: alerts, error } = await supabaseAdmin
-      .from('alerts')
-      .select(
-        'id, status, triggered_at, resolved_at, volunteer_confirmed_at, responding_volunteer_id, patient_id, patients ( name, zone_id )',
-      )
-      .order('triggered_at', { ascending: false })
-      .limit(200)
+    try {
+      const alerts = await prisma.alert.findMany({
+        orderBy: { triggeredAt: 'desc' },
+        take: 200,
+        include: {
+          patient: { select: { name: true, zoneId: true } },
+        },
+      })
 
-    if (error) {
-      logError('admin alerts history failed', { error: String(error) })
-      res.status(500).json({ error: 'Failed to load alerts' })
-      return
-    }
+      const filtered = alerts.filter((a) => {
+        const p = a.patient
+        if (!p) {
+          return false
+        }
+        const pZone = p.zoneId
+        if (!zoneId) {
+          return true
+        }
+        return pZone === zoneId
+      })
 
-    const filtered = (alerts ?? []).filter((a) => {
-      const p = a.patients
-      if (!isRecord(p)) {
-        return false
-      }
-      const pZone = typeof p.zone_id === 'string' ? p.zone_id : null
-      if (!zoneId) {
-        return true
-      }
-      return pZone === zoneId
-    })
-
-    const volIds = [
-      ...new Set(
-        filtered
-          .map((r) => r.responding_volunteer_id)
-          .filter((id): id is string => typeof id === 'string'),
-      ),
-    ]
-    let volNames: Record<string, string> = {}
-    if (volIds.length > 0) {
-      const { data: vols } = await supabaseAdmin.from('volunteers').select('id, name').in('id', volIds)
-      if (vols) {
+      const volIds = [
+        ...new Set(
+          filtered.map((r) => r.respondingVolunteerId).filter((id): id is string => typeof id === 'string'),
+        ),
+      ]
+      let volNames: Record<string, string> = {}
+      if (volIds.length > 0) {
+        const vols = await prisma.volunteer.findMany({
+          where: { id: { in: volIds } },
+          select: { id: true, name: true },
+        })
         volNames = Object.fromEntries(vols.map((v) => [v.id, v.name]))
       }
+
+      let totalVolunteerConfirmMs = 0
+      let volunteerConfirmCount = 0
+      let totalResolveMs = 0
+      let resolveCount = 0
+
+      const rows = filtered.map((a) => {
+        const rawP = a.patient
+        const patientName = rawP?.name ?? ''
+        const rid = a.respondingVolunteerId
+        const volName = typeof rid === 'string' && volNames[rid] ? volNames[rid] : null
+        const triggeredAt = a.triggeredAt.getTime()
+        let volunteerConfirmMs: number | null = null
+        if (a.volunteerConfirmedAt) {
+          volunteerConfirmMs = a.volunteerConfirmedAt.getTime() - triggeredAt
+          if (volunteerConfirmMs >= 0) {
+            totalVolunteerConfirmMs += volunteerConfirmMs
+            volunteerConfirmCount += 1
+          }
+        }
+        let resolveTimeMs: number | null = null
+        if (a.resolvedAt) {
+          resolveTimeMs = a.resolvedAt.getTime() - triggeredAt
+          if (resolveTimeMs >= 0) {
+            totalResolveMs += resolveTimeMs
+            resolveCount += 1
+          }
+        }
+        return {
+          id: a.id,
+          patientName,
+          triggeredAt: a.triggeredAt.toISOString(),
+          volunteerConfirmMs,
+          resolveTimeMs,
+          volunteerName: volName,
+          outcome: a.status,
+        }
+      })
+
+      const avgVolunteerConfirmMs =
+        volunteerConfirmCount > 0 ? Math.round(totalVolunteerConfirmMs / volunteerConfirmCount) : null
+      const avgResolveMs = resolveCount > 0 ? Math.round(totalResolveMs / resolveCount) : null
+
+      res.json({
+        alerts: rows,
+        avgVolunteerConfirmMs,
+        avgResolveMs,
+        /** @deprecated use avgResolveMs */
+        avgResponseMs: avgResolveMs,
+      })
+    } catch (err) {
+      logError('admin alerts history failed', { error: String(err) })
+      res.status(500).json({ error: 'Failed to load alerts' })
     }
-
-    let totalVolunteerConfirmMs = 0
-    let volunteerConfirmCount = 0
-    let totalResolveMs = 0
-    let resolveCount = 0
-
-    const rows = filtered.map((a) => {
-      const rawP = a.patients
-      const p: Record<string, unknown> = isRecord(rawP) ? rawP : {}
-      const patientName = typeof p.name === 'string' ? p.name : ''
-      const rid = a.responding_volunteer_id
-      const volName = typeof rid === 'string' && volNames[rid] ? volNames[rid] : null
-      let volunteerConfirmMs: number | null = null
-      if (a.triggered_at && a.volunteer_confirmed_at) {
-        volunteerConfirmMs = new Date(a.volunteer_confirmed_at).getTime() - new Date(a.triggered_at).getTime()
-        if (volunteerConfirmMs >= 0) {
-          totalVolunteerConfirmMs += volunteerConfirmMs
-          volunteerConfirmCount += 1
-        }
-      }
-      let resolveTimeMs: number | null = null
-      if (a.triggered_at && a.resolved_at) {
-        resolveTimeMs = new Date(a.resolved_at).getTime() - new Date(a.triggered_at).getTime()
-        if (resolveTimeMs >= 0) {
-          totalResolveMs += resolveTimeMs
-          resolveCount += 1
-        }
-      }
-      return {
-        id: a.id,
-        patientName,
-        triggeredAt: a.triggered_at,
-        volunteerConfirmMs,
-        resolveTimeMs,
-        volunteerName: volName,
-        outcome: a.status,
-      }
-    })
-
-    const avgVolunteerConfirmMs =
-      volunteerConfirmCount > 0 ? Math.round(totalVolunteerConfirmMs / volunteerConfirmCount) : null
-    const avgResolveMs = resolveCount > 0 ? Math.round(totalResolveMs / resolveCount) : null
-
-    res.json({
-      alerts: rows,
-      avgVolunteerConfirmMs,
-      avgResolveMs,
-      /** @deprecated use avgResolveMs */
-      avgResponseMs: avgResolveMs,
-    })
   }),
 )
 
@@ -234,32 +245,18 @@ adminDataRouter.get(
       return
     }
 
-    const [pRes, vRes, hRes, aRes] = await Promise.all([
-      supabaseAdmin.rpc('admin_patients_in_zone', { p_zone_id: zoneId }),
-      supabaseAdmin.rpc('admin_volunteers_in_zone', { p_zone_id: zoneId }),
-      supabaseAdmin.rpc('admin_hospitals_in_zone', { p_zone_id: zoneId }),
-      supabaseAdmin.rpc('admin_active_alert_points', { p_zone_id: zoneId }),
-    ])
-
-    if (pRes.error) {
-      logError('admin map patients', { error: String(pRes.error) })
+    try {
+      const [patients, volunteers, hospitals, activeAlerts] = await Promise.all([
+        rpcAdminPatientsInZone(zoneId),
+        rpcAdminVolunteersInZone(zoneId),
+        rpcAdminHospitalsInZone(zoneId),
+        rpcAdminActiveAlertPoints(zoneId),
+      ])
+      res.json({ patients, volunteers, hospitals, activeAlerts })
+    } catch (err) {
+      logError('admin map-points failed', { error: String(err) })
+      res.status(500).json({ error: 'Failed to load map data' })
     }
-    if (vRes.error) {
-      logError('admin map volunteers', { error: String(vRes.error) })
-    }
-    if (hRes.error) {
-      logError('admin map hospitals', { error: String(hRes.error) })
-    }
-    if (aRes.error) {
-      logError('admin map alerts', { error: String(aRes.error) })
-    }
-
-    res.json({
-      patients: pRes.data ?? [],
-      volunteers: vRes.data ?? [],
-      hospitals: hRes.data ?? [],
-      activeAlerts: aRes.data ?? [],
-    })
   }),
 )
 
@@ -281,24 +278,24 @@ adminDataRouter.patch(
       return
     }
     const zoneId = req.healthWorker?.zone_id
-    const { data: h, error: fErr } = await supabaseAdmin
-      .from('hospitals')
-      .select('id, zone_id')
-      .eq('id', id)
-      .maybeSingle()
-    if (fErr || !h) {
+    const h = await prisma.hospital.findUnique({
+      where: { id },
+      select: { id: true, zoneId: true },
+    })
+    if (!h) {
       res.status(404).json({ error: 'Hospital not found' })
       return
     }
-    if (zoneId && h.zone_id !== zoneId) {
+    if (zoneId && h.zoneId !== zoneId) {
       res.status(403).json({ error: 'Out of zone' })
       return
     }
-    const { error: uErr } = await supabaseAdmin
-      .from('hospitals')
-      .update({ receive_alerts: parsed.data.receive_alerts })
-      .eq('id', id)
-    if (uErr) {
+    try {
+      await prisma.hospital.update({
+        where: { id },
+        data: { receiveAlerts: parsed.data.receive_alerts },
+      })
+    } catch (uErr) {
       logError('admin hospital patch failed', { error: String(uErr) })
       res.status(500).json({ error: 'Update failed' })
       return
@@ -316,16 +313,15 @@ adminDataRouter.post(
       return
     }
     const zoneId = req.healthWorker?.zone_id
-    const { data: h, error: fErr } = await supabaseAdmin
-      .from('hospitals')
-      .select('id, zone_id')
-      .eq('id', id)
-      .maybeSingle()
-    if (fErr || !h) {
+    const h = await prisma.hospital.findUnique({
+      where: { id },
+      select: { id: true, zoneId: true },
+    })
+    if (!h) {
       res.status(404).json({ error: 'Hospital not found' })
       return
     }
-    if (zoneId && h.zone_id !== zoneId) {
+    if (zoneId && h.zoneId !== zoneId) {
       res.status(403).json({ error: 'Out of zone' })
       return
     }
@@ -350,13 +346,19 @@ adminDataRouter.get(
       res.status(400).json({ error: 'Admin has no zone assigned' })
       return
     }
-    const { data: zrow, error } = await supabaseAdmin
-      .from('zones')
-      .select('id, name, escalation_r1_m, escalation_r2_m, escalation_r3_m, escalation_delay_ms')
-      .eq('id', zoneId)
-      .maybeSingle()
-    if (error || !zrow) {
-      logError('admin zone escalation get failed', { error: String(error) })
+    const zrow = await prisma.zone.findUnique({
+      where: { id: zoneId },
+      select: {
+        id: true,
+        name: true,
+        escalationR1M: true,
+        escalationR2M: true,
+        escalationR3M: true,
+        escalationDelayMs: true,
+      },
+    })
+    if (!zrow) {
+      logError('admin zone escalation get failed', { zoneId })
       res.status(500).json({ error: 'Failed to load zone' })
       return
     }
@@ -364,10 +366,10 @@ adminDataRouter.get(
       zone: {
         id: zrow.id,
         name: zrow.name,
-        escalation_r1_m: zrow.escalation_r1_m,
-        escalation_r2_m: zrow.escalation_r2_m,
-        escalation_r3_m: zrow.escalation_r3_m,
-        escalation_delay_ms: zrow.escalation_delay_ms,
+        escalation_r1_m: zrow.escalationR1M,
+        escalation_r2_m: zrow.escalationR2M,
+        escalation_r3_m: zrow.escalationR3M,
+        escalation_delay_ms: zrow.escalationDelayMs,
       },
     })
   }),
@@ -386,18 +388,26 @@ adminDataRouter.patch(
       res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
       return
     }
-    const patch: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(parsed.data)) {
-      if (v !== undefined) {
-        patch[k] = v
-      }
+    const data: Prisma.ZoneUpdateInput = {}
+    if (parsed.data.escalation_r1_m !== undefined) {
+      data.escalationR1M = parsed.data.escalation_r1_m
     }
-    if (Object.keys(patch).length === 0) {
+    if (parsed.data.escalation_r2_m !== undefined) {
+      data.escalationR2M = parsed.data.escalation_r2_m
+    }
+    if (parsed.data.escalation_r3_m !== undefined) {
+      data.escalationR3M = parsed.data.escalation_r3_m
+    }
+    if (parsed.data.escalation_delay_ms !== undefined) {
+      data.escalationDelayMs = parsed.data.escalation_delay_ms
+    }
+    if (Object.keys(data).length === 0) {
       res.status(400).json({ error: 'No fields to update' })
       return
     }
-    const { error: uErr } = await supabaseAdmin.from('zones').update(patch).eq('id', zoneId)
-    if (uErr) {
+    try {
+      await prisma.zone.update({ where: { id: zoneId }, data })
+    } catch (uErr) {
       logError('admin zone escalation patch failed', { error: String(uErr) })
       res.status(500).json({ error: 'Update failed' })
       return
@@ -420,17 +430,23 @@ adminDataRouter.get(
       res.status(400).json({ error: 'Admin has no zone assigned' })
       return
     }
-    const { data, error } = await supabaseAdmin
-      .from('health_workers')
-      .select('user_id, name, phone, access_level')
-      .eq('zone_id', zoneId)
-      .order('name', { ascending: true })
-    if (error) {
-      logError('admin health-workers list failed', { error: String(error) })
+    try {
+      const data = await prisma.healthWorker.findMany({
+        where: { zoneId },
+        orderBy: { name: 'asc' },
+        select: { userId: true, name: true, phone: true, accessLevel: true },
+      })
+      const healthWorkers = data.map((hw) => ({
+        user_id: hw.userId,
+        name: hw.name,
+        phone: hw.phone,
+        access_level: hw.accessLevel,
+      }))
+      res.json({ healthWorkers })
+    } catch (err) {
+      logError('admin health-workers list failed', { error: String(err) })
       res.status(500).json({ error: 'Failed to list health workers' })
-      return
     }
-    res.json({ healthWorkers: data ?? [] })
   }),
 )
 
@@ -456,7 +472,7 @@ adminDataRouter.post(
       redirectTo !== undefined
         ? { data: { full_name: name }, redirectTo }
         : { data: { full_name: name } }
-    const { data: invited, error: invErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+    const { data: invited, error: invErr } = await supabaseAuthAdmin.auth.admin.inviteUserByEmail(
       email,
       invitePayload,
     )
@@ -466,14 +482,17 @@ adminDataRouter.post(
       return
     }
     const userId = invited.user.id
-    const { error: insErr } = await supabaseAdmin.from('health_workers').insert({
-      user_id: userId,
-      name,
-      phone: phone ?? null,
-      zone_id: zoneId,
-      access_level: 'health_worker',
-    })
-    if (insErr) {
+    try {
+      await prisma.healthWorker.create({
+        data: {
+          userId,
+          name,
+          phone: phone ?? null,
+          zoneId,
+          accessLevel: 'health_worker',
+        },
+      })
+    } catch (insErr) {
       logError('admin health_worker insert after invite failed', { error: String(insErr) })
       res.status(500).json({ error: 'Could not attach worker to zone (user may already be registered)' })
       return

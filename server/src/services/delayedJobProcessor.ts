@@ -1,7 +1,8 @@
+import { Prisma } from '@prisma/client'
 import { logError } from '@/lib/logger'
+import { prisma } from '@/lib/prisma'
 import { loadEscalationConfig, runEscalationTimer } from '@/services/escalation'
 import { runIncapacitationStep } from '@/services/incapacitationTimer'
-import { supabaseAdmin } from '@/services/supabase'
 
 function defaultEscalationDelayMs(): number {
   const raw = process.env.ESCALATION_DELAY_MS
@@ -14,10 +15,10 @@ function defaultEscalationDelayMs(): number {
 
 async function processJobRow(job: {
   id: string
-  job_type: string
+  jobType: string
   payload: unknown
 }): Promise<void> {
-  if (job.job_type === 'escalation') {
+  if (job.jobType === 'escalation') {
     const p = job.payload as { alertId?: string; patientId?: string; wave?: number }
     if (typeof p.alertId !== 'string' || typeof p.patientId !== 'string' || typeof p.wave !== 'number') {
       return
@@ -32,7 +33,7 @@ async function processJobRow(job: {
     await runEscalationTimer(p.alertId, p.patientId, p.wave, cfg)
     return
   }
-  if (job.job_type === 'incapacitation') {
+  if (job.jobType === 'incapacitation') {
     const p = job.payload as { alertId?: string; patientId?: string }
     if (typeof p.alertId !== 'string' || typeof p.patientId !== 'string') {
       return
@@ -41,35 +42,39 @@ async function processJobRow(job: {
   }
 }
 
-async function tickOnce(): Promise<void> {
-  const now = new Date().toISOString()
-  const { data: jobs, error } = await supabaseAdmin
-    .from('delayed_jobs')
-    .select('id, job_type, payload')
-    .lte('run_after', now)
-    .is('locked_at', null)
-    .order('run_after', { ascending: true })
-    .limit(25)
+function isMissingTableError(err: unknown): boolean {
+  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2021'
+}
 
-  if (error) {
-    if (String(error.message).includes('does not exist') || String(error.code) === '42P01') {
+async function tickOnce(): Promise<void> {
+  const now = new Date()
+  let jobs: { id: string; jobType: string; payload: unknown }[] = []
+  try {
+    jobs = await prisma.delayedJob.findMany({
+      where: { runAfter: { lte: now }, lockedAt: null },
+      orderBy: { runAfter: 'asc' },
+      take: 25,
+      select: { id: true, jobType: true, payload: true },
+    })
+  } catch (err) {
+    if (isMissingTableError(err)) {
       return
     }
-    logError('delayedJob: list failed', { error: String(error) })
+    logError('delayedJob: list failed', { error: String(err) })
     return
   }
 
-  for (const job of jobs ?? []) {
-    const lockIso = new Date().toISOString()
-    const { data: locked, error: lockErr } = await supabaseAdmin
-      .from('delayed_jobs')
-      .update({ locked_at: lockIso })
-      .eq('id', job.id)
-      .is('locked_at', null)
-      .select('id')
-      .maybeSingle()
-
-    if (lockErr || !locked) {
+  for (const job of jobs) {
+    const lockIso = new Date()
+    try {
+      const locked = await prisma.delayedJob.updateMany({
+        where: { id: job.id, lockedAt: null },
+        data: { lockedAt: lockIso },
+      })
+      if (locked.count === 0) {
+        continue
+      }
+    } catch (err) {
       continue
     }
 
@@ -78,7 +83,11 @@ async function tickOnce(): Promise<void> {
     } catch (err) {
       logError('delayedJob: handler failed', { jobId: job.id, err: String(err) })
     } finally {
-      await supabaseAdmin.from('delayed_jobs').delete().eq('id', job.id)
+      try {
+        await prisma.delayedJob.delete({ where: { id: job.id } })
+      } catch {
+        /* ignore */
+      }
     }
   }
 }

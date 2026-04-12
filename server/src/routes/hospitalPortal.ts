@@ -2,8 +2,8 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { logAudit, logError, logWarn } from '@/lib/logger'
+import { prisma } from '@/lib/prisma'
 import { verifyHospitalPortalToken } from '@/lib/portalJwt'
-import { supabaseAdmin } from '@/services/supabase'
 
 export const hospitalPortalRouter = Router()
 
@@ -21,10 +21,6 @@ function requireHospitalPortal(req: import('express').Request, res: import('expr
 
 hospitalPortalRouter.use(requireHospitalPortal)
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
 hospitalPortalRouter.get(
   '/inbox',
   asyncHandler(async (req, res) => {
@@ -34,54 +30,57 @@ hospitalPortalRouter.get(
       return
     }
 
-    const { data: rows, error } = await supabaseAdmin
-      .from('alerts')
-      .select(
-        'id, status, triggered_at, responding_volunteer_id, patients ( name, weeks_pregnant, blood_type, risk_flags )',
-      )
-      .eq('nearest_hospital_id', hospitalId)
-      .in('status', ['active', 'volunteer_responding', 'at_facility'])
-      .order('triggered_at', { ascending: false })
+    try {
+      const rows = await prisma.alert.findMany({
+        where: {
+          nearestHospitalId: hospitalId,
+          status: { in: ['active', 'volunteer_responding', 'at_facility'] },
+        },
+        orderBy: { triggeredAt: 'desc' },
+        include: {
+          patient: {
+            select: {
+              name: true,
+              weeksPregnant: true,
+              bloodType: true,
+              riskFlags: true,
+            },
+          },
+        },
+      })
 
-    if (error) {
-      logError('hospital inbox failed', { error: String(error) })
-      res.status(500).json({ error: 'Failed to load inbox' })
-      return
-    }
-
-    const volIds = [
-      ...new Set(
-        (rows ?? [])
-          .map((r) => r.responding_volunteer_id)
-          .filter((id): id is string => typeof id === 'string'),
-      ),
-    ]
-    let volNames: Record<string, string> = {}
-    if (volIds.length > 0) {
-      const { data: vols } = await supabaseAdmin.from('volunteers').select('id, name').in('id', volIds)
-      if (vols) {
+      const volIds = [...new Set(rows.map((r) => r.respondingVolunteerId).filter((id): id is string => !!id))]
+      let volNames: Record<string, string> = {}
+      if (volIds.length > 0) {
+        const vols = await prisma.volunteer.findMany({
+          where: { id: { in: volIds } },
+          select: { id: true, name: true },
+        })
         volNames = Object.fromEntries(vols.map((v) => [v.id, v.name]))
       }
+
+      const items = rows.map((r) => {
+        const pr = r.patient
+        const rid = r.respondingVolunteerId
+        const risk = pr?.riskFlags ?? []
+        return {
+          alertId: r.id,
+          status: r.status,
+          triggeredAt: r.triggeredAt.toISOString(),
+          patientName: pr?.name ?? '',
+          weeksPregnant: pr?.weeksPregnant ?? null,
+          bloodType: pr?.bloodType ?? null,
+          riskFlags: risk,
+          volunteerName: typeof rid === 'string' && volNames[rid] ? volNames[rid] : null,
+          etaMinutes: 25,
+        }
+      })
+
+      res.json({ items })
+    } catch (err) {
+      logError('hospital inbox failed', { error: String(err) })
+      res.status(500).json({ error: 'Failed to load inbox' })
     }
-
-    const items = (rows ?? []).map((r) => {
-      const pr: Record<string, unknown> = isRecord(r.patients) ? r.patients : {}
-      const rid = r.responding_volunteer_id
-      const risk = Array.isArray(pr.risk_flags) ? (pr.risk_flags as string[]) : []
-      return {
-        alertId: r.id,
-        status: r.status,
-        triggeredAt: r.triggered_at,
-        patientName: typeof pr.name === 'string' ? pr.name : '',
-        weeksPregnant: typeof pr.weeks_pregnant === 'number' ? pr.weeks_pregnant : null,
-        bloodType: typeof pr.blood_type === 'string' ? pr.blood_type : null,
-        riskFlags: risk,
-        volunteerName: typeof rid === 'string' && volNames[rid] ? volNames[rid] : null,
-        etaMinutes: 25,
-      }
-    })
-
-    res.json({ items })
   }),
 )
 
@@ -103,12 +102,15 @@ hospitalPortalRouter.post(
       res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
       return
     }
-    const { error: insErr } = await supabaseAdmin.from('hospital_alert_acks').insert({
-      alert_id: parsed.data.alertId,
-      hospital_id: hospitalId,
-      ack_type: parsed.data.type,
-    })
-    if (insErr) {
+    try {
+      await prisma.hospitalAlertAck.create({
+        data: {
+          alertId: parsed.data.alertId,
+          hospitalId,
+          ackType: parsed.data.type,
+        },
+      })
+    } catch (insErr) {
       logError('hospital ack insert failed', { error: String(insErr) })
       res.status(500).json({ error: 'Could not save acknowledgement' })
       return
