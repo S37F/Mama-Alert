@@ -34,17 +34,15 @@ export function validateEnv(): void {
   if (!process.env.DIRECT_DATABASE_URL?.trim() && dbUrl) {
     process.env.DIRECT_DATABASE_URL = dbUrl
   }
-  for (const key of REQUIRED_CORE) {
-    if (!process.env[key] || process.env[key] === '') {
-      throw new Error(`Missing required environment variable: ${key}`)
-    }
-  }
-  if (!isTwilioMock()) {
-    for (const key of REQUIRED_TWILIO) {
-      if (!process.env[key] || process.env[key] === '') {
-        throw new Error(`Missing required environment variable: ${key}`)
-      }
-    }
+  const missingCore = REQUIRED_CORE.filter((key) => !process.env[key]?.trim())
+  const missingTwilio = isTwilioMock()
+    ? []
+    : REQUIRED_TWILIO.filter((key) => !process.env[key]?.trim())
+  const missing = [...missingCore, ...missingTwilio]
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required environment variable(s): ${missing.join(', ')}. See server/.env.example and server/dev.env.example.`,
+    )
   }
   const sos = process.env.SOS_SIGNING_SECRET ?? ''
   const portal = process.env.PORTAL_JWT_SECRET ?? ''
