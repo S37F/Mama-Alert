@@ -28,6 +28,12 @@ export function validateEnv(): void {
   if (validated) {
     return
   }
+  // Prisma schema defines directUrl; pooler-only deploys often set only DATABASE_URL.
+  // Runtime queries use `url`; migrations should still use a direct Postgres URL when run via CLI/CI.
+  const dbUrl = process.env.DATABASE_URL?.trim()
+  if (!process.env.DIRECT_DATABASE_URL?.trim() && dbUrl) {
+    process.env.DIRECT_DATABASE_URL = dbUrl
+  }
   for (const key of REQUIRED_CORE) {
     if (!process.env[key] || process.env[key] === '') {
       throw new Error(`Missing required environment variable: ${key}`)
