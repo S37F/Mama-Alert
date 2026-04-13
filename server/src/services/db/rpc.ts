@@ -114,12 +114,14 @@ export async function rpcInsertSosAlertIfAllowed(
   patientId: string,
   incapacitationSuspected: boolean,
   cooldownSeconds: number,
+  triggerMethod: 'pwa' | 'sms' | 'ussd',
 ): Promise<{ ok: boolean; reason?: string; alert_id?: string }> {
   const rows = await prisma.$queryRaw<{ result: Prisma.JsonValue }[]>`
     SELECT public.insert_sos_alert_if_allowed(
       ${patientId}::uuid,
       ${incapacitationSuspected}::boolean,
-      ${cooldownSeconds}::int
+      ${cooldownSeconds}::int,
+      ${triggerMethod}::text
     ) AS result
   `
   const raw = rows[0]?.result

@@ -86,6 +86,7 @@ export async function runIncapacitationStep(alertId: string, patientId: string):
       nearestHospitalId: true,
       waveNumber: true,
       incapacitationSuspected: true,
+      patientInteractionAt: true,
     },
   })
 
@@ -97,6 +98,12 @@ export async function runIncapacitationStep(alertId: string, patientId: string):
     return
   }
   if (alertData.respondingVolunteerId != null || alertData.volunteerConfirmedAt != null) {
+    return
+  }
+  if (
+    alertData.patientInteractionAt != null &&
+    alertData.patientInteractionAt.getTime() >= alertData.triggeredAt.getTime()
+  ) {
     return
   }
 

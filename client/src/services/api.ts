@@ -161,6 +161,13 @@ export interface SosSuccessResponse {
   success: true
   alertId: string
   volunteersNotified: number
+  /** Same alert within cooldown; no new fan-out (HTTP 200). */
+  duplicate?: boolean
+}
+
+export async function postSosPatientInteraction(sosToken: string): Promise<{ ok: boolean; alertId: string }> {
+  const response = await api.post<{ ok: boolean; alertId: string }>('/api/sos/interaction', { sosToken })
+  return response.data
 }
 
 export interface PatientHintsResponse {
@@ -344,10 +351,8 @@ export async function postHospitalResolve(alertId: string): Promise<void> {
 export interface FamilyStatusPayload {
   patientFirstName: string
   alertStatus: string
-  volunteerName: string | null
+  volunteerFirstName: string | null
   hospitalName: string | null
-  patientArrivedAt: string | null
-  lastUpdated: string | null
 }
 
 export async function getFamilyStatus(token: string): Promise<FamilyStatusPayload> {

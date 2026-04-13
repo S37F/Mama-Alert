@@ -72,13 +72,15 @@ model Patient {
   patientStatus      String   @default("active") @map("patient_status")
   registrationVerified Boolean @default(true) @map("registration_verified")
   registrationSource   String   @default("health_worker") @map("registration_source")
+  preferredHospitalId  String?  @map("preferred_hospital_id") @db.Uuid
   createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  healthWorker HealthWorker @relation(fields: [healthWorkerId], references: [userId], onDelete: Restrict)
-  zone         Zone?        @relation(fields: [zoneId], references: [id], onDelete: SetNull)
-  alerts          Alert[]
-  otpChallenges   PatientOtpChallenge[]
+  healthWorker      HealthWorker @relation(fields: [healthWorkerId], references: [userId], onDelete: Restrict)
+  zone              Zone?        @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  preferredHospital Hospital?    @relation("PatientPreferredHospital", fields: [preferredHospitalId], references: [id], onDelete: SetNull)
+  alerts            Alert[]
+  otpChallenges     PatientOtpChallenge[]
 
   @@map("patients")
 }
@@ -145,6 +147,7 @@ model Hospital {
   zone              Zone?                @relation(fields: [zoneId], references: [id], onDelete: SetNull)
   alertsNearest     Alert[]              @relation("NearestHospital")
   hospitalAlertAcks HospitalAlertAck[]
+  preferredByPatients Patient[]          @relation("PatientPreferredHospital")
 
   @@map("hospitals")
 }
@@ -162,6 +165,8 @@ model Alert {
   nearestHospitalId      String?   @map("nearest_hospital_id") @db.Uuid
   waveNumber             Int       @default(1) @map("wave_number")
   incapacitationSuspected Boolean  @default(false) @map("incapacitation_suspected")
+  triggerMethod          String    @default("pwa") @map("trigger_method")
+  patientInteractionAt   DateTime? @map("patient_interaction_at") @db.Timestamptz(6)
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt              DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 

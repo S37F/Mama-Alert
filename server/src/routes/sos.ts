@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { logAudit, logError } from '@/lib/logger'
+import { prisma } from '@/lib/prisma'
 import { verifySosPatientToken } from '@/lib/sosToken'
 import { fetchPatientForSosById } from '@/services/patientQueries'
 import { triggerSos, triggerSosFromPatientRow } from '@/services/sosService'
@@ -59,8 +60,12 @@ sosRouter.post(
           incapacitationSuspected === undefined
             ? await triggerSosFromPatientRow(row, triggerMethod)
             : await triggerSosFromPatientRow(row, triggerMethod, incapacitationSuspected)
-        logAudit('sos_triggered', { method: 'pwa', patientId: row.id, alertId: result.alertId })
-        res.status(201).json(result)
+        logAudit(result.duplicate ? 'sos_duplicate_ack' : 'sos_triggered', {
+          method: 'pwa',
+          patientId: row.id,
+          alertId: result.alertId,
+        })
+        res.status(result.duplicate ? 200 : 201).json(result)
         return
       }
       if (phone) {
@@ -68,8 +73,11 @@ sosRouter.post(
           incapacitationSuspected === undefined
             ? await triggerSos({ phone, triggerMethod })
             : await triggerSos({ phone, triggerMethod, incapacitationSuspected })
-        logAudit('sos_triggered', { method: 'pwa_legacy_phone', alertId: result.alertId })
-        res.status(201).json(result)
+        logAudit(result.duplicate ? 'sos_duplicate_ack' : 'sos_triggered', {
+          method: 'pwa_legacy_phone',
+          alertId: result.alertId,
+        })
+        res.status(result.duplicate ? 200 : 201).json(result)
         return
       }
       res.status(400).json({ error: 'Missing SOS credentials' })
@@ -80,12 +88,43 @@ sosRouter.post(
         res.status(404).json({ error: 'Patient not found' })
         return
       }
-      if (code === 409) {
-        res.status(409).json({ error: 'Duplicate alert within cooldown' })
-        return
-      }
       logError('sos route failed', { err: String(err) })
       res.status(500).json({ error: 'SOS failed' })
     }
+  }),
+)
+
+const interactionBodySchema = z.object({
+  sosToken: z.string().min(24),
+})
+
+sosRouter.post(
+  '/interaction',
+  asyncHandler(async (req, res) => {
+    const parsed = interactionBodySchema.safeParse(req.body)
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
+      return
+    }
+    const v = verifySosPatientToken(parsed.data.sosToken)
+    if (!v) {
+      res.status(401).json({ error: 'Invalid or expired SOS token' })
+      return
+    }
+    const open = await prisma.alert.findFirst({
+      where: { patientId: v.patientId, status: 'active' },
+      orderBy: { triggeredAt: 'desc' },
+      select: { id: true },
+    })
+    if (!open) {
+      res.status(404).json({ error: 'No active alert' })
+      return
+    }
+    await prisma.alert.update({
+      where: { id: open.id },
+      data: { patientInteractionAt: new Date() },
+    })
+    logAudit('sos_patient_interaction', { patientId: v.patientId, alertId: open.id })
+    res.json({ ok: true, alertId: open.id })
   }),
 )

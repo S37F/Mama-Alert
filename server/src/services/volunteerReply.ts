@@ -4,6 +4,7 @@ import { logAudit, logError, logWarn } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { rpcClaimAlertForVolunteer, rpcGetPatientForSos } from '@/services/db/rpc'
 import { getNearbyHospital } from '@/services/geo'
+import type { Hospital } from '@/types/hospital'
 import {
   buildClinicPreAlertSMS,
   buildFamilySMS,
@@ -18,6 +19,35 @@ import type { Volunteer } from '@/types/volunteer'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+/** Prefer patient-chosen facility when valid; otherwise nearest by geography (+ pre_alert cap). */
+async function resolveHospitalForSos(
+  lat: number,
+  lng: number,
+  preferredHospitalId: string | null | undefined,
+): Promise<Hospital | null> {
+  if (preferredHospitalId) {
+    const row = await prisma.hospital.findFirst({
+      where: { id: preferredHospitalId, receiveAlerts: true },
+    })
+    if (row?.phoneEmergency) {
+      const nearby = await getNearbyHospital(lat, lng).catch(() => null)
+      const out: Hospital = {
+        id: row.id,
+        name: row.name,
+        phone_emergency: row.phoneEmergency,
+        services: row.services,
+        is_24hr: row.is24hr,
+        pre_alert_radius_km: row.preAlertRadiusKm,
+      }
+      if (nearby?.id === preferredHospitalId && typeof nearby.distance_m === 'number') {
+        out.distance_m = nearby.distance_m
+      }
+      return out
+    }
+  }
+  return getNearbyHospital(lat, lng)
 }
 
 /** Map Prisma patient row to the snake_case shape `mapPatientFromJoin` expects. */
@@ -172,18 +202,24 @@ export async function applyVolunteerYes(vol: Volunteer, responseId: string, aler
 
   let lat = 0
   let lng = 0
+  let preferredHospitalId: string | null = null
   try {
     const rpcRows = await rpcGetPatientForSos(patient.phone_primary)
     if (rpcRows && rpcRows.length > 0) {
       const pr = rpcRows[0] as PatientSosRow
       lat = pr.lat
       lng = pr.lng
+      if (typeof pr.preferred_hospital_id === 'string' && pr.preferred_hospital_id.length > 0) {
+        preferredHospitalId = pr.preferred_hospital_id
+      }
     }
   } catch (rpcErr) {
     logWarn('volunteer-reply: get_patient_for_sos failed', { error: String(rpcErr) })
   }
-
-  const hospital = lat && lng ? await getNearbyHospital(lat, lng).catch(() => null) : null
+  const hospital =
+    lat && lng
+      ? await resolveHospitalForSos(lat, lng, preferredHospitalId).catch(() => null)
+      : null
 
   let claim: { ok: boolean; reason?: string }
   try {

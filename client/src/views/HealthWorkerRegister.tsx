@@ -21,6 +21,7 @@ import { useGeolocation } from '@/hooks/useGeolocation'
 import { useZoneId } from '@/hooks/useZoneId'
 import { postRegisterPatient } from '@/services/api'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { NetworkOfflineBanner } from '@/components/NetworkOfflineBanner'
 
 const langs = ['en', 'hi', 'fr', 'sw', 'ar', 'pt'] as const
 
@@ -246,6 +247,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
 
   return wrapPage(
     <form className="mx-auto max-w-2xl space-y-6 p-6 pb-24" onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
+      <NetworkOfflineBanner variant="formSubmit" />
       <h1 className="text-2xl font-bold">{t('register.title')}</h1>
 
       {submitErr ? <ErrorMessage message={submitErr} onRetry={() => setSubmitErr(null)} /> : null}

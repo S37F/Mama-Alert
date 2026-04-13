@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { NetworkOfflineBanner } from '@/components/NetworkOfflineBanner'
 import {
   getHospitalInbox,
   postHospitalAck,
@@ -93,6 +94,7 @@ export function HospitalInbox() {
   if (savedToken.length < 20) {
     return (
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-4 p-6 outline-none">
+        <NetworkOfflineBanner variant="liveData" />
         <h1 className="text-2xl font-bold">{t('hospital.title')}</h1>
         <p className="text-muted-foreground text-sm">
           Paste the hospital portal token issued by your zone admin (Admin dashboard → hospital row, or POST /api/admin/hospitals/:id/portal-token).
@@ -116,6 +118,7 @@ export function HospitalInbox() {
 
   return (
     <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-4 p-6 outline-none">
+      <NetworkOfflineBanner variant="liveDataSms" />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('hospital.title')}</h1>
         <div className="flex items-center gap-2">

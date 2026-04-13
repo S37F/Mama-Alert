@@ -16,4 +16,5 @@ export interface PatientSosRow {
   status_token: string
   risk_flags?: string[] | null
   weeks_pregnant?: number | null
+  preferred_hospital_id?: string | null
 }

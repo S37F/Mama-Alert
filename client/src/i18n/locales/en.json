@@ -17,6 +17,8 @@
     "savePhone": "Save",
     "sentDetail": "Volunteers and your clinic are being notified.",
     "duplicateDetail": "An alert was already sent recently. Help is already being arranged.",
+    "interactionHint": "If you can respond on this phone, tap below so we know you are okay — this can delay urgent family messages.",
+    "interactionCta": "I can respond here",
     "reset": "New alert",
     "error": "Could not send. Try again.",
     "networkOfflineHint": "You're offline — alerts will queue until you're back online.",
@@ -308,6 +310,12 @@
     "sosAnnouncementOffline": "No signal. Your alert is saved and will send when you are back online.",
     "sosAnnouncementError": "Could not send your alert. Try again.",
     "sosAnnouncementDuplicate": "An alert was already sent recently. Help is being arranged."
+  },
+  "network": {
+    "offlineLiveData": "You’re offline. Live updates and dashboards need internet.",
+    "offlineSmsAlertsHint": "SMS still works on cellular: reply YES or NO to alert texts; pre-alerts and ARRIVED use SMS too.",
+    "offlineCannotSubmit": "You’re offline. Saving this form needs internet — try again when you have signal.",
+    "offlineStatusPage": "You’re offline. This page can’t load fresh status until you’re back online."
   },
   "common": {
     "loading": "Loading...",

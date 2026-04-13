@@ -16,6 +16,8 @@
     "savePhone": "Save",
     "sentDetail": "Volunteers and your clinic are being notified.",
     "duplicateDetail": "हाल ही में पहले से अलर्ट भेजा गया। मदद पहले से की जा रही है।",
+    "interactionHint": "यदि आप इस फोन पर जवाब दे सकती हैं, तो नीचे टैप करें — इससे ज़रूरी परिवार संदेश टल सकते हैं।",
+    "interactionCta": "मैं यहाँ जवाब दे सकती हूँ",
     "reset": "नया अलर्ट",
     "error": "Could not send. Try again.",
     "networkOfflineHint": "आप ऑफ़लाइन हैं — नेटवर्क वापस आने तक अलर्ट कतार में रहेंगे।"

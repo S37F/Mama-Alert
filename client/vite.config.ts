@@ -7,6 +7,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      /** SW script under `/sos/` so registration scope can match manifest (`/sos`) per ALIGNMENT_CHECK. */
+      filename: 'sos/sw.js',
+      scope: '/sos/',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icon-192.png', 'icon-512.png'],
       manifest: {
@@ -18,7 +21,7 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/sos',
-        scope: '/',
+        scope: '/sos',
         id: '/sos',
         icons: [
           {
@@ -44,17 +47,22 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         navigateFallback: '/index.html',
+        /** Only SOS-related navigations get SPA shell offline; other routes need network (spec). */
+        navigateFallbackAllowlist: [/^\/sos(\/.*)?$/],
         navigateFallbackDenylist: [/^\/api\//],
         additionalManifestEntries: [],
-        importScripts: ['sw-sos.js'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/tile\.openstreetmap\.org/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'osm-tiles',
-              expiration: { maxEntries: 500, maxAgeSeconds: 604800 },
-            },
+        /** Root `public/sw-sos.js` — relative to `/sos/sw.js` service worker URL. */
+        importScripts: ['../sw-sos.js'],
+        /**
+         * Precache only the SOS PWA shell + shared core — exclude lazy chunks for other routes
+         * (landing, volunteer, admin, family status, health worker, demo).
+         */
+        manifestTransforms: [
+          async (entries) => {
+            const deny =
+              /(^|\/)assets\/(LandingPage|GlobeCanvas|DemoFlow|FamilyStatus|VolunteerDashboard|AdminZone|HealthWorkerDashboard)-[^/]+\.(js|css)$/
+            const manifest = entries.filter((e) => !deny.test(e.url))
+            return { manifest, warnings: [] }
           },
         ],
       },

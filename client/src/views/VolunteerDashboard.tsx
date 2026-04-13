@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { AlertCard } from '@/components/AlertCard'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { NetworkOfflineBanner } from '@/components/NetworkOfflineBanner'
 import {
   getVolunteerFeed,
   postVolunteerOtpRequest,
@@ -212,6 +213,7 @@ export function VolunteerDashboard() {
   if (!sessionReady) {
     return (
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-4 p-6 text-base outline-none">
+        <NetworkOfflineBanner variant="liveData" />
         <h1 className="text-2xl font-bold">{t('volunteer.title')}</h1>
         <p className="text-muted-foreground text-sm">{t('volunteer.loginIntro')}</p>
         <div className="space-y-3 rounded-lg border p-4">
@@ -261,6 +263,7 @@ export function VolunteerDashboard() {
 
   return (
     <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-6 p-6 text-base outline-none">
+      <NetworkOfflineBanner variant="liveDataSms" />
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('volunteer.title')}</h1>
         <div className="flex items-center gap-2">

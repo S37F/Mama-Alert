@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
@@ -26,6 +24,7 @@ import {
 } from '@/components/ui/select'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { NetworkOfflineBanner } from '@/components/NetworkOfflineBanner'
 import { useAlertsRealtimeRefresh } from '@/hooks/useAlertsRealtimeRefresh'
 import { useAuth } from '@/hooks/useAuth'
 import { useZoneId } from '@/hooks/useZoneId'
@@ -241,12 +240,13 @@ export function HealthWorkerDashboard() {
 
   return (
     <main id="main-content" tabIndex={-1} className="mx-auto max-w-5xl space-y-4 p-6 outline-none">
+      <NetworkOfflineBanner variant="liveData" />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('worker.title')}</h1>
         <div className="flex gap-2">
-          <Link to="/register" className={cn(buttonVariants({ variant: 'outline' }))}>
+          <Button type="button" variant="outline" onClick={() => setTab('register')}>
             {t('worker.openRegister')}
-          </Link>
+          </Button>
           <Button type="button" variant="outline" onClick={() => void logout()}>
             {t('auth.signOut')}
           </Button>

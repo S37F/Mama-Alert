@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { MapView } from '@/components/MapView'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { NetworkOfflineBanner } from '@/components/NetworkOfflineBanner'
 import { useAuth } from '@/hooks/useAuth'
 import { useZoneId } from '@/hooks/useZoneId'
 import { useRealtimeAlerts } from '@/hooks/useRealtimeAlerts'
@@ -348,6 +349,7 @@ export function AdminZone() {
 
   return (
     <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl space-y-4 p-6 outline-none">
+      <NetworkOfflineBanner variant="liveData" />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('admin.title')}</h1>
         <Button type="button" variant="outline" onClick={() => void logout()}>

@@ -29,6 +29,15 @@ function formatWeeksLabel(patient: Patient): string {
   return ''
 }
 
+function formatBloodSnippet(patient: Patient): string {
+  const bt = (patient.blood_type ?? '').trim()
+  if (!bt) {
+    return ''
+  }
+  const seg = bt.length > 8 ? `${bt.slice(0, 7)}…` : bt
+  return `Blood ${seg}. `
+}
+
 function formatDistanceKm(volunteer: Volunteer): string {
   if (typeof volunteer.distance_m !== 'number' || !Number.isFinite(volunteer.distance_m)) {
     return ''
@@ -50,15 +59,16 @@ export function buildVolunteerAlertSMS(
   const wkSeg = wk ? `${wk} ` : ''
   const risk = formatRiskSnippet(patient.risk_flags)
   const riskSeg = risk ? `R:${risk}. ` : ''
+  const bloodSeg = formatBloodSnippet(patient)
   const dist = formatDistanceKm(volunteer)
   const distSeg = dist ? `~${dist}. ` : ''
   const table: Record<string, string> = {
-    en: `MAMA ALERT: ${patient.name}. ${lm}${wkSeg}${riskSeg}${distSeg}Reply YES or NO.`,
-    hi: `MAMA ALERT: ${patient.name}. ${lm}${wkSeg}${riskSeg}${distSeg}YES या NO भेजें।`,
-    fr: `ALERTE MAMA: ${patient.name}. ${lm}${wkSeg}${riskSeg}${distSeg}Répondez OUI ou NON.`,
-    sw: `MAMA ALERT: ${patient.name}. ${lm}${wkSeg}${riskSeg}${distSeg}Jibu NDIO au HAPANA.`,
-    ar: `تنبيه: ${patient.name}. ${lm}${wkSeg}${riskSeg}${distSeg}أرسل نعم أو لا.`,
-    pt: `ALERTA MAMA: ${patient.name}. ${lm}${wkSeg}${riskSeg}${distSeg}Responda SIM ou NÃO.`,
+    en: `MAMA ALERT: ${patient.name}. ${lm}${wkSeg}${riskSeg}${bloodSeg}${distSeg}Reply YES or NO.`,
+    hi: `MAMA ALERT: ${patient.name}. ${lm}${wkSeg}${riskSeg}${bloodSeg}${distSeg}YES या NO भेजें।`,
+    fr: `ALERTE MAMA: ${patient.name}. ${lm}${wkSeg}${riskSeg}${bloodSeg}${distSeg}Répondez OUI ou NON.`,
+    sw: `MAMA ALERT: ${patient.name}. ${lm}${wkSeg}${riskSeg}${bloodSeg}${distSeg}Jibu NDIO au HAPANA.`,
+    ar: `تنبيه: ${patient.name}. ${lm}${wkSeg}${riskSeg}${bloodSeg}${distSeg}أرسل نعم أو لا.`,
+    pt: `ALERTA MAMA: ${patient.name}. ${lm}${wkSeg}${riskSeg}${bloodSeg}${distSeg}Responda SIM ou NÃO.`,
   }
   return truncateSmsTwoPart(pickLang(lang, table))
 }
@@ -336,7 +346,7 @@ export function buildCoordinatorEscalationSMS(
 ): string {
   const shortId = alertId.slice(0, 8)
   const table: Record<string, string> = {
-    en: `UNRESPONDED ALERT — ${minutesSince} min, no volunteer. ${patient.name}. Ref ${shortId}`,
+    en: `UNRESPONDED ALERT — ${minutesSince} min, no volunteer confirmed. ${patient.name}. Ref ${shortId}`,
     hi: `ESCALATE ${shortId}: ${patient.name}, ${minutesSince} मिनट।`,
     fr: `ESCALADE ${shortId}: ${patient.name}, ${minutesSince} min.`,
     sw: `ESCALATE ${shortId}: ${patient.name}, ${minutesSince}m.`,

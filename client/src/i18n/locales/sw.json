@@ -16,6 +16,8 @@
     "savePhone": "Save",
     "sentDetail": "Volunteers and your clinic are being notified.",
     "duplicateDetail": "Tahadhari tayari imetumwa hivi karibuni. Msaada tayari unaandaliwa.",
+    "interactionHint": "Ukijibu kwenye simu hii, gusa hapa chini — inaweza kuchelewa ujumbe wa haraka kwa familia.",
+    "interactionCta": "Naweza kujibu hapa",
     "reset": "Tahadhari mpya",
     "error": "Could not send. Try again.",
     "networkOfflineHint": "Huna mtandao — tahadhari zitatulia kwenye foleni hadi mtandao urudi."

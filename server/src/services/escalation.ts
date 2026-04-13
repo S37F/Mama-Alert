@@ -234,7 +234,7 @@ async function enqueueEscalationDelayedJob(alertId: string, patientId: string, w
 }
 
 /**
- * @param wave 0 → after delay run r1 wave; 1 → after delay run r2 wave; 2 → after delay coordinator action SMS (+ optional voice)
+ * @param wave 0 → after delay run r1 wave; 1 → after delay run r2 wave + critical coordinator SMS (same tick as T+10 spec)
  */
 export function scheduleEscalation(alertId: string, patientId: string, wave: number): void {
   void enqueueEscalationDelayedJob(alertId, patientId, wave)
@@ -289,8 +289,6 @@ export async function runEscalationTimer(
       nextPriority: 3,
       minutesSinceStart: minutesSince,
     })
-    scheduleEscalation(alertId, alertRow.patientId, 2)
-  } else if (wave === 2) {
     const a = await prisma.alert.findUnique({
       where: { id: alertId },
       select: { status: true },

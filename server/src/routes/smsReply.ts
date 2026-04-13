@@ -100,14 +100,16 @@ smsReplyRouter.post(
         return
       }
       patientLang = row.language ?? 'en'
-      await triggerSos({ phone: from, triggerMethod: 'sms' })
-      res.type('text/xml').send(twimlMessage(buildSmsKeywordAck(patientLang, 'received')))
+      const sosResult = await triggerSos({ phone: from, triggerMethod: 'sms' })
+      res
+        .type('text/xml')
+        .send(
+          twimlMessage(
+            buildSmsKeywordAck(patientLang, sosResult.duplicate ? 'duplicate' : 'received'),
+          ),
+        )
     } catch (err) {
       const code = typeof err === 'object' && err !== null && 'statusCode' in err ? (err as { statusCode?: number }).statusCode : undefined
-      if (code === 409) {
-        res.type('text/xml').send(twimlMessage(buildSmsKeywordAck(patientLang, 'duplicate')))
-        return
-      }
       if (code === 404) {
         res.type('text/xml').send(twimlMessage(buildSmsKeywordAck(patientLang, 'notfound')))
         return

@@ -22,6 +22,7 @@ export interface TriggerSosResult {
   success: true
   alertId: string
   volunteersNotified: number
+  duplicate?: boolean
 }
 
 export async function triggerSosFromPatientRow(
@@ -36,17 +37,22 @@ export async function triggerSosFromPatientRow(
 
   let parsed: { ok: boolean; reason?: string; alert_id?: string }
   try {
-    parsed = await rpcInsertSosAlertIfAllowed(row.id, incapacitation, 600)
+    parsed = await rpcInsertSosAlertIfAllowed(row.id, incapacitation, 600, triggerMethod)
   } catch (rpcErr) {
     logError('sos: insert_sos_alert_if_allowed failed', { patientId: row.id, error: String(rpcErr) })
     throw rpcErr
   }
-  if (!parsed.ok) {
-    if (parsed.reason === 'duplicate') {
-      const err = new Error('An alert was already triggered recently for this patient')
-      ;(err as Error & { statusCode?: number }).statusCode = 409
-      throw err
+
+  if (!parsed.ok && parsed.reason === 'duplicate' && typeof parsed.alert_id === 'string') {
+    return {
+      success: true,
+      alertId: parsed.alert_id,
+      volunteersNotified: 0,
+      duplicate: true,
     }
+  }
+
+  if (!parsed.ok) {
     const err = new Error('Alert insert failed')
     ;(err as Error & { statusCode?: number }).statusCode = 500
     throw err

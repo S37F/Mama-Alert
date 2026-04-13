@@ -97,12 +97,17 @@ ussdRouter.post(
 
       if (text === '1') {
         try {
-          await triggerSos({
+          const sosResult = await triggerSos({
             phone: normalizePhone(from),
             triggerMethod: 'ussd',
             incapacitationSuspected: true,
           })
-          sendSmsTwiml(res, 'Help is on the way. Stay where you are.')
+          sendSmsTwiml(
+            res,
+            sosResult.duplicate
+              ? 'An alert is already active. Help is being arranged.'
+              : 'Help is on the way. Stay where you are.',
+          )
         } catch (err) {
           logError('ussd: SOS failed (SMS)', { err: String(err) })
           const code =
@@ -165,12 +170,17 @@ ussdRouter.post(
 
       if (choice === '1') {
         try {
-          await triggerSos({
+          const sosResult = await triggerSos({
             phone: normalizePhone(from),
             triggerMethod: 'ussd',
             incapacitationSuspected: true,
           })
-          sendVoiceSay(res, 'Help is on the way. Stay where you are.')
+          sendVoiceSay(
+            res,
+            sosResult.duplicate
+              ? 'An alert is already active. Help is being arranged.'
+              : 'Help is on the way. Stay where you are.',
+          )
         } catch (err) {
           logError('ussd: SOS failed (Voice)', { err: String(err) })
           const code =

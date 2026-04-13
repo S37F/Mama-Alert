@@ -21,6 +21,7 @@ import {
   postPatientOtpRequest,
   postPatientOtpVerify,
   postSos,
+  postSosPatientInteraction,
 } from '@/services/api'
 
 const LS_PHONE = 'mamaalert_patient_phone'
@@ -234,7 +235,7 @@ export function PatientSOS() {
       return shortLinkPhone
     }
     return localStorage.getItem(LS_PHONE) ?? ''
-  }, [searchParams, shortLinkPhone])
+  }, [shortLinkPhone])
 
   const effectivePhone = manualPhone.trim().length >= 8 ? manualPhone.trim() : storedPhone
   const helpPhone = import.meta.env.VITE_HELP_PHONE ?? '112'
@@ -437,6 +438,20 @@ export function PatientSOS() {
     }
   }, [processPending])
 
+  useEffect(() => {
+    const flushQueueWhenVisible = () => {
+      if (document.visibilityState === 'visible' && typeof navigator !== 'undefined' && navigator.onLine) {
+        void processPending()
+      }
+    }
+    document.addEventListener('visibilitychange', flushQueueWhenVisible)
+    window.addEventListener('pageshow', flushQueueWhenVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', flushQueueWhenVisible)
+      window.removeEventListener('pageshow', flushQueueWhenVisible)
+    }
+  }, [processPending])
+
   const persistPhone = useCallback(() => {
     const p = normalizePhoneInput(manualPhone)
     if (p.length >= 8) {
@@ -477,7 +492,8 @@ export function PatientSOS() {
     setStatus('sending')
     setDuplicateCooldown(false)
     try {
-      await postSos(payload)
+      const out = await postSos(payload)
+      setDuplicateCooldown(Boolean(out.duplicate))
       setStatus('sent')
     } catch (err) {
       if (err instanceof ApiHttpError) {
@@ -686,6 +702,28 @@ export function PatientSOS() {
         {status === 'sent' ? (
           <div className="max-w-sm space-y-3 text-center">
             <p className="text-muted-foreground text-sm">{duplicateCooldown ? t('sos.duplicateDetail') : t('sos.sentDetail')}</p>
+            {!duplicateCooldown ? (
+              <p className="text-muted-foreground text-xs">{t('sos.interactionHint')}</p>
+            ) : null}
+            {!duplicateCooldown ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      await postSosPatientInteraction(sosToken)
+                    } catch {
+                      /* non-fatal */
+                    }
+                  })()
+                }}
+              >
+                {t('sos.interactionCta')}
+              </Button>
+            ) : null}
             <Button type="button" variant="outline" size="sm" onClick={() => { setStatus('idle'); setDuplicateCooldown(false) }}>
               {t('sos.reset')}
             </Button>

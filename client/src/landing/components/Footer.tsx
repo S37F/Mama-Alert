@@ -69,10 +69,10 @@ export function Footer() {
             <a href="#install" style={linkStyle}>
               Install the app
             </a>
-            <a href="/app/volunteer" style={linkStyle}>
+            <a href="/volunteer" style={linkStyle}>
               Register as volunteer
             </a>
-            <a href="/app/worker" style={linkStyle}>
+            <a href="/register" style={linkStyle}>
               For health workers
             </a>
           </div>

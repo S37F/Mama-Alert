@@ -3,7 +3,7 @@ import { usePWAInstall } from '@/landing/hooks/usePWAInstall'
 
 export function InstallSection() {
   const { install, isInstalled, isInstalling, canInstall } = usePWAInstall()
-  const primary = isInstalled ? 'Open App' : canInstall ? 'Install MamaAlert' : 'Open App'
+  const primary = isInstalled ? 'Open App' : canInstall ? 'Install App' : 'Open App'
 
   const watchDemo = () => {
     document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })

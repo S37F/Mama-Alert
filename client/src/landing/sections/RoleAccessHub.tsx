@@ -37,7 +37,7 @@ type RoleCardDef = {
   pathHint?: string
 }
 
-function buildRoleCards(hospitalPortalEnabled: boolean): RoleCardDef[] {
+function buildRoleCards(): RoleCardDef[] {
   return [
   {
     roleKey: 'patient',
@@ -62,11 +62,10 @@ function buildRoleCards(hospitalPortalEnabled: boolean): RoleCardDef[] {
     title: 'Hospital inbox',
     badge: 'Facility access',
     Icon: Building2,
-    body: hospitalPortalEnabled
-      ? 'See pre-alerts before arrival, confirm bed and team readiness, and stay in sync with the field response.'
-      : 'Receive maternity pre-alert SMS with patient summary, blood type, and ETA. Reply ARRIVED when the patient arrives to close the alert—no web app required.',
-    actions: hospitalPortalEnabled ? [{ to: '/hospital', label: 'Open hospital inbox', variant: 'terra' }] : [],
-    pathHint: hospitalPortalEnabled ? '/hospital' : 'SMS: reply ARRIVED',
+    body:
+      'Receive maternity pre-alert SMS with patient summary, blood type, and ETA. Reply ARRIVED when the patient arrives to close the alert—no web app required.',
+    actions: [],
+    pathHint: 'SMS pre-alert · reply ARRIVED',
   },
   {
     roleKey: 'worker',
@@ -74,11 +73,8 @@ function buildRoleCards(hospitalPortalEnabled: boolean): RoleCardDef[] {
     badge: 'Staff sign-in',
     Icon: Stethoscope,
     body: 'Onboard women into the program, keep records straight, and run follow-ups from the worker dashboard.',
-    actions: [
-      { to: '/register', label: 'Patient registration', variant: 'ghost' },
-      { to: '/worker', label: 'Worker dashboard', variant: 'terra' },
-    ],
-    pathHint: '/register · /worker · /dashboard',
+    actions: [{ to: '/register', label: 'Open worker portal', variant: 'terra' }],
+    pathHint: '/register',
   },
   {
     roleKey: 'family',
@@ -102,8 +98,7 @@ function buildRoleCards(hospitalPortalEnabled: boolean): RoleCardDef[] {
 
 export function RoleAccessHub() {
   const { ref, inView } = useScrollReveal(0.12)
-  const hospitalPortalEnabled = import.meta.env.VITE_ENABLE_HOSPITAL_PORTAL === 'true'
-  const roleCards = useMemo(() => buildRoleCards(hospitalPortalEnabled), [hospitalPortalEnabled])
+  const roleCards = useMemo(() => buildRoleCards(), [])
   const roleEntries = useMemo(() => Object.entries(ROLE_TARGETS) as [RoleKey, string][], [])
   const [activeRole, setActiveRole] = useState<RoleKey>('patient')
 
