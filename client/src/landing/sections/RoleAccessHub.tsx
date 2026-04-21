@@ -42,10 +42,10 @@ function buildRoleCards(): RoleCardDef[] {
   {
     roleKey: 'patient',
     title: 'Patient SOS',
-    badge: 'No account',
+    badge: 'Phone access',
     Icon: HeartPulse,
     body: 'One tap raises an alert with location so responders and facilities can act immediately—no password. Sign in with your phone (SMS code), self-register where your program allows it, or open the private link from your health worker.',
-    actions: [{ to: '/sos', label: 'Open SOS screen', variant: 'terra' }],
+    actions: [{ to: '/signup', label: 'Sign up / Login', variant: 'terra' }],
     pathHint: '/sos',
   },
   {
@@ -54,7 +54,7 @@ function buildRoleCards(): RoleCardDef[] {
     badge: 'Phone ID',
     Icon: Radio,
     body: 'A live feed of nearby maternal emergencies. Tap YES or NO to respond; when you are needed, directions land on your phone.',
-    actions: [{ to: '/volunteer', label: 'Open volunteer feed', variant: 'terra' }],
+    actions: [{ to: '/signup', label: 'Join as volunteer', variant: 'terra' }],
     pathHint: '/volunteer',
   },
   {
@@ -73,7 +73,7 @@ function buildRoleCards(): RoleCardDef[] {
     badge: 'Staff sign-in',
     Icon: Stethoscope,
     body: 'Onboard women into the program, keep records straight, and run follow-ups from the worker dashboard.',
-    actions: [{ to: '/register', label: 'Open worker portal', variant: 'terra' }],
+    actions: [{ to: '/signup', label: 'Open worker portal', variant: 'terra' }],
     pathHint: '/register',
   },
   {
@@ -90,7 +90,7 @@ function buildRoleCards(): RoleCardDef[] {
     badge: 'Restricted',
     Icon: Shield,
     body: 'NGO zone leads manage volunteers, hospitals, and locality rules so the right people see the right alerts.',
-    actions: [{ to: '/admin', label: 'Open admin console', variant: 'terra' }],
+    actions: [{ to: '/signup', label: 'Open admin console', variant: 'terra' }],
     pathHint: '/admin',
   },
 ]

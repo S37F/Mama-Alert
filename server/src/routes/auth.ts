@@ -1,18 +1,216 @@
 import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
-import { logError } from '@/lib/logger'
-import { assertAdminHasZone, requireAuth } from '@/middleware/auth'
-import { prisma } from '@/lib/prisma'
-import { supabaseAuthAdmin } from '@/services/supabaseAuth'
-import { supabaseAnon } from '@/services/supabaseAnon'
+import {
+  createHealthWorkerAccount,
+  ensureAssignableHealthWorkerId,
+  isPhoneRegistered,
+  lookupSessionByPhone,
+  resolveCommunityZoneId,
+  resolveOrCreateZone,
+  resolveSignupCoordinates,
+} from '@/lib/mamaAuth'
+import { insertPatientWithLocation, insertVolunteerWithLocation } from '@/services/db/geoWrites'
 
 export const authRouter = Router()
 
-const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
+const patientSignupSchema = z.object({
+  role: z.literal('patient'),
+  name: z.string().min(2),
+  phone: z.string().min(10),
+  weeksPregnant: z.number().int().min(1).max(44),
+  village: z.string().min(2),
+  landmark: z.string().optional(),
+  language: z.string().default('en'),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
 })
+
+const volunteerSignupSchema = z.object({
+  role: z.literal('volunteer'),
+  name: z.string().min(2),
+  phone: z.string().min(10),
+  village: z.string().min(2),
+  skills: z.array(z.string()).min(1),
+  vehicle: z.enum(['motorcycle', 'car', 'bicycle', 'none']),
+  availableHours: z.enum(['24/7', 'daytime', 'nights', 'weekends']),
+  maxRadiusKm: z.number().int().min(1).max(100).default(5),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+})
+
+const healthWorkerSignupSchema = z.object({
+  role: z.literal('health_worker'),
+  name: z.string().min(2),
+  phone: z.string().min(10),
+  roleTitle: z.string().min(2),
+  organisation: z.string().min(2),
+  zone: z.string().min(2),
+})
+
+const adminSignupSchema = z.object({
+  role: z.literal('admin'),
+  name: z.string().min(2),
+  phone: z.string().min(10),
+  organisation: z.string().min(2),
+  zone: z.string().min(2),
+  adminCode: z.string().min(1),
+})
+
+const signupSchema = z.discriminatedUnion('role', [
+  patientSignupSchema,
+  volunteerSignupSchema,
+  healthWorkerSignupSchema,
+  adminSignupSchema,
+])
+
+const loginSchema = z.object({
+  phone: z.string().min(10),
+})
+
+authRouter.post(
+  '/signup',
+  asyncHandler(async (req, res) => {
+    const parsed = signupSchema.safeParse(req.body)
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
+      return
+    }
+
+    const body = parsed.data
+    if (await isPhoneRegistered(body.phone)) {
+      res.status(409).json({ error: 'This phone is already registered. Try logging in.' })
+      return
+    }
+
+    if (body.role === 'patient') {
+      const zoneId = await resolveCommunityZoneId(body.village)
+      const healthWorkerId = await ensureAssignableHealthWorkerId(zoneId)
+      const coords = resolveSignupCoordinates({
+        ...(body.lat !== undefined ? { lat: body.lat } : {}),
+        ...(body.lng !== undefined ? { lng: body.lng } : {}),
+      })
+      const patient = await insertPatientWithLocation({
+        healthWorkerId,
+        zoneId,
+        name: body.name.trim(),
+        age: null,
+        phonePrimary: body.phone.trim(),
+        phoneSecondary: null,
+        village: body.village.trim(),
+        landmark: body.landmark?.trim() || null,
+        lat: coords.lat,
+        lng: coords.lng,
+        weeksPregnant: body.weeksPregnant,
+        dueDate: null,
+        prevPregnancies: null,
+        prevBirths: null,
+        prevCsection: false,
+        lastAncDate: null,
+        bloodType: null,
+        language: body.language,
+        riskFlags: [],
+        medicationName: null,
+        emergencyContacts: [],
+        registrationVerified: false,
+        registrationSource: 'self',
+      })
+      const session = await lookupSessionByPhone(body.phone)
+      if (!session) {
+        res.status(500).json({ error: 'Could not create account' })
+        return
+      }
+      res.status(201).json({
+        success: true,
+        role: 'patient',
+        name: body.name.trim(),
+        profileId: patient.id,
+        session,
+      })
+      return
+    }
+
+    if (body.role === 'volunteer') {
+      const zoneId = await resolveCommunityZoneId(body.village)
+      const coords = resolveSignupCoordinates({
+        ...(body.lat !== undefined ? { lat: body.lat } : {}),
+        ...(body.lng !== undefined ? { lng: body.lng } : {}),
+      })
+      const volunteer = await insertVolunteerWithLocation({
+        zoneId,
+        name: body.name.trim(),
+        phone: body.phone.trim(),
+        lat: coords.lat,
+        lng: coords.lng,
+        village: body.village.trim(),
+        availabilityHours: body.availableHours,
+        skills: body.skills,
+        vehicle: body.vehicle,
+        maxRadiusKm: body.maxRadiusKm,
+        language: 'en',
+      })
+      const session = await lookupSessionByPhone(body.phone)
+      if (!session) {
+        res.status(500).json({ error: 'Could not create account' })
+        return
+      }
+      res.status(201).json({
+        success: true,
+        role: 'volunteer',
+        name: body.name.trim(),
+        profileId: volunteer.id,
+        session,
+      })
+      return
+    }
+
+    if (body.role === 'health_worker') {
+      const zone = await resolveOrCreateZone(body.zone, body.organisation)
+      const session = await createHealthWorkerAccount({
+        name: body.name.trim(),
+        phone: body.phone.trim(),
+        zoneId: zone.id,
+        accessLevel: 'health_worker',
+        organisation: body.organisation.trim(),
+        roleTitle: body.roleTitle.trim(),
+      })
+      res.status(201).json({
+        success: true,
+        role: 'health_worker',
+        name: body.name.trim(),
+        profileId: session.profileId,
+        session,
+      })
+      return
+    }
+
+    const adminCode = process.env.ADMIN_SIGNUP_CODE?.trim()
+    if (!adminCode) {
+      throw new Error('Missing ADMIN_SIGNUP_CODE - admin sign-up will be disabled.')
+    }
+    if (body.adminCode.trim() !== adminCode) {
+      res.status(403).json({ error: 'Invalid access code' })
+      return
+    }
+
+    const zone = await resolveOrCreateZone(body.zone, body.organisation)
+    const session = await createHealthWorkerAccount({
+      name: body.name.trim(),
+      phone: body.phone.trim(),
+      zoneId: zone.id,
+      accessLevel: 'admin',
+      organisation: body.organisation.trim(),
+      roleTitle: 'Administrator',
+    })
+    res.status(201).json({
+      success: true,
+      role: 'admin',
+      name: body.name.trim(),
+      profileId: session.profileId,
+      session,
+    })
+  }),
+)
 
 authRouter.post(
   '/login',
@@ -22,83 +220,19 @@ authRouter.post(
       res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
       return
     }
-    const { email, password } = parsed.data
-    const { data, error } = await supabaseAnon.auth.signInWithPassword({ email, password })
-    if (error || !data.session) {
-      res.status(401).json({ error: error?.message ?? 'Login failed' })
-      return
-    }
-    const hw = await prisma.healthWorker.findUnique({
-      where: { userId: data.user.id },
-      select: { accessLevel: true, zoneId: true },
-    })
-    if (!hw) {
-      res.status(403).json({ error: 'Health worker profile not linked to this account' })
-      return
-    }
-    if (!assertAdminHasZone(res, hw.accessLevel, hw.zoneId)) {
-      return
-    }
-    res.json({
-      access_token: data.session.access_token,
-      refresh_token: data.session.refresh_token,
-      expires_at: data.session.expires_at,
-      expires_in: data.session.expires_in,
-      token_type: data.session.token_type,
-      user: { id: data.user.id, email: data.user.email },
-      role: hw.accessLevel,
-      zone_id: hw.zoneId,
-    })
-  }),
-)
 
-/** After Supabase invite / magic link, client has tokens; load MamaAlert staff role + zone. */
-authRouter.get(
-  '/me',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    const uid = req.authUserId
-    if (!uid) {
-      res.status(401).json({ error: 'Unauthorized' })
+    const session = await lookupSessionByPhone(parsed.data.phone)
+    if (!session) {
+      res.status(404).json({ error: 'No account found with this number. Sign up first.' })
       return
     }
-    const hw = await prisma.healthWorker.findUnique({
-      where: { userId: uid },
-      select: { accessLevel: true, zoneId: true },
-    })
-    if (!hw) {
-      res.status(403).json({ error: 'Health worker profile not linked to this account' })
-      return
-    }
-    if (!assertAdminHasZone(res, hw.accessLevel, hw.zoneId)) {
-      return
-    }
-    const { data: udata, error: uerr } = await supabaseAuthAdmin.auth.admin.getUserById(uid)
-    if (uerr) {
-      logError('auth /me getUserById failed', { error: String(uerr) })
-    }
-    res.json({
-      user: { id: uid, email: udata?.user?.email ?? null },
-      role: hw.accessLevel,
-      zone_id: hw.zoneId,
-    })
-  }),
-)
 
-authRouter.post(
-  '/logout',
-  requireAuth,
-  asyncHandler(async (req, res) => {
-    const hdr = req.headers.authorization
-    const token = hdr?.startsWith('Bearer ') ? hdr.slice(7) : undefined
-    if (!token) {
-      res.status(401).json({ error: 'Unauthorized' })
-      return
-    }
-    const { error: signOutErr } = await supabaseAuthAdmin.auth.admin.signOut(token, 'global')
-    if (signOutErr) {
-      logError('auth: admin signOut failed', { error: String(signOutErr) })
-    }
-    res.status(204).end()
+    res.json({
+      role: session.role,
+      profileId: session.profileId,
+      name: session.name,
+      phone: session.phone,
+      session,
+    })
   }),
 )

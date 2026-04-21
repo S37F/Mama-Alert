@@ -6,12 +6,10 @@
 const REQUIRED_CORE = [
   'DATABASE_URL',
   'DIRECT_DATABASE_URL',
-  'SUPABASE_URL',
-  'SUPABASE_SERVICE_ROLE_KEY',
-  'SUPABASE_ANON_KEY',
   'CLIENT_URL',
   'SOS_SIGNING_SECRET',
   'PORTAL_JWT_SECRET',
+  'ADMIN_SIGNUP_CODE',
 ] as const
 
 const REQUIRED_TWILIO = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_NUMBER'] as const
@@ -54,35 +52,40 @@ export function validateEnv(): void {
   if (validated) {
     return
   }
-  // Before copying DATABASE_URL → DIRECT_DATABASE_URL (when unset), fix pooler URL for Prisma.
+
   ensurePgbouncerModeForTransactionPoolerDatabaseUrl()
-  // Prisma schema defines directUrl; pooler-only deploys often set only DATABASE_URL.
-  // Runtime queries use `url`; migrations should still use a direct Postgres URL when run via CLI/CI.
+
   const dbUrl = process.env.DATABASE_URL?.trim()
   if (!process.env.DIRECT_DATABASE_URL?.trim() && dbUrl) {
     process.env.DIRECT_DATABASE_URL = dbUrl
   }
+
   const missingCore = REQUIRED_CORE.filter((key) => !process.env[key]?.trim())
-  const missingTwilio = isTwilioMock()
-    ? []
-    : REQUIRED_TWILIO.filter((key) => !process.env[key]?.trim())
+  const missingTwilio = isTwilioMock() ? [] : REQUIRED_TWILIO.filter((key) => !process.env[key]?.trim())
   const missing = [...missingCore, ...missingTwilio]
   if (missing.length > 0) {
     throw new Error(
       `Missing required environment variable(s): ${missing.join(', ')}. See server/.env.example and server/dev.env.example.`,
     )
   }
+
   const sos = process.env.SOS_SIGNING_SECRET ?? ''
   const portal = process.env.PORTAL_JWT_SECRET ?? ''
   if (sos.length < 16 || portal.length < 16) {
     throw new Error('SOS_SIGNING_SECRET and PORTAL_JWT_SECRET must each be at least 16 characters')
   }
+
+  if (process.env.ADMIN_SIGNUP_CODE?.trim().length === 0) {
+    throw new Error('Missing ADMIN_SIGNUP_CODE - admin sign-up will be disabled.')
+  }
+
   if (process.env.NODE_ENV === 'production' && isTwilioMock()) {
     throw new Error('TWILIO_MOCK cannot be enabled when NODE_ENV=production')
   }
+
   const validatedKeys = [...REQUIRED_CORE, ...(isTwilioMock() ? [] : [...REQUIRED_TWILIO])]
   console.log(
-    `MamaAlert: environment OK — required keys present: ${validatedKeys.join(', ')} (DB via Prisma, auth via Supabase)`,
+    `MamaAlert: environment OK - required keys present: ${validatedKeys.join(', ')} (DB via Prisma, phone-only auth active)`,
   )
   validated = true
 }

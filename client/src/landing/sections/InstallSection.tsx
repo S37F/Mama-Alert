@@ -1,13 +1,9 @@
-import { Play } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { usePWAInstall } from '@/landing/hooks/usePWAInstall'
 
 export function InstallSection() {
   const { install, isInstalled, isInstalling, canInstall } = usePWAInstall()
   const primary = isInstalled ? 'Open App' : canInstall ? 'Install App' : 'Open App'
-
-  const watchDemo = () => {
-    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })
-  }
 
   return (
     <section
@@ -83,8 +79,8 @@ export function InstallSection() {
           >
             {isInstalling ? '…' : primary}
           </button>
-          <button
-            type="button"
+          <Link
+            to="/signup"
             className="landing-btn landing-btn--install-cta"
             style={{
               background: 'transparent',
@@ -92,11 +88,9 @@ export function InstallSection() {
               border: '2px solid var(--color-white)',
               minWidth: 200,
             }}
-            onClick={watchDemo}
           >
-            <Play size={22} strokeWidth={2} aria-hidden />
-            Watch Demo
-          </button>
+            Sign Up / Login →
+          </Link>
         </div>
 
         <p

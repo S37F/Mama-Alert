@@ -25,7 +25,6 @@ import {
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { NetworkOfflineBanner } from '@/components/NetworkOfflineBanner'
-import { useAlertsRealtimeRefresh } from '@/hooks/useAlertsRealtimeRefresh'
 import { useAuth } from '@/hooks/useAuth'
 import { useZoneId } from '@/hooks/useZoneId'
 import { useGeolocation } from '@/hooks/useGeolocation'
@@ -180,7 +179,7 @@ function CompletePatientDialog({
 
 export function HealthWorkerDashboard() {
   const { t } = useTranslation()
-  const { logout, session, isLoading: authLoading } = useAuth()
+  const { logout } = useAuth()
   const zoneId = useZoneId()
   const [tab, setTab] = useState('overview')
   const [patients, setPatients] = useState<WorkerPatientRow[]>([])
@@ -218,10 +217,6 @@ export function HealthWorkerDashboard() {
       /* keep existing list */
     }
   }, [])
-
-  useAlertsRealtimeRefresh(!authLoading && !!session, zoneId, () => {
-    void refreshCoordinatorAlerts()
-  })
 
   useEffect(() => {
     void load()

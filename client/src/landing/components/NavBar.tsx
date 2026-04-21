@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Play } from 'lucide-react'
 import { usePWAInstall } from '@/landing/hooks/usePWAInstall'
 
 export function NavBar() {
@@ -28,11 +28,6 @@ export function NavBar() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [menuOpen])
-
-  const goHowItWorks = () => {
-    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })
-    setMenuOpen(false)
-  }
 
   const label = isInstalled ? 'Open App' : canInstall ? 'Install App' : 'Open App'
 
@@ -96,14 +91,12 @@ export function NavBar() {
           style={{ display: 'flex', alignItems: 'center', gap: 12 }}
           className="landing-nav-desktop"
         >
-          <button
-            type="button"
+          <Link
+            to="/signup"
             className="landing-btn landing-btn--ghost"
-            onClick={goHowItWorks}
           >
-            <Play size={18} strokeWidth={2} aria-hidden />
-            {t('a11y.watchDemo')}
-          </button>
+            Sign Up
+          </Link>
           <button
             type="button"
             className="landing-btn landing-btn--terra"
@@ -143,15 +136,14 @@ export function NavBar() {
             gap: 12,
           }}
         >
-          <button
-            type="button"
+          <Link
+            to="/signup"
             className="landing-btn landing-btn--ghost"
             style={{ width: '100%' }}
-            onClick={goHowItWorks}
+            onClick={() => setMenuOpen(false)}
           >
-            <Play size={18} strokeWidth={2} aria-hidden />
-            {t('a11y.watchDemo')}
-          </button>
+            Sign Up
+          </Link>
           <button
             type="button"
             className="landing-btn landing-btn--terra"

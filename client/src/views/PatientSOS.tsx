@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +11,7 @@ import {
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useSignup } from '@/hooks/useSignup'
 import { cn } from '@/lib/utils'
 import { SOSButton, type SosVisualStatus } from '@/components/SOSButton'
 import { useOfflineQueue } from '@/hooks/useOfflineQueue'
@@ -18,8 +19,6 @@ import {
   ApiHttpError,
   getPatientVolunteersNearbyCount,
   postPatientHints,
-  postPatientOtpRequest,
-  postPatientOtpVerify,
   postSos,
   postSosPatientInteraction,
 } from '@/services/api'
@@ -63,67 +62,30 @@ function normalizePhoneInput(value: string): string {
 
 function PhoneOtpPanel({
   onBack,
-  onVerified,
   t,
   countryHint,
 }: {
   onBack: () => void
-  onVerified: (data: {
-    token: string
-    phone: string
-    firstName: string
-    weeksPregnant: number | null
-  }) => void
   t: TFunction
   countryHint: string
 }) {
+  const { login, isSubmitting, error } = useSignup()
   const [phone, setPhone] = useState('')
-  const [code, setCode] = useState('')
-  const [sent, setSent] = useState(false)
-  const [err, setErr] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [localErr, setLocalErr] = useState<string | null>(null)
 
   const compactPhone = () => normalizePhoneInput(phone).replace(/\s/g, '')
 
-  const sendCode = async () => {
-    setErr(null)
+  const submit = async () => {
+    setLocalErr(null)
     const p = compactPhone()
     if (p.length < 8) {
-      setErr(t('sos.access.phoneInvalid'))
+      setLocalErr(t('sos.access.phoneInvalid'))
       return
     }
-    setLoading(true)
     try {
-      await postPatientOtpRequest(p)
-      setSent(true)
+      await login(p)
     } catch {
-      setErr(t('sos.access.sendCodeFailed'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const verify = async () => {
-    setErr(null)
-    const p = compactPhone()
-    const c = code.trim()
-    if (c.length < 4) {
-      setErr(t('sos.access.codeInvalid'))
-      return
-    }
-    setLoading(true)
-    try {
-      const out = await postPatientOtpVerify(p, c)
-      onVerified({
-        token: out.sos_token,
-        phone: p,
-        firstName: out.firstName,
-        weeksPregnant: out.weeksPregnant,
-      })
-    } catch {
-      setErr(t('sos.access.verifyFailed'))
-    } finally {
-      setLoading(false)
+      /* handled by hook state */
     }
   }
 
@@ -142,36 +104,13 @@ function PhoneOtpPanel({
           autoComplete="tel"
           value={phone}
           onChange={(e) => setPhone(normalizePhoneInput(e.target.value))}
-          disabled={sent}
           placeholder={countryHint}
         />
       </div>
-      {!sent ? (
-        <Button type="button" className="w-full" disabled={loading} onClick={() => void sendCode()}>
-          {loading ? t('common.loading') : t('sos.access.sendCode')}
-        </Button>
-      ) : (
-        <>
-          <div className="space-y-2">
-            <Label htmlFor="otp-code">{t('sos.access.codeLabel')}</Label>
-            <Input
-              id="otp-code"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-              placeholder="000000"
-            />
-          </div>
-          <Button type="button" className="w-full" disabled={loading} onClick={() => void verify()}>
-            {loading ? t('common.loading') : t('sos.access.verify')}
-          </Button>
-          <Button type="button" variant="link" className="h-auto p-0 text-sm" onClick={() => { setSent(false); setCode('') }}>
-            {t('sos.access.useDifferentNumber')}
-          </Button>
-        </>
-      )}
-      {err ? <p className="text-destructive text-center text-sm">{err}</p> : null}
+      <Button type="button" className="w-full" disabled={isSubmitting} onClick={() => void submit()}>
+        {isSubmitting ? t('common.loading') : 'Login →'}
+      </Button>
+      {localErr || error ? <p className="text-destructive text-center text-sm">{localErr ?? error}</p> : null}
     </div>
   )
 }
@@ -215,7 +154,6 @@ function OnboardingVolunteerStep({ sosToken, t }: { sosToken: string; t: TFuncti
 
 export function PatientSOS() {
   const { t, i18n } = useTranslation()
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { addToQueue, processPending } = useOfflineQueue()
 
@@ -382,26 +320,6 @@ export function PatientSOS() {
     }
     setShowOnboarding(false)
   }, [])
-
-  const onPhoneAccessVerified = useCallback(
-    (data: { token: string; phone: string; firstName: string; weeksPregnant: number | null }) => {
-      try {
-        localStorage.setItem(LS_SOS_TOKEN, data.token)
-        localStorage.setItem(LS_PHONE, data.phone)
-        localStorage.setItem(LS_NAME, data.firstName)
-        if (data.weeksPregnant !== null) {
-          localStorage.setItem(LS_WEEKS, String(data.weeksPregnant))
-        }
-      } catch {
-        /* ignore */
-      }
-      const u = new URL(`${window.location.origin}/sos`)
-      u.searchParams.set('token', data.token)
-      u.searchParams.set('phone', data.phone)
-      navigate(`${u.pathname}${u.search}`, { replace: true })
-    },
-    [navigate],
-  )
 
   const [status, setStatus] = useState<SosVisualStatus>('idle')
   const [duplicateCooldown, setDuplicateCooldown] = useState(false)
@@ -612,7 +530,7 @@ export function PatientSOS() {
                     {t('sos.shortLink.signInCta')}
                   </Button>
                   <Link
-                    to="/sos/register"
+                    to="/signup"
                     className={cn(buttonVariants({ variant: 'secondary' }), 'inline-flex w-full items-center justify-center')}
                   >
                     {t('sos.access.selfRegister')}
@@ -630,7 +548,7 @@ export function PatientSOS() {
                     {t('sos.access.signInPhone')}
                   </Button>
                   <Link
-                    to="/sos/register"
+                    to="/signup"
                     className={cn(buttonVariants({ variant: 'secondary' }), 'inline-flex w-full items-center justify-center')}
                   >
                     {t('sos.access.selfRegister')}
@@ -646,7 +564,6 @@ export function PatientSOS() {
               t={t}
               countryHint={countryHint}
               onBack={() => setAccessMode('menu')}
-              onVerified={onPhoneAccessVerified}
             />
           )
         ) : null}

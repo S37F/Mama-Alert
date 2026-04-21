@@ -11,8 +11,8 @@ const LandingPage = lazy(() =>
 const PatientSOS = lazy(() =>
   import('@/views/PatientSOS').then((m) => ({ default: m.PatientSOS })),
 )
-const PatientSelfRegister = lazy(() =>
-  import('@/views/PatientSelfRegister').then((m) => ({ default: m.PatientSelfRegister })),
+const SignupLogin = lazy(() =>
+  import('@/views/SignupLogin').then((m) => ({ default: m.SignupLogin })),
 )
 const VolunteerDashboard = lazy(() =>
   import('@/views/VolunteerDashboard').then((m) => ({ default: m.VolunteerDashboard })),
@@ -42,10 +42,11 @@ export function App() {
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Navigate to="/register" replace />} />
+          <Route path="/signup" element={<SignupLogin />} />
+          <Route path="/login" element={<Navigate to="/signup?mode=login" replace />} />
 
           <Route path="/sos" element={<PatientSOS />} />
-          <Route path="/sos/register" element={<PatientSelfRegister />} />
+          <Route path="/sos/register" element={<Navigate to="/signup" replace />} />
           <Route path="/volunteer" element={<VolunteerDashboard />} />
           <Route path="/hospital" element={<Navigate to="/" replace />} />
           <Route

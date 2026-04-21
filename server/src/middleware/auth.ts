@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from 'express'
 import { asyncHandler } from '@/lib/asyncHandler'
+import { readSessionHeaders } from '@/lib/mamaAuth'
 import { prisma } from '@/lib/prisma'
-import { supabaseAuthAdmin } from '@/services/supabaseAuth'
 
 /** Zone admins must have `zone_id` set; health workers may omit it. */
 export function assertAdminHasZone(res: Response, accessLevel: string, zoneId: string | null): boolean {
@@ -13,34 +13,35 @@ export function assertAdminHasZone(res: Response, accessLevel: string, zoneId: s
 }
 
 export const requireAuth = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  const hdr = req.headers.authorization
-  const token = hdr?.startsWith('Bearer ') ? hdr.slice(7) : undefined
-  if (!token) {
+  const session = readSessionHeaders(req)
+  if (!session || (session.role !== 'health_worker' && session.role !== 'admin')) {
     res.status(401).json({ error: 'Unauthorized' })
     return
   }
-  const { data, error } = await supabaseAuthAdmin.auth.getUser(token)
-  if (error || !data.user) {
-    res.status(401).json({ error: 'Invalid session' })
-    return
-  }
+
   const hw = await prisma.healthWorker.findUnique({
-    where: { userId: data.user.id },
+    where: { userId: session.profileId },
     select: { accessLevel: true, zoneId: true },
   })
   if (!hw) {
     res.status(403).json({ error: 'Health worker profile not found' })
     return
   }
+
   const level = hw.accessLevel
   if (level !== 'health_worker' && level !== 'admin') {
     res.status(403).json({ error: 'Invalid access level' })
     return
   }
+  if (session.role !== level) {
+    res.status(403).json({ error: 'Session role mismatch' })
+    return
+  }
   if (!assertAdminHasZone(res, level, hw.zoneId)) {
     return
   }
-  req.authUserId = data.user.id
+
+  req.authUserId = session.profileId
   req.healthWorker = {
     access_level: level,
     zone_id: hw.zoneId,
@@ -56,7 +57,7 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
   next()
 }
 
-/** Health worker field routes — not zone admins. */
+/** Health worker field routes - not zone admins. */
 export function requireHealthWorker(req: Request, res: Response, next: NextFunction): void {
   if (req.healthWorker?.access_level !== 'health_worker') {
     res.status(403).json({ error: 'Health worker access only' })

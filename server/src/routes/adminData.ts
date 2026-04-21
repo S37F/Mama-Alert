@@ -12,7 +12,6 @@ import {
   rpcAdminPatientsInZone,
   rpcAdminVolunteersInZone,
 } from '@/services/db/rpc'
-import { supabaseAuthAdmin } from '@/services/supabaseAuth'
 
 export const adminDataRouter = Router()
 
@@ -416,12 +415,6 @@ adminDataRouter.patch(
   }),
 )
 
-const hwInviteSchema = z.object({
-  email: z.string().email(),
-  name: z.string().min(1).max(200),
-  phone: z.string().max(40).optional(),
-})
-
 adminDataRouter.get(
   '/health-workers',
   asyncHandler(async (req, res) => {
@@ -447,56 +440,5 @@ adminDataRouter.get(
       logError('admin health-workers list failed', { error: String(err) })
       res.status(500).json({ error: 'Failed to list health workers' })
     }
-  }),
-)
-
-adminDataRouter.post(
-  '/health-workers/invite',
-  asyncHandler(async (req, res) => {
-    const zoneId = req.healthWorker?.zone_id
-    if (!zoneId) {
-      res.status(400).json({ error: 'Admin has no zone assigned' })
-      return
-    }
-    const parsed = hwInviteSchema.safeParse(req.body)
-    if (!parsed.success) {
-      res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
-      return
-    }
-    const { email, name, phone } = parsed.data
-    const redirectTo =
-      typeof process.env.CLIENT_URL === 'string' && process.env.CLIENT_URL.length > 0
-        ? `${process.env.CLIENT_URL.replace(/\/$/, '')}/register`
-        : undefined
-    const invitePayload =
-      redirectTo !== undefined
-        ? { data: { full_name: name }, redirectTo }
-        : { data: { full_name: name } }
-    const { data: invited, error: invErr } = await supabaseAuthAdmin.auth.admin.inviteUserByEmail(
-      email,
-      invitePayload,
-    )
-    if (invErr || !invited?.user?.id) {
-      logError('admin invite failed', { error: String(invErr) })
-      res.status(400).json({ error: invErr?.message ?? 'Invite failed' })
-      return
-    }
-    const userId = invited.user.id
-    try {
-      await prisma.healthWorker.create({
-        data: {
-          userId,
-          name,
-          phone: phone ?? null,
-          zoneId,
-          accessLevel: 'health_worker',
-        },
-      })
-    } catch (insErr) {
-      logError('admin health_worker insert after invite failed', { error: String(insErr) })
-      res.status(500).json({ error: 'Could not attach worker to zone (user may already be registered)' })
-      return
-    }
-    res.status(201).json({ success: true, userId })
   }),
 )

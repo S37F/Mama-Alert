@@ -12,7 +12,6 @@ import { ErrorMessage } from '@/components/ErrorMessage'
 import { NetworkOfflineBanner } from '@/components/NetworkOfflineBanner'
 import { useAuth } from '@/hooks/useAuth'
 import { useZoneId } from '@/hooks/useZoneId'
-import { useRealtimeAlerts } from '@/hooks/useRealtimeAlerts'
 import {
   getAdminPatients,
   getAdminVolunteers,
@@ -24,7 +23,6 @@ import {
   patchAdminZoneEscalation,
   patchVolunteerActive,
   postAdminHospitalPortalToken,
-  postAdminInviteHealthWorker,
   type AdminPatientRow,
   type AdminVolunteerRow,
   type AdminAlertHistoryRow,
@@ -91,7 +89,6 @@ export function AdminZone() {
   const { t } = useTranslation()
   const { logout } = useAuth()
   const zoneId = useZoneId()
-  const { alerts: liveAlerts } = useRealtimeAlerts(zoneId ?? undefined)
   const [patients, setPatients] = useState<AdminPatientRow[]>([])
   const [volunteers, setVolunteers] = useState<AdminVolunteerRow[]>([])
   const [alerts, setAlerts] = useState<AdminAlertHistoryRow[]>([])
@@ -108,9 +105,6 @@ export function AdminZone() {
   const [escR2Km, setEscR2Km] = useState('')
   const [escR3Km, setEscR3Km] = useState('')
   const [escDelaySec, setEscDelaySec] = useState('')
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteName, setInviteName] = useState('')
-  const [invitePhone, setInvitePhone] = useState('')
 
   const load = useCallback(async () => {
     setError(null)
@@ -167,7 +161,7 @@ export function AdminZone() {
 
   useEffect(() => {
     void load()
-  }, [load, liveAlerts])
+  }, [load])
 
   const toggleVol = async (id: string, active: boolean) => {
     try {
@@ -300,26 +294,6 @@ export function AdminZone() {
         return
       }
       await patchAdminZoneEscalation(patch)
-      await load()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.error'))
-    }
-  }
-
-  const sendInvite = async () => {
-    try {
-      const inviteBody: { email: string; name: string; phone?: string } = {
-        email: inviteEmail.trim(),
-        name: inviteName.trim(),
-      }
-      const invitePhoneTrimmed = invitePhone.trim()
-      if (invitePhoneTrimmed.length > 0) {
-        inviteBody.phone = invitePhoneTrimmed
-      }
-      await postAdminInviteHealthWorker(inviteBody)
-      setInviteEmail('')
-      setInviteName('')
-      setInvitePhone('')
       await load()
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
@@ -613,35 +587,6 @@ export function AdminZone() {
                       ))}
                     </TableBody>
                   </Table>
-                </div>
-                <div className="grid max-w-md gap-3">
-                  <div className="space-y-1">
-                    <Label htmlFor="inv-email">{t('admin.inviteEmail')}</Label>
-                    <Input
-                      id="inv-email"
-                      type="email"
-                      autoComplete="email"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="inv-name">{t('admin.inviteName')}</Label>
-                    <Input id="inv-name" value={inviteName} onChange={(e) => setInviteName(e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label htmlFor="inv-phone">{t('admin.invitePhone')}</Label>
-                    <Input id="inv-phone" type="tel" value={invitePhone} onChange={(e) => setInvitePhone(e.target.value)} />
-                  </div>
-                  <p className="text-muted-foreground text-xs">{t('admin.inviteHelp')}</p>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={!inviteEmail.trim() || !inviteName.trim()}
-                    onClick={() => void sendInvite()}
-                  >
-                    {t('admin.sendInvite')}
-                  </Button>
                 </div>
               </div>
             </>

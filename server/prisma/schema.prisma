@@ -30,13 +30,16 @@ model Zone {
 }
 
 model HealthWorker {
-  userId      String   @id @map("user_id") @db.Uuid
-  name        String
-  phone       String?
-  zoneId      String?  @map("zone_id") @db.Uuid
-  accessLevel String   @default("health_worker") @map("access_level")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  userId       String   @id @map("user_id") @db.Uuid
+  name         String
+  phone        String?
+  phoneE164    String?  @default(dbgenerated("normalize_phone_for_match(phone)")) @map("phone_e164")
+  zoneId       String?  @map("zone_id") @db.Uuid
+  accessLevel  String   @default("health_worker") @map("access_level")
+  organisation String?
+  roleTitle    String?  @map("role_title")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   zone     Zone?     @relation(fields: [zoneId], references: [id], onDelete: SetNull)
   patients Patient[]

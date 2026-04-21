@@ -1,13 +1,10 @@
-import { Play } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { DeathCounter } from '@/landing/components/DeathCounter'
 import { usePWAInstall } from '@/landing/hooks/usePWAInstall'
 
 export function Hero() {
   const { install, isInstalled, isInstalling, canInstall } = usePWAInstall()
   const installLabel = isInstalled ? 'Open App' : canInstall ? 'Install MamaAlert' : 'Open App'
-
-  const scrollHow = () =>
-    document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })
 
   return (
     <section
@@ -95,14 +92,9 @@ export function Hero() {
               >
                 {isInstalling ? '…' : installLabel}
               </button>
-              <button
-                type="button"
-                className="landing-btn landing-btn--ghost landing-btn--hero-primary"
-                onClick={scrollHow}
-              >
-                <Play size={20} strokeWidth={2} aria-hidden />
-                Watch how it works
-              </button>
+              <Link to="/signup" className="landing-btn landing-btn--ghost landing-btn--hero-primary">
+                Sign Up / Login →
+              </Link>
             </div>
             <p
               style={{

@@ -75,7 +75,7 @@ app.use('/api/hospital', hospitalPortalRouter)
 app.use('/api/admin', adminDataRouter)
 app.use('/api/alerts', alertsRouter)
 app.use('/api/worker', workerPortalRouter)
-app.use('/api', authRouter)
+app.use('/api/auth', authRouter)
 app.use('/api/status', statusRouter)
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

@@ -1,7 +1,8 @@
 import axios from 'axios'
+import type { MamaAlertSession } from '@/lib/mamaSession'
+import { readMamaAlertSession } from '@/lib/mamaSession'
 import type { SosPayload } from '@/types/api'
 import type { MapPoint } from '@/types/map'
-import { supabase } from '@/services/supabase'
 
 const baseURL = import.meta.env.VITE_API_URL ?? ''
 
@@ -11,13 +12,8 @@ export const api = axios.create({
   timeout: 30_000,
 })
 
-let bearerToken: string | null = null
 let volunteerPortalToken: string | null = null
 let hospitalPortalToken: string | null = null
-
-export function setApiBearerToken(token: string | null): void {
-  bearerToken = token
-}
 
 export function setVolunteerPortalToken(token: string | null): void {
   volunteerPortalToken = token
@@ -30,11 +26,16 @@ export function setHospitalPortalToken(token: string | null): void {
 api.interceptors.request.use((config) => {
   const url = typeof config.url === 'string' ? config.url : ''
   const full = `${config.baseURL ?? ''}${url}`
+  const session = readMamaAlertSession()
+
+  const volunteerTokenFromSession =
+    volunteerPortalToken ??
+    session?.volunteerPortalToken ??
+    localStorage.getItem('mamaalert_volunteer_portal_token')
 
   if (full.includes('/api/volunteer/') && !full.includes('/otp/')) {
-    const t = volunteerPortalToken ?? localStorage.getItem('mamaalert_volunteer_portal_token')
-    if (t) {
-      config.headers.Authorization = `Bearer ${t}`
+    if (volunteerTokenFromSession) {
+      config.headers.Authorization = `Bearer ${volunteerTokenFromSession}`
     }
     return config
   }
@@ -47,80 +48,24 @@ api.interceptors.request.use((config) => {
     return config
   }
 
-  const t = bearerToken ?? localStorage.getItem('mamaalert_access_token')
-  if (t) {
-    config.headers.Authorization = `Bearer ${t}`
+  if (session && !full.includes('/api/public/') && !full.includes('/api/auth/')) {
+    config.headers['X-MamaAlert-Profile-Id'] = session.profileId
+    config.headers['X-MamaAlert-Role'] = session.role
   }
   return config
 })
 
-api.interceptors.response.use(
-  (r) => r,
-  async (error: unknown) => {
-    if (!axios.isAxiosError(error) || !error.config || error.response?.status !== 401) {
-      return Promise.reject(error)
-    }
-    const cfg = error.config as typeof error.config & { _retry?: boolean }
-    const url = typeof cfg.url === 'string' ? cfg.url : ''
-    if (url.includes('/api/volunteer/') || url.includes('/api/hospital/') || url.includes('/api/public/')) {
-      return Promise.reject(error)
-    }
-    if (cfg._retry) {
-      return Promise.reject(error)
-    }
-    cfg._retry = true
-    const rt = localStorage.getItem('mamaalert_refresh_token')
-    if (!rt) {
-      return Promise.reject(error)
-    }
-    const { data, error: refErr } = await supabase.auth.refreshSession({ refresh_token: rt })
-    if (refErr || !data.session?.access_token) {
-      return Promise.reject(error)
-    }
-    localStorage.setItem('mamaalert_access_token', data.session.access_token)
-    if (data.session.refresh_token) {
-      localStorage.setItem('mamaalert_refresh_token', data.session.refresh_token)
-    }
-    bearerToken = data.session.access_token
-    cfg.headers.Authorization = `Bearer ${data.session.access_token}`
-    return api(cfg)
-  },
-)
-
-export function setStoredTokens(access: string, refreshToken: string): void {
-  bearerToken = access
-  localStorage.setItem('mamaalert_refresh_token', refreshToken)
-}
-
-export function clearStoredTokens(): void {
-  bearerToken = null
-}
-
-export interface LoginResponse {
-  access_token: string
-  refresh_token: string
-  user: { id: string; email: string | undefined }
+export interface AuthResponse {
   role: string
-  zone_id: string | null
+  profileId: string
+  name: string
+  phone: string
+  session: MamaAlertSession
 }
 
-export interface AuthMeResponse {
-  user: { id: string; email: string | null }
-  role: string
-  zone_id: string | null
-}
-
-/** Bootstrap staff role after Supabase invite / URL session (Bearer must be current access token). */
-export async function fetchAuthMe(accessToken: string): Promise<AuthMeResponse> {
-  const response = await api.get<AuthMeResponse>('/api/me', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
-  return response.data
-}
-
-export async function login(email: string, password: string): Promise<LoginResponse> {
+export async function postAuthLogin(phone: string): Promise<AuthResponse> {
   try {
-    const response = await api.post<LoginResponse>('/api/login', { email, password })
+    const response = await api.post<AuthResponse>('/api/auth/login', { phone })
     return response.data
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -137,14 +82,23 @@ export async function login(email: string, password: string): Promise<LoginRespo
   }
 }
 
-export async function logout(accessToken: string): Promise<void> {
-  await api.post(
-    '/api/logout',
-    {},
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    },
-  )
+export async function postAuthSignup<TBody extends Record<string, unknown>>(body: TBody): Promise<AuthResponse> {
+  try {
+    const response = await api.post<AuthResponse>('/api/auth/signup', body)
+    return response.data
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const msg =
+        typeof error.response?.data === 'object' &&
+        error.response.data !== null &&
+        'error' in error.response.data &&
+        typeof (error.response.data as { error: unknown }).error === 'string'
+          ? (error.response.data as { error: string }).error
+          : 'Sign up failed'
+      throw new Error(msg)
+    }
+    throw error
+  }
 }
 
 export class ApiHttpError extends Error {
@@ -582,14 +536,6 @@ export interface AdminHealthWorkerRow {
 export async function getAdminHealthWorkers(): Promise<AdminHealthWorkerRow[]> {
   const response = await api.get<{ healthWorkers: AdminHealthWorkerRow[] }>('/api/admin/health-workers')
   return response.data.healthWorkers
-}
-
-export async function postAdminInviteHealthWorker(body: {
-  email: string
-  name: string
-  phone?: string
-}): Promise<void> {
-  await api.post('/api/admin/health-workers/invite', body)
 }
 
 export type { MapPoint } from '@/types/map'
