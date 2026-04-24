@@ -71,17 +71,17 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
 
   return (
     <form className="space-y-5" onSubmit={(event) => void onSubmit(event)}>
-      <Button type="button" variant="ghost" className="-ml-3 text-[#7B645A]" onClick={onBack}>
-        ← Back
+      <Button type="button" variant="ghost" className="-ml-3 text-muted-foreground" onClick={onBack}>
+        Back
       </Button>
 
       <div className="space-y-2">
-        <Label htmlFor="name" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]">
+        <Label htmlFor="name" className="mama-label">
           Full name
         </Label>
         <Input
           id="name"
-          className="h-12 rounded-xl border-[#D8C1B0] bg-white focus-visible:ring-[#C4522A]"
+          className="mama-input"
           {...register('name')}
           onChange={(event) => {
             register('name').onChange(event)
@@ -91,7 +91,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phoneLocal" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]">
+        <Label htmlFor="phoneLocal" className="mama-label">
           Phone number
         </Label>
         <div className="grid grid-cols-[118px_1fr] gap-3">
@@ -105,7 +105,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
               clearError()
             }}
           >
-            <SelectTrigger className="h-12 rounded-xl border-[#D8C1B0] bg-white focus:ring-[#C4522A]">
+            <SelectTrigger className="mama-select">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -120,7 +120,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
             id="phoneLocal"
             inputMode="tel"
             autoComplete="tel"
-            className="h-12 rounded-xl border-[#D8C1B0] bg-white focus-visible:ring-[#C4522A]"
+            className="mama-input"
             placeholder="9876543210"
             {...register('phoneLocal')}
             onChange={(event) => {
@@ -135,12 +135,12 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="village" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]">
+        <Label htmlFor="village" className="mama-label">
           Village / area
         </Label>
         <Input
           id="village"
-          className="h-12 rounded-xl border-[#D8C1B0] bg-white focus-visible:ring-[#C4522A]"
+          className="mama-input"
           {...register('village')}
           onChange={(event) => {
             register('village').onChange(event)
@@ -149,19 +149,17 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
         />
       </div>
 
-      <div id="skills" className="space-y-3 rounded-2xl border border-[#E6D5C7] bg-[#FFFDFC] p-4">
-        <Label className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]">Skills</Label>
+      <div id="skills" className="mama-panel-compact space-y-3 p-4">
+        <Label className="mama-label">Skills</Label>
         <div className="space-y-3">
           {VOLUNTEER_SKILLS.map((skill) => {
             const checked = selectedSkills.includes(skill)
             return (
-              <label key={skill} className="flex items-start gap-3 text-sm text-[#5C463A]">
+              <label key={skill} className="flex items-start gap-3 text-sm text-foreground">
                 <Checkbox
                   checked={checked}
                   onCheckedChange={(value) => {
-                    const next = value
-                      ? [...selectedSkills, skill]
-                      : selectedSkills.filter((item) => item !== skill)
+                    const next = value ? [...selectedSkills, skill] : selectedSkills.filter((item) => item !== skill)
                     setValue('skills', next, { shouldDirty: true, shouldValidate: true })
                     clearError()
                   }}
@@ -171,12 +169,12 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
             )
           })}
         </div>
-        {errors.skills ? <p className="text-sm text-red-600">Select at least one skill.</p> : null}
+        {errors.skills ? <p className="text-sm text-destructive">Select at least one skill.</p> : null}
       </div>
 
       <div className="grid gap-5 sm:grid-cols-3">
         <div className="space-y-2">
-          <Label htmlFor="vehicle" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]">
+          <Label htmlFor="vehicle" className="mama-label">
             Vehicle
           </Label>
           <Select
@@ -189,7 +187,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
               clearError()
             }}
           >
-            <SelectTrigger id="vehicle" className="h-12 rounded-xl border-[#D8C1B0] bg-white focus:ring-[#C4522A]">
+            <SelectTrigger id="vehicle" className="mama-select">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -202,10 +200,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="space-y-2">
-          <Label
-            htmlFor="availableHours"
-            className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]"
-          >
+          <Label htmlFor="availableHours" className="mama-label">
             Available hours
           </Label>
           <Select
@@ -221,10 +216,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
               clearError()
             }}
           >
-            <SelectTrigger
-              id="availableHours"
-              className="h-12 rounded-xl border-[#D8C1B0] bg-white focus:ring-[#C4522A]"
-            >
+            <SelectTrigger id="availableHours" className="mama-select">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -237,10 +229,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
         </div>
 
         <div className="space-y-2">
-          <Label
-            htmlFor="maxRadiusKm"
-            className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]"
-          >
+          <Label htmlFor="maxRadiusKm" className="mama-label">
             Max radius
           </Label>
           <Select
@@ -253,10 +242,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
               clearError()
             }}
           >
-            <SelectTrigger
-              id="maxRadiusKm"
-              className="h-12 rounded-xl border-[#D8C1B0] bg-white focus:ring-[#C4522A]"
-            >
+            <SelectTrigger id="maxRadiusKm" className="mama-select">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -268,14 +254,10 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
-      {error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="mama-error">{error}</p> : null}
 
-      <Button
-        type="submit"
-        className="h-13 w-full rounded-xl bg-[#C4522A] text-base text-white hover:bg-[#A94625]"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? 'Loading…' : 'Create Account →'}
+      <Button type="submit" className="mama-primary-action" disabled={isSubmitting}>
+        {isSubmitting ? 'Loading...' : 'Create Account >'}
       </Button>
     </form>
   )

@@ -322,10 +322,10 @@ export function AdminZone() {
   const avgResolveMin = avgResolveMs !== null ? Math.round(avgResolveMs / 60_000) : null
 
   return (
-    <main id="main-content" tabIndex={-1} className="mx-auto max-w-6xl space-y-4 p-6 outline-none">
+    <main id="main-content" tabIndex={-1} className="mama-page mama-page-shell mama-page-shell--dashboard">
       <NetworkOfflineBanner variant="liveData" />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">{t('admin.title')}</h1>
+        <h1 className="mama-heading text-2xl">{t('admin.title')}</h1>
         <Button type="button" variant="outline" onClick={() => void logout()}>
           {t('auth.signOut')}
         </Button>
@@ -349,7 +349,7 @@ export function AdminZone() {
               {t('admin.exportCsv')}
             </Button>
           </div>
-          <div className="rounded-md border">
+          <div className="mama-table-shell">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -394,7 +394,7 @@ export function AdminZone() {
               {t('admin.exportCsv')}
             </Button>
           </div>
-          <div className="rounded-md border">
+          <div className="mama-table-shell">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -440,7 +440,7 @@ export function AdminZone() {
               {t('admin.exportCsv')}
             </Button>
           </div>
-          <div className="rounded-md border">
+          <div className="mama-table-shell">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -476,7 +476,7 @@ export function AdminZone() {
           <p className="text-muted-foreground text-xs">{t('admin.mapLegend')}</p>
           {mapData ? <AdminZoneMap data={mapData} /> : null}
           {mapData && mapData.hospitals.length > 0 ? (
-            <div className="rounded-md border">
+            <div className="mama-table-shell">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -568,7 +568,7 @@ export function AdminZone() {
 
               <div className="space-y-3">
                 <h2 className="text-lg font-semibold">{t('admin.healthWorkersTitle')}</h2>
-                <div className="rounded-md border">
+                  <div className="mama-table-shell">
                   <Table>
                     <TableHeader>
                       <TableRow>

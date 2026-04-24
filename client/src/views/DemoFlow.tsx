@@ -57,11 +57,11 @@ export function DemoFlow() {
   }, [auto, steps.length])
 
   return (
-    <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-6 p-6 outline-none">
-      <h1 className="text-2xl font-bold">{t('demo.title')}</h1>
+    <main id="main-content" tabIndex={-1} className="mama-page mama-page-shell mama-page-shell--narrow space-y-6">
+      <h1 className="mama-heading text-2xl">{t('demo.title')}</h1>
 
       {step === 0 ? (
-        <div className="overflow-hidden rounded-md border">
+        <div className="mama-panel-compact overflow-hidden">
           <p className="text-muted-foreground bg-muted px-2 py-1 text-xs">{t('demo.sosPreviewTitle')}</p>
           <iframe title={t('demo.sosPreviewTitle')} src="/" className="h-64 w-full border-0 bg-background" />
         </div>
@@ -101,7 +101,7 @@ export function DemoFlow() {
         </Button>
       </div>
 
-      <Button type="button" className="w-full bg-red-600 text-white hover:bg-red-700" disabled={demoBusy} onClick={() => void runRealDemo()}>
+      <Button type="button" variant="destructive" className="w-full" disabled={demoBusy} onClick={() => void runRealDemo()}>
         {demoBusy ? t('common.loading') : t('demo.triggerReal')}
       </Button>
       {demoErr ? <ErrorMessage message={demoErr} /> : null}

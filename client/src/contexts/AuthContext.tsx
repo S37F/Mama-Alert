@@ -18,12 +18,10 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<MamaAlertSession | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [session, setSession] = useState<MamaAlertSession | null>(() => readMamaAlertSession())
+  const isLoading = false
 
   useEffect(() => {
-    setSession(readMamaAlertSession())
-    setIsLoading(false)
     return subscribeMamaAlertSession(() => {
       setSession(readMamaAlertSession())
     })

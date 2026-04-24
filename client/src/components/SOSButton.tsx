@@ -35,7 +35,7 @@ export function SOSButton({ onTrigger, status, preview = false }: SOSButtonProps
         ? 'bg-amber-600 hover:bg-amber-700'
         : status === 'error'
           ? 'bg-red-800 hover:bg-red-900'
-          : 'bg-[#DC2626] hover:bg-red-700'
+          : 'bg-destructive hover:bg-red-700'
 
   const pulse = status === 'idle' && !preview
 

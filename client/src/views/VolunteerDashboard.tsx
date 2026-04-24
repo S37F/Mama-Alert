@@ -144,12 +144,12 @@ export function VolunteerDashboard() {
   }
 
   return (
-    <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-6 p-6 text-base outline-none">
+    <main id="main-content" tabIndex={-1} className="mama-page mama-page-shell mama-page-shell--narrow space-y-6 text-base">
       <NetworkOfflineBanner variant="liveDataSms" />
       <div className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold">{t('volunteer.title')}</h1>
-          <p className="text-muted-foreground text-sm">{session.name}</p>
+          <h1 className="mama-heading text-2xl">{t('volunteer.title')}</h1>
+          <p className="mama-copy text-sm">{session.name}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{items.length}</Badge>
@@ -161,12 +161,12 @@ export function VolunteerDashboard() {
 
       {error ? <ErrorMessage message={error} onRetry={() => void reload()} /> : null}
       {confirmMsg ? (
-        <p className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900">
+        <p className="rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-900">
           {confirmMsg}
         </p>
       ) : null}
 
-      <p className="text-muted-foreground rounded-md border border-border bg-muted/40 p-3 text-sm">
+      <p className="mama-panel-compact text-muted-foreground p-3 text-sm">
         {t('volunteer.smsPrimary')}
       </p>
 
@@ -174,7 +174,7 @@ export function VolunteerDashboard() {
 
       {active.length === 0 && !loading ? (
         <div
-          className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-12 text-center"
+          className="mama-empty-state"
           aria-live="polite"
         >
           <span className="bg-primary/20 size-3 animate-pulse rounded-full" aria-hidden />

@@ -116,7 +116,7 @@ export function WorkerVolunteerRegisterForm({ zoneId, onRegistered }: WorkerVolu
 
   if (doneId) {
     return (
-      <div className="space-y-3 rounded-md border border-border p-4">
+      <div className="mama-panel-compact space-y-3 p-4">
         <p className="text-sm font-medium text-foreground">{t('worker.volunteerReg.success')}</p>
         <p className="text-muted-foreground text-sm">{t('worker.volunteerReg.welcomeSmsHint')}</p>
         <p className="text-muted-foreground font-mono text-xs">{doneId}</p>

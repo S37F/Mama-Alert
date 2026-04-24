@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { AppHeader } from '@/components/AppHeader'
 import { DocumentLangSync } from '@/components/DocumentLangSync'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { SkipLink } from '@/components/SkipLink'
@@ -35,10 +36,14 @@ function RouteFallback() {
 }
 
 export function App() {
+  const { pathname } = useLocation()
+  const showAppHeader = pathname !== '/' && !pathname.startsWith('/sos')
+
   return (
     <>
       <SkipLink />
       <DocumentLangSync />
+      {showAppHeader ? <AppHeader /> : null}
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />

@@ -1,0 +1,49 @@
+import { Link, useLocation } from 'react-router-dom'
+import { HeartPulse } from 'lucide-react'
+import { buttonVariants } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+
+const routeLabels: Record<string, string> = {
+  '/signup': 'Access',
+  '/volunteer': 'Volunteer',
+  '/register': 'Health worker',
+  '/admin': 'Admin',
+  '/demo': 'Demo',
+}
+
+export function AppHeader() {
+  const location = useLocation()
+  const pathname = location.pathname
+  const sectionLabel = pathname.startsWith('/status') ? 'Family status' : routeLabels[pathname] ?? 'MamaAlert'
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
+      <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <Link to="/" className="flex min-w-0 items-center gap-3 text-foreground no-underline">
+          <span
+            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm"
+            aria-hidden
+          >
+            <HeartPulse className="size-5" />
+          </span>
+          <span className="min-w-0">
+            <span className="mama-heading block truncate text-xl leading-none">MamaAlert</span>
+            <span className="mama-copy mt-1 block truncate text-xs font-medium">{sectionLabel}</span>
+          </span>
+        </Link>
+
+        <nav className="flex shrink-0 items-center gap-2" aria-label="App">
+          <Link
+            to="/sos"
+            className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'hidden sm:inline-flex')}
+          >
+            SOS
+          </Link>
+          <Link to="/signup" className={cn(buttonVariants({ size: 'sm' }), pathname === '/signup' && 'hidden')}>
+            Sign Up
+          </Link>
+        </nav>
+      </div>
+    </header>
+  )
+}

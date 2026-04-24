@@ -45,13 +45,15 @@ export function LoginForm() {
   return (
     <form className="space-y-5" onSubmit={(event) => void onSubmit(event)}>
       <div className="space-y-2 text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#8F6A5C]">Phone login</p>
-        <h2 className="font-serif text-3xl font-bold text-[#36251D]">Welcome back</h2>
-        <p className="text-sm text-[#7B645A]">Enter your phone number and we’ll send you straight to the right dashboard.</p>
+        <p className="mama-kicker">Phone login</p>
+        <h2 className="mama-heading text-3xl">Welcome back</h2>
+        <p className="mama-copy text-sm">
+          Enter your phone number and we'll send you straight to the right dashboard.
+        </p>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phoneLocal" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]">
+        <Label htmlFor="phoneLocal" className="mama-label">
           Phone number
         </Label>
         <div className="grid grid-cols-[118px_1fr] gap-3">
@@ -65,7 +67,7 @@ export function LoginForm() {
               clearError()
             }}
           >
-            <SelectTrigger className="h-12 rounded-xl border-[#D8C1B0] bg-white focus:ring-[#C4522A]">
+            <SelectTrigger className="mama-select">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -81,7 +83,7 @@ export function LoginForm() {
             inputMode="tel"
             autoComplete="tel"
             placeholder="9876543210"
-            className="h-12 rounded-xl border-[#D8C1B0] bg-white focus-visible:ring-[#C4522A]"
+            className="mama-input"
             {...register('phoneLocal')}
             onChange={(event) => {
               register('phoneLocal').onChange({
@@ -92,17 +94,13 @@ export function LoginForm() {
             }}
           />
         </div>
-        {errors.phoneLocal ? <p className="text-sm text-red-600">Enter a valid phone number.</p> : null}
+        {errors.phoneLocal ? <p className="text-sm text-destructive">Enter a valid phone number.</p> : null}
       </div>
 
-      {error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="mama-error">{error}</p> : null}
 
-      <Button
-        type="submit"
-        className="h-13 w-full rounded-xl bg-[#C4522A] text-base text-white hover:bg-[#A94625]"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? 'Loading…' : 'Login →'}
+      <Button type="submit" className="mama-primary-action" disabled={isSubmitting}>
+        {isSubmitting ? 'Loading...' : 'Login >'}
       </Button>
     </form>
   )

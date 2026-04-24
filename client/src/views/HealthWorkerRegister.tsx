@@ -93,7 +93,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
     embedded ? (
       inner
     ) : (
-      <main id="main-content" tabIndex={-1} className="outline-none">
+      <main id="main-content" tabIndex={-1} className="mama-page outline-none">
         {inner}
       </main>
     )
@@ -196,7 +196,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
   if (success) {
     return wrapPage(
       <div className="mx-auto max-w-lg space-y-6 p-6">
-        <h1 className="text-2xl font-bold">{t('register.success')}</h1>
+        <h1 className="mama-heading text-2xl">{t('register.success')}</h1>
         <p className="text-muted-foreground text-sm">
           {t('register.patientId')}: <span className="font-mono text-foreground">{success.id}</span>
         </p>
@@ -248,7 +248,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
   return wrapPage(
     <form className="mx-auto max-w-2xl space-y-6 p-6 pb-24" onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
       <NetworkOfflineBanner variant="formSubmit" />
-      <h1 className="text-2xl font-bold">{t('register.title')}</h1>
+      <h1 className="mama-heading text-2xl">{t('register.title')}</h1>
 
       {submitErr ? <ErrorMessage message={submitErr} onRetry={() => setSubmitErr(null)} /> : null}
 

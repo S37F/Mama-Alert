@@ -2,31 +2,30 @@
 
 .landing-page {
   /* Core */
-  --color-cream: #fdfaf6;
-  --color-sand: #f5e6d3;
-  --color-sand-dark: #e8d5bc;
+  --color-cream: var(--mama-cream);
+  --color-sand: var(--mama-sand);
+  --color-sand-dark: var(--mama-sand-dark);
 
   /* Brand */
-  --color-terra: #c4522a;
-  --color-terra-dark: #9b3d1c;
-  --color-terra-light: #f0876a;
+  --color-terra: var(--mama-terra);
+  --color-terra-dark: var(--mama-terra-dark);
+  --color-terra-light: var(--mama-terra-light);
 
   /* Text */
-  --color-charcoal: #2c2416;
-  --color-warm-gray: #6b5b4e;
-  --color-muted: #a89080;
+  --color-charcoal: var(--mama-charcoal);
+  --color-warm-gray: var(--mama-warm-gray);
+  --color-muted: var(--mama-muted);
 
   /* Semantic */
-  --color-forest: #2d6a4f;
-  --color-alert: #dc2626;
-  --color-gold: #d4a017;
+  --color-forest: var(--mama-forest);
+  --color-alert: var(--mama-alert);
+  --color-gold: var(--mama-gold);
 
   /* Surfaces */
-  --color-white: #ffffff;
-  --color-card: #fff8f2;
+  --color-white: var(--mama-white);
+  --color-card: var(--mama-card);
 
-  --font-display: 'Playfair Display', Georgia, serif;
-  --font-body: 'Inter', system-ui, sans-serif;
+  --font-body: var(--font-sans);
 
   --text-xs: 0.75rem;
   --text-sm: 0.875rem;

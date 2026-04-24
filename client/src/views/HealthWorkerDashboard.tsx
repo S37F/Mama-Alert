@@ -234,10 +234,10 @@ export function HealthWorkerDashboard() {
   }, [tab, refreshCoordinatorAlerts])
 
   return (
-    <main id="main-content" tabIndex={-1} className="mx-auto max-w-5xl space-y-4 p-6 outline-none">
+    <main id="main-content" tabIndex={-1} className="mama-page mama-page-shell mama-page-shell--dashboard">
       <NetworkOfflineBanner variant="liveData" />
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-bold">{t('worker.title')}</h1>
+        <h1 className="mama-heading text-2xl">{t('worker.title')}</h1>
         <div className="flex gap-2">
           <Button type="button" variant="outline" onClick={() => setTab('register')}>
             {t('worker.openRegister')}
@@ -251,7 +251,7 @@ export function HealthWorkerDashboard() {
       {error ? <ErrorMessage message={error} onRetry={() => void load()} /> : null}
 
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
+        <TabsList className="flex flex-wrap">
           <TabsTrigger value="overview">{t('worker.tabOverview')}</TabsTrigger>
           <TabsTrigger value="register">{t('worker.tabRegister')}</TabsTrigger>
         </TabsList>
@@ -259,7 +259,7 @@ export function HealthWorkerDashboard() {
         <TabsContent value="overview" className="mt-4 space-y-6">
           {loading ? <LoadingSpinner variant="inline" /> : null}
 
-          <Card>
+          <Card className="shadow-sm">
             <CardHeader>
               <CardTitle>{t('worker.activeAlerts')}</CardTitle>
             </CardHeader>
@@ -285,7 +285,7 @@ export function HealthWorkerDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-sm">
             <CardHeader>
               <CardTitle>{t('worker.needsProfile')}</CardTitle>
             </CardHeader>
@@ -321,7 +321,7 @@ export function HealthWorkerDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-sm">
             <CardHeader>
               <CardTitle>{t('worker.myPatients')}</CardTitle>
             </CardHeader>
@@ -359,7 +359,7 @@ export function HealthWorkerDashboard() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="shadow-sm">
             <CardHeader>
               <CardTitle>{t('worker.zoneVolunteers')}</CardTitle>
             </CardHeader>

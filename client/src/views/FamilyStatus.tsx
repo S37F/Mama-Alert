@@ -73,7 +73,7 @@ export function FamilyStatus() {
 
   if (loading && !data) {
     return (
-      <main id="main-content" tabIndex={-1} className="flex min-h-screen items-center justify-center p-6 outline-none">
+      <main id="main-content" tabIndex={-1} className="mama-page flex min-h-screen items-center justify-center p-6 outline-none">
         <LoadingSpinner variant="inline" />
       </main>
     )
@@ -81,7 +81,7 @@ export function FamilyStatus() {
 
   if (error || !data) {
     return (
-      <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-4 p-6 outline-none">
+      <main id="main-content" tabIndex={-1} className="mama-page mama-page-shell mama-page-shell--narrow space-y-4">
         <NetworkOfflineBanner variant="statusPage" />
         <ErrorMessage message={error ?? t('common.error')} onRetry={() => void load()} />
       </main>
@@ -112,14 +112,14 @@ export function FamilyStatus() {
   ]
 
   return (
-    <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-8 p-6 outline-none">
+    <main id="main-content" tabIndex={-1} className="mama-page mama-page-shell mama-page-shell--narrow space-y-8">
       <NetworkOfflineBanner variant="statusPage" />
       <div>
-        <h1 className="text-2xl font-bold">{t('family.title')}</h1>
-        <p className="text-muted-foreground mt-1 text-lg">{data.patientFirstName}</p>
+        <h1 className="mama-heading text-2xl">{t('family.title')}</h1>
+        <p className="mama-copy mt-1 text-lg">{data.patientFirstName}</p>
       </div>
 
-      <ol className="relative space-y-6 border-s-2 border-border ps-6">
+      <ol className="mama-panel-compact relative space-y-6 border-s-2 border-border p-6 ps-8">
         {steps.map((s, i) => (
           <li key={i} className="relative">
             <span

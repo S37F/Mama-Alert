@@ -66,28 +66,28 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
 
   return (
     <form className="space-y-5" onSubmit={(event) => void onSubmit(event)}>
-      <Button type="button" variant="ghost" className="-ml-3 text-[#7B645A]" onClick={onBack}>
-        ← Back
+      <Button type="button" variant="ghost" className="-ml-3 text-muted-foreground" onClick={onBack}>
+        Back
       </Button>
 
       <div className="space-y-2">
-        <Label htmlFor="name" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]">
+        <Label htmlFor="name" className="mama-label">
           Full name
         </Label>
         <Input
           id="name"
-          className="h-12 rounded-xl border-[#D8C1B0] bg-white focus-visible:ring-[#C4522A]"
+          className="mama-input"
           {...register('name')}
           onChange={(event) => {
             register('name').onChange(event)
             clearError()
           }}
         />
-        {errors.name ? <p className="text-sm text-red-600">Please enter your full name.</p> : null}
+        {errors.name ? <p className="text-sm text-destructive">Please enter your full name.</p> : null}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="phoneLocal" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]">
+        <Label htmlFor="phoneLocal" className="mama-label">
           Phone number
         </Label>
         <div className="grid grid-cols-[118px_1fr] gap-3">
@@ -101,7 +101,7 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
               clearError()
             }}
           >
-            <SelectTrigger className="h-12 rounded-xl border-[#D8C1B0] bg-white focus:ring-[#C4522A]">
+            <SelectTrigger className="mama-select">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -116,7 +116,7 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
             id="phoneLocal"
             inputMode="tel"
             autoComplete="tel"
-            className="h-12 rounded-xl border-[#D8C1B0] bg-white focus-visible:ring-[#C4522A]"
+            className="mama-input"
             placeholder="9876543210"
             {...register('phoneLocal')}
             onChange={(event) => {
@@ -128,15 +128,12 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
             }}
           />
         </div>
-        {errors.phoneLocal ? <p className="text-sm text-red-600">Please enter a valid phone number.</p> : null}
+        {errors.phoneLocal ? <p className="text-sm text-destructive">Please enter a valid phone number.</p> : null}
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label
-            htmlFor="weeksPregnant"
-            className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]"
-          >
+          <Label htmlFor="weeksPregnant" className="mama-label">
             Weeks pregnant
           </Label>
           <Input
@@ -144,7 +141,7 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
             inputMode="numeric"
             min={1}
             max={44}
-            className="h-12 rounded-xl border-[#D8C1B0] bg-white focus-visible:ring-[#C4522A]"
+            className="mama-input"
             {...register('weeksPregnant')}
             onChange={(event) => {
               register('weeksPregnant').onChange({
@@ -154,11 +151,11 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
               clearError()
             }}
           />
-          {errors.weeksPregnant ? <p className="text-sm text-red-600">Enter a number between 1 and 44.</p> : null}
+          {errors.weeksPregnant ? <p className="text-sm text-destructive">Enter a number between 1 and 44.</p> : null}
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="language" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]">
+          <Label htmlFor="language" className="mama-label">
             Language
           </Label>
           <Select
@@ -171,7 +168,7 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
               clearError()
             }}
           >
-            <SelectTrigger id="language" className="h-12 rounded-xl border-[#D8C1B0] bg-white focus:ring-[#C4522A]">
+            <SelectTrigger id="language" className="mama-select">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -186,28 +183,28 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="village" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]">
+        <Label htmlFor="village" className="mama-label">
           Village / area
         </Label>
         <Input
           id="village"
-          className="h-12 rounded-xl border-[#D8C1B0] bg-white focus-visible:ring-[#C4522A]"
+          className="mama-input"
           {...register('village')}
           onChange={(event) => {
             register('village').onChange(event)
             clearError()
           }}
         />
-        {errors.village ? <p className="text-sm text-red-600">Please enter your village or area.</p> : null}
+        {errors.village ? <p className="text-sm text-destructive">Please enter your village or area.</p> : null}
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="landmark" className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8F6A5C]">
+        <Label htmlFor="landmark" className="mama-label">
           Nearest landmark
         </Label>
         <Input
           id="landmark"
-          className="h-12 rounded-xl border-[#D8C1B0] bg-white focus-visible:ring-[#C4522A]"
+          className="mama-input"
           {...register('landmark')}
           onChange={(event) => {
             register('landmark').onChange(event)
@@ -216,19 +213,15 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
         />
       </div>
 
-      <p className="text-sm leading-6 text-[#7B645A]">
-        We’ll try to capture your location silently so responders can reach you faster. If your phone blocks it, we’ll
+      <p className="mama-copy text-sm leading-6">
+        We'll try to capture your location silently so responders can reach you faster. If your phone blocks it, we'll
         still save your account.
       </p>
 
-      {error ? <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="mama-error">{error}</p> : null}
 
-      <Button
-        type="submit"
-        className="h-13 w-full rounded-xl bg-[#C4522A] text-base text-white hover:bg-[#A94625]"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? 'Loading…' : 'Create Account →'}
+      <Button type="submit" className="mama-primary-action" disabled={isSubmitting}>
+        {isSubmitting ? 'Loading...' : 'Create Account >'}
       </Button>
     </form>
   )

@@ -90,7 +90,7 @@ function PhoneOtpPanel({
   }
 
   return (
-    <div className="w-full max-w-sm space-y-4 rounded-lg border border-border p-4">
+    <div className="mama-panel-compact w-full max-w-sm space-y-4 p-4">
       <Button type="button" variant="ghost" size="sm" className="px-0" onClick={onBack}>
         {t('sos.access.back')}
       </Button>
@@ -444,12 +444,12 @@ export function PatientSOS() {
           ? 'sos.onboarding.step2Title'
           : 'sos.onboarding.step3Title'
     return (
-      <main id="main-content" tabIndex={-1} className="flex min-h-[100dvh] flex-col bg-background px-4 py-12 outline-none">
+    <main id="main-content" tabIndex={-1} className="mama-page flex min-h-[100dvh] flex-col px-4 py-12 outline-none">
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6">
           <p className="text-muted-foreground text-center text-sm">
             {t('sos.onboarding.stepCounter', { current: onboardingStep, total: ONBOARDING_STEP_COUNT })}
           </p>
-          <h1 className="text-center text-2xl font-semibold tracking-tight">{t(titleKey)}</h1>
+          <h1 className="mama-heading text-center text-2xl">{t(titleKey)}</h1>
           {onboardingStep === 1 ? (
             <>
               <p className="text-muted-foreground text-center text-base leading-relaxed">{t('sos.onboarding.step1Body')}</p>
@@ -489,13 +489,13 @@ export function PatientSOS() {
   }
 
   return (
-    <main id="main-content" tabIndex={-1} className="relative flex min-h-[100dvh] flex-col bg-background outline-none">
+    <main id="main-content" tabIndex={-1} className="mama-page relative flex min-h-[100dvh] flex-col outline-none">
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {statusAnnouncement}
       </div>
       <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-20 pt-16 text-base">
         <div className="text-center">
-          <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          <h1 className="mama-heading text-3xl md:text-4xl">
             {t('sos.greeting', { name: displayName })}
           </h1>
           {weeksPregnant !== null ? (
@@ -515,7 +515,7 @@ export function PatientSOS() {
         {missingToken ? (
           accessMode === 'menu' ? (
             phoneOnlyShortLink ? (
-              <div className="w-full max-w-sm space-y-4 rounded-lg border border-border p-4">
+              <div className="mama-panel-compact w-full max-w-sm space-y-4 p-4">
                 <h2 className="text-center text-lg font-semibold">{t('sos.shortLink.title')}</h2>
                 <p className="text-muted-foreground text-center text-sm">{t('sos.shortLink.body')}</p>
                 <div className="flex flex-col gap-2">
@@ -541,7 +541,7 @@ export function PatientSOS() {
                 </p>
               </div>
             ) : (
-              <div className="w-full max-w-sm space-y-4 rounded-lg border border-border p-4">
+              <div className="mama-panel-compact w-full max-w-sm space-y-4 p-4">
                 <p className="text-muted-foreground text-center text-sm">{t('sos.access.intro')}</p>
                 <div className="flex flex-col gap-2">
                   <Button type="button" className="w-full" onClick={() => setAccessMode('phone')}>
@@ -569,7 +569,7 @@ export function PatientSOS() {
         ) : null}
 
         {!missingToken ? (
-          <div className="w-full max-w-sm space-y-3 rounded-lg border border-border p-4">
+          <div className="mama-panel-compact w-full max-w-sm space-y-3 p-4">
             <Label htmlFor="sos-phone" className="text-base">
               {t('sos.phoneLabel')}
             </Label>
@@ -648,7 +648,7 @@ export function PatientSOS() {
         ) : null}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-3 py-2 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card/95 px-3 py-2 backdrop-blur">
         <div className="mx-auto grid w-full max-w-md grid-cols-3 gap-2">
           <a
             href={`tel:${helpPhone}`}
