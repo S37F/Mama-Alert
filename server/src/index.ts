@@ -27,14 +27,40 @@ import { prisma } from '@/lib/prisma'
 const app = express()
 const PORT = Number(process.env.PORT) || 3000
 
+function normalizeOrigin(value: string): string {
+  const trimmed = value.trim().replace(/\/$/, '')
+  try {
+    return new URL(trimmed).origin
+  } catch {
+    return trimmed
+  }
+}
+
+function getAllowedOrigins(): Set<string> {
+  const raw = [process.env.CLIENT_URL, process.env.CLIENT_ORIGINS].filter(Boolean).join(',')
+  return new Set(
+    raw
+      .split(',')
+      .map((value) => normalizeOrigin(value))
+      .filter(Boolean),
+  )
+}
+
 // Railway / other reverse proxies send X-Forwarded-For; required for express-rate-limit client IPs
 const trustProxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS ?? '1', 10)
 app.set('trust proxy', Number.isFinite(trustProxyHops) && trustProxyHops > 0 ? trustProxyHops : 1)
+const allowedOrigins = getAllowedOrigins()
 
 app.use(helmet())
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true)
+        return
+      }
+      callback(null, allowedOrigins.has(normalizeOrigin(origin)))
+    },
     methods: ['GET', 'POST', 'PATCH'],
     credentials: true,
   }),
