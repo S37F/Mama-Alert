@@ -27,6 +27,8 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
   const { signup, isSubmitting, error, clearError } = useSignup()
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       name: '',
       dialCode: '+91',
@@ -48,6 +50,9 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
   } = form
 
   const selectedSkills = watch('skills')
+  const nameField = register('name')
+  const phoneLocalField = register('phoneLocal')
+  const villageField = register('village')
 
   const onSubmit = handleSubmit(
     async (values) => {
@@ -82,9 +87,9 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
         <Input
           id="name"
           className="mama-input"
-          {...register('name')}
+          {...nameField}
           onChange={(event) => {
-            register('name').onChange(event)
+            nameField.onChange(event)
             clearError()
           }}
         />
@@ -122,10 +127,10 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
             autoComplete="tel"
             className="mama-input"
             placeholder="9876543210"
-            {...register('phoneLocal')}
+            {...phoneLocalField}
             onChange={(event) => {
               sanitizeNumericInput(event)
-              register('phoneLocal').onChange(event)
+              phoneLocalField.onChange(event)
               clearError()
             }}
           />
@@ -139,9 +144,9 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
         <Input
           id="village"
           className="mama-input"
-          {...register('village')}
+          {...villageField}
           onChange={(event) => {
-            register('village').onChange(event)
+            villageField.onChange(event)
             clearError()
           }}
         />

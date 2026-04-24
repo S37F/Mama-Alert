@@ -25,6 +25,8 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
   const { signup, isSubmitting, error, clearError } = useSignup()
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       name: '',
       dialCode: '+91',
@@ -43,6 +45,11 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
     watch,
     formState: { errors },
   } = form
+  const nameField = register('name')
+  const phoneLocalField = register('phoneLocal')
+  const weeksPregnantField = register('weeksPregnant')
+  const villageField = register('village')
+  const landmarkField = register('landmark')
 
   const onSubmit = handleSubmit(
     async (values) => {
@@ -77,9 +84,9 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
         <Input
           id="name"
           className="mama-input"
-          {...register('name')}
+          {...nameField}
           onChange={(event) => {
-            register('name').onChange(event)
+            nameField.onChange(event)
             clearError()
           }}
         />
@@ -118,10 +125,10 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
             autoComplete="tel"
             className="mama-input"
             placeholder="9876543210"
-            {...register('phoneLocal')}
+            {...phoneLocalField}
             onChange={(event) => {
               sanitizeNumericInput(event)
-              register('phoneLocal').onChange(event)
+              phoneLocalField.onChange(event)
               clearError()
             }}
           />
@@ -140,10 +147,10 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
             min={1}
             max={44}
             className="mama-input"
-            {...register('weeksPregnant')}
+            {...weeksPregnantField}
             onChange={(event) => {
               sanitizeNumericInput(event, 2)
-              register('weeksPregnant').onChange(event)
+              weeksPregnantField.onChange(event)
               clearError()
             }}
           />
@@ -185,9 +192,9 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
         <Input
           id="village"
           className="mama-input"
-          {...register('village')}
+          {...villageField}
           onChange={(event) => {
-            register('village').onChange(event)
+            villageField.onChange(event)
             clearError()
           }}
         />
@@ -201,9 +208,9 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
         <Input
           id="landmark"
           className="mama-input"
-          {...register('landmark')}
+          {...landmarkField}
           onChange={(event) => {
-            register('landmark').onChange(event)
+            landmarkField.onChange(event)
             clearError()
           }}
         />

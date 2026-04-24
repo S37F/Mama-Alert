@@ -24,6 +24,8 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
   const { signup, isSubmitting, error, clearError } = useSignup()
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       name: '',
       dialCode: '+91',
@@ -41,6 +43,10 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
     watch,
     formState: { errors },
   } = form
+  const nameField = register('name')
+  const phoneLocalField = register('phoneLocal')
+  const organisationField = register('organisation')
+  const zoneField = register('zone')
 
   const onSubmit = handleSubmit(
     async (values) => {
@@ -70,9 +76,9 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
         <Input
           id="name"
           className="mama-input"
-          {...register('name')}
+          {...nameField}
           onChange={(event) => {
-            register('name').onChange(event)
+            nameField.onChange(event)
             clearError()
           }}
         />
@@ -111,10 +117,10 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
             autoComplete="tel"
             className="mama-input"
             placeholder="9876543210"
-            {...register('phoneLocal')}
+            {...phoneLocalField}
             onChange={(event) => {
               sanitizeNumericInput(event)
-              register('phoneLocal').onChange(event)
+              phoneLocalField.onChange(event)
               clearError()
             }}
           />
@@ -156,9 +162,9 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
           <Input
             id="organisation"
             className="mama-input"
-            {...register('organisation')}
+            {...organisationField}
             onChange={(event) => {
-              register('organisation').onChange(event)
+              organisationField.onChange(event)
               clearError()
             }}
           />
@@ -172,9 +178,9 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
         <Input
           id="zone"
           className="mama-input"
-          {...register('zone')}
+          {...zoneField}
           onChange={(event) => {
-            register('zone').onChange(event)
+            zoneField.onChange(event)
             clearError()
           }}
         />

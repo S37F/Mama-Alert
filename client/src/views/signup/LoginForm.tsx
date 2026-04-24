@@ -20,6 +20,8 @@ export function LoginForm() {
   const { login, isSubmitting, error, clearError } = useSignup()
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       dialCode: '+91',
       phoneLocal: '',
@@ -33,6 +35,7 @@ export function LoginForm() {
     register,
     formState: { errors },
   } = form
+  const phoneLocalField = register('phoneLocal')
 
   const onSubmit = handleSubmit(
     async (values) => {
@@ -84,10 +87,10 @@ export function LoginForm() {
             autoComplete="tel"
             placeholder="9876543210"
             className="mama-input"
-            {...register('phoneLocal')}
+            {...phoneLocalField}
             onChange={(event) => {
               sanitizeNumericInput(event)
-              register('phoneLocal').onChange(event)
+              phoneLocalField.onChange(event)
               clearError()
             }}
           />
