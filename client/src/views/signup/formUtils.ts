@@ -1,8 +1,14 @@
+import type { ChangeEvent } from 'react'
 import type { FieldErrors } from 'react-hook-form'
 
 export function composePhone(dialCode: string, phoneLocal: string): string {
   const digits = phoneLocal.replace(/\D/g, '')
   return `${dialCode}${digits}`
+}
+
+export function sanitizeNumericInput(event: ChangeEvent<HTMLInputElement>, maxLength?: number): void {
+  const digits = event.currentTarget.value.replace(/\D/g, '')
+  event.currentTarget.value = typeof maxLength === 'number' ? digits.slice(0, maxLength) : digits
 }
 
 export function scrollToFirstError<TFieldValues extends Record<string, unknown>>(errors: FieldErrors<TFieldValues>): void {

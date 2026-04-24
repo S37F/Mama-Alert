@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useSignup } from '@/hooks/useSignup'
 import { DIAL_CODES, LANGUAGE_OPTIONS } from '@/views/signup/constants'
-import { composePhone, scrollToFirstError } from '@/views/signup/formUtils'
+import { composePhone, sanitizeNumericInput, scrollToFirstError } from '@/views/signup/formUtils'
 
 const formSchema = z.object({
   name: z.string().min(2),
@@ -120,10 +120,8 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
             placeholder="9876543210"
             {...register('phoneLocal')}
             onChange={(event) => {
-              register('phoneLocal').onChange({
-                ...event,
-                target: { ...event.target, value: event.target.value.replace(/\D/g, '') },
-              })
+              sanitizeNumericInput(event)
+              register('phoneLocal').onChange(event)
               clearError()
             }}
           />
@@ -144,10 +142,8 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
             className="mama-input"
             {...register('weeksPregnant')}
             onChange={(event) => {
-              register('weeksPregnant').onChange({
-                ...event,
-                target: { ...event.target, value: event.target.value.replace(/\D/g, '').slice(0, 2) },
-              })
+              sanitizeNumericInput(event, 2)
+              register('weeksPregnant').onChange(event)
               clearError()
             }}
           />

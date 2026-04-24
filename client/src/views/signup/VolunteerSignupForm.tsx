@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useSignup } from '@/hooks/useSignup'
 import { DIAL_CODES, VOLUNTEER_SKILLS } from '@/views/signup/constants'
-import { composePhone, scrollToFirstError } from '@/views/signup/formUtils'
+import { composePhone, sanitizeNumericInput, scrollToFirstError } from '@/views/signup/formUtils'
 
 const formSchema = z.object({
   name: z.string().min(2),
@@ -124,10 +124,8 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
             placeholder="9876543210"
             {...register('phoneLocal')}
             onChange={(event) => {
-              register('phoneLocal').onChange({
-                ...event,
-                target: { ...event.target, value: event.target.value.replace(/\D/g, '') },
-              })
+              sanitizeNumericInput(event)
+              register('phoneLocal').onChange(event)
               clearError()
             }}
           />
