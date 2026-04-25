@@ -25,7 +25,7 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
   const { signup, isSubmitting, error, clearError } = useSignup()
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    mode: 'onChange',
+    mode: 'onSubmit',
     reValidateMode: 'onChange',
     defaultValues: {
       name: '',

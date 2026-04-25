@@ -23,7 +23,7 @@ export function LoginForm() {
   const [code, setCode] = useState('')
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    mode: 'onChange',
+    mode: 'onSubmit',
     reValidateMode: 'onChange',
     defaultValues: {
       dialCode: '+91',
