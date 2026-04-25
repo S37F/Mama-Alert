@@ -106,7 +106,13 @@ app.use('/api/status', statusRouter)
 
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   logError('Unhandled error', { err: String(err) })
-  res.status(500).json({ error: 'Internal server error' })
+  const statusCode =
+    err && typeof err === 'object' && 'statusCode' in err && typeof (err as { statusCode: unknown }).statusCode === 'number'
+      ? (err as { statusCode: number }).statusCode
+      : 500
+  const message =
+    statusCode >= 400 && statusCode < 500 && err instanceof Error ? err.message : 'Internal server error'
+  res.status(statusCode).json({ error: message })
 })
 
 app.listen(PORT, () => {

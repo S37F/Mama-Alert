@@ -29,11 +29,10 @@ export function HospitalInbox() {
       return q
     }
     const ls = localStorage.getItem(LS_HOSP_TOKEN)
-    const env = import.meta.env.VITE_HOSPITAL_PORTAL_TOKEN as string | undefined
     if (ls && ls.length > 20) {
       return ls
     }
-    return env && env.length > 20 ? env : ''
+    return ''
   }, [searchParams])
 
   const [tokenInput, setTokenInput] = useState(initialToken)

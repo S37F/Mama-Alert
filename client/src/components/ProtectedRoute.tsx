@@ -27,7 +27,7 @@ export function ProtectedRoute({ children, role }: ProtectedRouteProps) {
     return <Navigate to="/signup" replace />
   }
 
-  if (role === 'health_worker' && session.role !== 'health_worker' && session.role !== 'admin') {
+  if (role === 'health_worker' && session.role !== 'health_worker') {
     return <Navigate to="/signup" replace />
   }
 

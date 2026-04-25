@@ -60,7 +60,7 @@ export default defineConfig({
         manifestTransforms: [
           async (entries) => {
             const deny =
-              /(^|\/)assets\/(LandingPage|GlobeCanvas|DemoFlow|FamilyStatus|VolunteerDashboard|AdminZone|HealthWorkerDashboard)-[^/]+\.(js|css)$/
+              /(^|\/)assets\/(LandingPage|GlobeCanvas|vendor-three|DemoFlow|FamilyStatus|VolunteerDashboard|AdminZone|HealthWorkerDashboard)-[^/]+\.(js|css)$/
             const manifest = entries.filter((e) => !deny.test(e.url))
             return { manifest, warnings: [] }
           },
@@ -71,6 +71,17 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (/node_modules[\\/]three[\\/]/.test(id)) {
+            return 'vendor-three'
+          }
+        },
+      },
     },
   },
 })

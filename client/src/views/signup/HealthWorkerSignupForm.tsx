@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,7 @@ const formSchema = z.object({
   roleTitle: z.enum(['ASHA', 'ANM', 'Nurse', 'Doctor', 'Community volunteer']),
   organisation: z.string().min(2),
   zone: z.string().min(2),
+  accessCode: z.string().min(1),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -33,6 +34,7 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
       roleTitle: 'ASHA',
       organisation: '',
       zone: '',
+      accessCode: '',
     },
   })
 
@@ -40,13 +42,16 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
     handleSubmit,
     register,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = form
+  const dialCode = useWatch({ control, name: 'dialCode' })
+  const roleTitle = useWatch({ control, name: 'roleTitle' })
   const nameField = register('name')
   const phoneLocalField = register('phoneLocal')
   const organisationField = register('organisation')
   const zoneField = register('zone')
+  const accessCodeField = register('accessCode')
 
   const onSubmit = handleSubmit(
     async (values) => {
@@ -58,6 +63,7 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
         roleTitle: values.roleTitle,
         organisation: values.organisation.trim(),
         zone: values.zone.trim(),
+        accessCode: values.accessCode.trim(),
       })
     },
     (invalid) => scrollToFirstError(invalid),
@@ -91,7 +97,7 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
         </Label>
         <div className="grid grid-cols-[118px_1fr] gap-3">
           <Select
-            value={watch('dialCode')}
+            value={dialCode}
             onValueChange={(value) => {
               if (!value) {
                 return
@@ -133,7 +139,7 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
             Role title
           </Label>
           <Select
-            value={watch('roleTitle')}
+            value={roleTitle}
             onValueChange={(value) => {
               if (!value) {
                 return
@@ -185,6 +191,24 @@ export function HealthWorkerSignupForm({ onBack }: { onBack: () => void }) {
           }}
         />
         {errors.zone ? <p className="text-sm text-destructive">Please enter a zone or district.</p> : null}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="accessCode" className="mama-label">
+          Worker access code
+        </Label>
+        <Input
+          id="accessCode"
+          type="password"
+          autoComplete="one-time-code"
+          className="mama-input"
+          {...accessCodeField}
+          onChange={(event) => {
+            accessCodeField.onChange(event)
+            clearError()
+          }}
+        />
+        {errors.accessCode ? <p className="text-sm text-destructive">Enter your worker access code.</p> : null}
       </div>
 
       {error ? <p className="mama-error">{error}</p> : null}

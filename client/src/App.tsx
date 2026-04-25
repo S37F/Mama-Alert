@@ -26,6 +26,12 @@ const DemoFlow = lazy(() => import('@/views/DemoFlow').then((m) => ({ default: m
 const FamilyStatus = lazy(() =>
   import('@/views/FamilyStatus').then((m) => ({ default: m.FamilyStatus })),
 )
+const HospitalInbox = lazy(() =>
+  import('@/views/HospitalInbox').then((m) => ({ default: m.HospitalInbox })),
+)
+const PatientSelfRegister = lazy(() =>
+  import('@/views/PatientSelfRegister').then((m) => ({ default: m.PatientSelfRegister })),
+)
 
 function RouteFallback() {
   return (
@@ -51,9 +57,9 @@ export function App() {
           <Route path="/login" element={<Navigate to="/signup?mode=login" replace />} />
 
           <Route path="/sos" element={<PatientSOS />} />
-          <Route path="/sos/register" element={<Navigate to="/signup" replace />} />
+          <Route path="/sos/register" element={<PatientSelfRegister />} />
           <Route path="/volunteer" element={<VolunteerDashboard />} />
-          <Route path="/hospital" element={<Navigate to="/" replace />} />
+          <Route path="/hospital" element={<HospitalInbox />} />
           <Route
             path="/register"
             element={

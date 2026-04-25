@@ -23,6 +23,7 @@ type EscalationRadiiConfig = {
   delayMs: number
   r1: number
   r2: number
+  r3: number
 }
 
 function defaultEscalationDelayMs(): number {
@@ -48,6 +49,7 @@ export async function loadEscalationConfig(patientId: string): Promise<Escalatio
     delayMs: defaultEscalationDelayMs(),
     r1: 10_000,
     r2: 20_000,
+    r3: 50_000,
   }
   const pat = await prisma.patient.findUnique({
     where: { id: patientId },
@@ -58,7 +60,12 @@ export async function loadEscalationConfig(patientId: string): Promise<Escalatio
   }
   const z = await prisma.zone.findUnique({
     where: { id: pat.zoneId },
-    select: { escalationR1M: true, escalationR2M: true, escalationDelayMs: true },
+    select: {
+      escalationR1M: true,
+      escalationR2M: true,
+      escalationR3M: true,
+      escalationDelayMs: true,
+    },
   })
   if (!z) {
     return defaults
@@ -73,6 +80,7 @@ export async function loadEscalationConfig(patientId: string): Promise<Escalatio
     delayMs,
     r1: clampR(z.escalationR1M) ?? defaults.r1,
     r2: clampR(z.escalationR2M) ?? defaults.r2,
+    r3: clampR(z.escalationR3M) ?? defaults.r3,
   }
 }
 
@@ -212,7 +220,7 @@ async function enqueueEscalationDelayedJob(alertId: string, patientId: string, w
     cfg = await loadEscalationConfig(patientId)
   } catch (err) {
     logError('escalation: loadEscalationConfig failed', { patientId, err: String(err) })
-    cfg = { delayMs: defaultEscalationDelayMs(), r1: 10_000, r2: 20_000 }
+    cfg = { delayMs: defaultEscalationDelayMs(), r1: 10_000, r2: 20_000, r3: 50_000 }
   }
   const runAfter = new Date(Date.now() + cfg.delayMs)
   const payload: Prisma.InputJsonValue = { alertId, patientId, wave }
@@ -233,9 +241,7 @@ async function enqueueEscalationDelayedJob(alertId: string, patientId: string, w
   }
 }
 
-/**
- * @param wave 0 → after delay run r1 wave; 1 → after delay run r2 wave + critical coordinator SMS (same tick as T+10 spec)
- */
+/** @param wave 0 -> run R1; 1 -> run R2; 2 -> run R3 + critical coordinator SMS. */
 export function scheduleEscalation(alertId: string, patientId: string, wave: number): void {
   void enqueueEscalationDelayedJob(alertId, patientId, wave)
 }
@@ -286,6 +292,16 @@ export async function runEscalationTimer(
       patientPhone: phone,
       radiusM: cfg.r2,
       nextWaveNumber: 3,
+      nextPriority: 3,
+      minutesSinceStart: minutesSince,
+    })
+    scheduleEscalation(alertId, alertRow.patientId, 2)
+  } else if (wave === 2) {
+    await runEscalationStep({
+      alertId,
+      patientPhone: phone,
+      radiusM: cfg.r3,
+      nextWaveNumber: 4,
       nextPriority: 3,
       minutesSinceStart: minutesSince,
     })

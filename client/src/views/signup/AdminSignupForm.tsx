@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -40,9 +40,10 @@ export function AdminSignupForm({ onBack }: { onBack: () => void }) {
     handleSubmit,
     register,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = form
+  const dialCode = useWatch({ control, name: 'dialCode' })
   const nameField = register('name')
   const phoneLocalField = register('phoneLocal')
   const organisationField = register('organisation')
@@ -91,7 +92,7 @@ export function AdminSignupForm({ onBack }: { onBack: () => void }) {
         </Label>
         <div className="grid grid-cols-[118px_1fr] gap-3">
           <Select
-            value={watch('dialCode')}
+            value={dialCode}
             onValueChange={(value) => {
               if (!value) {
                 return

@@ -1,3 +1,4 @@
+import { randomInt } from 'crypto'
 import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
@@ -10,7 +11,11 @@ import {
   resolveOrCreateZone,
   resolveSignupCoordinates,
 } from '@/lib/mamaAuth'
+import { hashOtpCode } from '@/lib/otpHash'
+import { normalizePhone } from '@/lib/phone'
+import { prisma } from '@/lib/prisma'
 import { insertPatientWithLocation, insertVolunteerWithLocation } from '@/services/db/geoWrites'
+import { sendSMS } from '@/services/twilio'
 
 export const authRouter = Router()
 
@@ -46,6 +51,7 @@ const healthWorkerSignupSchema = z.object({
   roleTitle: z.string().min(2),
   organisation: z.string().min(2),
   zone: z.string().min(2),
+  accessCode: z.string().min(1),
 })
 
 const adminSignupSchema = z.object({
@@ -67,6 +73,35 @@ const signupSchema = z.discriminatedUnion('role', [
 const loginSchema = z.object({
   phone: z.string().min(10),
 })
+
+const loginVerifySchema = loginSchema.extend({
+  code: z.string().regex(/^\d{4,8}$/),
+})
+
+function healthWorkerSignupCode(): string {
+  return (process.env.HEALTH_WORKER_SIGNUP_CODE?.trim() || process.env.ADMIN_SIGNUP_CODE?.trim() || '')
+}
+
+async function createAndSendLoginCode(phone: string): Promise<boolean> {
+  const session = await lookupSessionByPhone(phone)
+  if (!session) {
+    return false
+  }
+
+  const code = String(randomInt(0, 1_000_000)).padStart(6, '0')
+  const phoneE164 = normalizePhone(phone)
+  await prisma.authOtpChallenge.create({
+    data: {
+      phoneE164,
+      role: session.role,
+      profileId: session.profileId,
+      codeHash: hashOtpCode(code),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    },
+  })
+  await sendSMS(session.phone, `MamaAlert login code: ${code}. Valid 10 minutes.`)
+  return true
+}
 
 authRouter.post(
   '/signup',
@@ -165,6 +200,15 @@ authRouter.post(
     }
 
     if (body.role === 'health_worker') {
+      const expected = healthWorkerSignupCode()
+      if (!expected) {
+        throw Object.assign(new Error('Missing HEALTH_WORKER_SIGNUP_CODE or ADMIN_SIGNUP_CODE'), { statusCode: 500 })
+      }
+      if (body.accessCode.trim() !== expected) {
+        res.status(403).json({ error: 'Invalid access code' })
+        return
+      }
+
       const zone = await resolveOrCreateZone(body.zone, body.organisation)
       const session = await createHealthWorkerAccount({
         name: body.name.trim(),
@@ -220,6 +264,60 @@ authRouter.post(
       res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
       return
     }
+
+    const sent = await createAndSendLoginCode(parsed.data.phone)
+    if (!sent) {
+      res.status(404).json({ error: 'No account found with this number. Sign up first.' })
+      return
+    }
+
+    res.status(202).json({ ok: true })
+  }),
+)
+
+authRouter.post(
+  '/login/verify',
+  asyncHandler(async (req, res) => {
+    const parsed = loginVerifySchema.safeParse(req.body)
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
+      return
+    }
+
+    const phoneE164 = normalizePhone(parsed.data.phone)
+    const wantHash = hashOtpCode(parsed.data.code)
+    const now = new Date()
+    const rows = await prisma.authOtpChallenge.findMany({
+      where: {
+        phoneE164,
+        consumedAt: null,
+        expiresAt: { gt: now },
+        attempts: { lt: 5 },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: { id: true, codeHash: true },
+    })
+
+    if (rows.length === 0) {
+      res.status(401).json({ error: 'Invalid code' })
+      return
+    }
+
+    const match = rows.find((row) => row.codeHash === wantHash)
+    if (!match) {
+      await prisma.authOtpChallenge.updateMany({
+        where: { id: { in: rows.map((row) => row.id) } },
+        data: { attempts: { increment: 1 } },
+      })
+      res.status(401).json({ error: 'Invalid code' })
+      return
+    }
+
+    await prisma.authOtpChallenge.update({
+      where: { id: match.id },
+      data: { consumedAt: new Date() },
+    })
 
     const session = await lookupSessionByPhone(parsed.data.phone)
     if (!session) {

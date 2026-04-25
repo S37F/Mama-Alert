@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { redirectForRole, writeMamaAlertSession, type MamaAlertSession } from '@/lib/mamaSession'
-import { postAuthLogin, postAuthSignup } from '@/services/api'
+import { postAuthLoginRequest, postAuthLoginVerify, postAuthSignup } from '@/services/api'
 
 function clearLegacyRoleState(): void {
   localStorage.removeItem('mamaalert_sos_token')
@@ -61,11 +61,25 @@ export function useSignup() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const login = async (phone: string) => {
+  const requestLoginCode = async (phone: string) => {
     setIsSubmitting(true)
     setError(null)
     try {
-      const response = await postAuthLogin(phone)
+      await postAuthLoginRequest(phone)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not send login code'
+      setError(message)
+      throw err
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const verifyLoginCode = async (phone: string, code: string) => {
+    setIsSubmitting(true)
+    setError(null)
+    try {
+      const response = await postAuthLoginVerify(phone, code)
       writeMamaAlertSession(response.session)
       syncLegacyRoleState(response.session)
       navigate(redirectForRole(response.session.role), { replace: true })
@@ -108,7 +122,8 @@ export function useSignup() {
     error,
     isSubmitting,
     clearError: () => setError(null),
-    login,
+    requestLoginCode,
+    verifyLoginCode,
     signup,
   }
 }

@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -42,9 +42,11 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
     handleSubmit,
     register,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = form
+  const dialCode = useWatch({ control, name: 'dialCode' })
+  const language = useWatch({ control, name: 'language' })
   const nameField = register('name')
   const phoneLocalField = register('phoneLocal')
   const weeksPregnantField = register('weeksPregnant')
@@ -99,7 +101,7 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
         </Label>
         <div className="grid grid-cols-[118px_1fr] gap-3">
           <Select
-            value={watch('dialCode')}
+            value={dialCode}
             onValueChange={(value) => {
               if (!value) {
                 return
@@ -162,7 +164,7 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
             Language
           </Label>
           <Select
-            value={watch('language')}
+            value={language}
             onValueChange={(value) => {
               if (!value) {
                 return
@@ -217,8 +219,8 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
       </div>
 
       <p className="mama-copy text-sm leading-6">
-        We'll try to capture your location silently so responders can reach you faster. If your phone blocks it, we'll
-        still save your account.
+        We'll ask your phone for location so responders can reach you. If location is blocked, account creation will stop
+        until it is shared.
       </p>
 
       {error ? <p className="mama-error">{error}</p> : null}

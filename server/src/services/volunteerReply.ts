@@ -183,7 +183,13 @@ export async function applyVolunteerNo(responseId: string): Promise<void> {
   }
 }
 
-export async function applyVolunteerYes(vol: Volunteer, responseId: string, alertId: string): Promise<void> {
+export type VolunteerYesResult = { ok: true } | { ok: false; reason: string }
+
+export async function applyVolunteerYes(
+  vol: Volunteer,
+  responseId: string,
+  alertId: string,
+): Promise<VolunteerYesResult> {
   const alertJoin = await prisma.alert.findUnique({
     where: { id: alertId },
     include: { patient: true },
@@ -191,13 +197,14 @@ export async function applyVolunteerYes(vol: Volunteer, responseId: string, aler
 
   if (!alertJoin?.patient) {
     logError('volunteer-reply: load alert failed', { alertId })
-    return
+    return { ok: false, reason: 'alert_not_found' }
   }
 
   const patientRaw = patientModelToJoinRaw(alertJoin.patient)
   const patient = mapPatientFromJoin(patientRaw)
   if (!patient) {
-    return
+    logError('volunteer-reply: invalid patient row', { alertId })
+    return { ok: false, reason: 'patient_invalid' }
   }
 
   let lat = 0
@@ -231,12 +238,12 @@ export async function applyVolunteerYes(vol: Volunteer, responseId: string, aler
     )
   } catch (claimErr) {
     logError('volunteer-reply: claim RPC failed', { error: String(claimErr) })
-    return
+    return { ok: false, reason: 'claim_failed' }
   }
 
   if (!claim?.ok) {
     logWarn('volunteer-reply: claim rejected', { reason: claim?.reason, alertId })
-    return
+    return { ok: false, reason: claim?.reason ?? 'claim_rejected' }
   }
 
   logAudit('volunteer_claimed_alert', { alertId, volunteerId: vol.id })
@@ -282,6 +289,7 @@ export async function applyVolunteerYes(vol: Volunteer, responseId: string, aler
   }
 
   notifyVolunteerFeedRefresh(vol.id)
+  return { ok: true }
 }
 
 export function toVolunteerRow(row: {

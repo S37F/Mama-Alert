@@ -83,6 +83,10 @@ export function validateEnv(): void {
     throw new Error('TWILIO_MOCK cannot be enabled when NODE_ENV=production')
   }
 
+  if (process.env.NODE_ENV === 'production' && !process.env.SERVER_PUBLIC_URL?.trim()) {
+    throw new Error('SERVER_PUBLIC_URL must be set in production so Twilio webhook signature validation uses the API URL')
+  }
+
   const validatedKeys = [...REQUIRED_CORE, ...(isTwilioMock() ? [] : [...REQUIRED_TWILIO])]
   console.log(
     `MamaAlert: environment OK - required keys present: ${validatedKeys.join(', ')} (DB via Prisma, phone-only auth active)`,

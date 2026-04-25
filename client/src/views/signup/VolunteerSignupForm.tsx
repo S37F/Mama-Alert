@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -45,11 +45,15 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
     handleSubmit,
     register,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = form
 
-  const selectedSkills = watch('skills')
+  const dialCode = useWatch({ control, name: 'dialCode' })
+  const selectedSkills = useWatch({ control, name: 'skills' }) ?? []
+  const vehicle = useWatch({ control, name: 'vehicle' })
+  const availableHours = useWatch({ control, name: 'availableHours' })
+  const maxRadiusKm = useWatch({ control, name: 'maxRadiusKm' })
   const nameField = register('name')
   const phoneLocalField = register('phoneLocal')
   const villageField = register('village')
@@ -101,7 +105,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
         </Label>
         <div className="grid grid-cols-[118px_1fr] gap-3">
           <Select
-            value={watch('dialCode')}
+            value={dialCode}
             onValueChange={(value) => {
               if (!value) {
                 return
@@ -181,7 +185,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
             Vehicle
           </Label>
           <Select
-            value={watch('vehicle')}
+            value={vehicle}
             onValueChange={(value) => {
               if (!value) {
                 return
@@ -207,7 +211,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
             Available hours
           </Label>
           <Select
-            value={watch('availableHours')}
+            value={availableHours}
             onValueChange={(value) => {
               if (!value) {
                 return
@@ -236,7 +240,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
             Max radius
           </Label>
           <Select
-            value={watch('maxRadiusKm')}
+            value={maxRadiusKm}
             onValueChange={(value) => {
               if (!value) {
                 return

@@ -4,5 +4,5 @@ export function normalizePhone(raw: string): string {
   if (t.startsWith('+')) {
     return `+${t.slice(1).replace(/\D/g, '')}`
   }
-  return t.replace(/\s/g, '')
+  return t.replace(/\D/g, '')
 }

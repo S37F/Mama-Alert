@@ -1,4 +1,5 @@
-import { useForm } from 'react-hook-form'
+import { useState } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -17,7 +18,9 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 export function LoginForm() {
-  const { login, isSubmitting, error, clearError } = useSignup()
+  const { requestLoginCode, verifyLoginCode, isSubmitting, error, clearError } = useSignup()
+  const [pendingPhone, setPendingPhone] = useState('')
+  const [code, setCode] = useState('')
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     mode: 'onChange',
@@ -31,16 +34,23 @@ export function LoginForm() {
   const {
     handleSubmit,
     setValue,
-    watch,
+    control,
     register,
     formState: { errors },
   } = form
+  const dialCode = useWatch({ control, name: 'dialCode' })
   const phoneLocalField = register('phoneLocal')
 
   const onSubmit = handleSubmit(
     async (values) => {
       clearError()
-      await login(composePhone(values.dialCode, values.phoneLocal))
+      const phone = composePhone(values.dialCode, values.phoneLocal)
+      if (!pendingPhone) {
+        await requestLoginCode(phone)
+        setPendingPhone(phone)
+        return
+      }
+      await verifyLoginCode(pendingPhone, code.trim())
     },
     (invalid) => scrollToFirstError(invalid),
   )
@@ -61,7 +71,7 @@ export function LoginForm() {
         </Label>
         <div className="grid grid-cols-[118px_1fr] gap-3">
           <Select
-            value={watch('dialCode')}
+            value={dialCode}
             onValueChange={(value) => {
               if (!value) {
                 return
@@ -98,10 +108,40 @@ export function LoginForm() {
         {errors.phoneLocal ? <p className="text-sm text-destructive">Enter a valid phone number.</p> : null}
       </div>
 
+      {pendingPhone ? (
+        <div className="space-y-2">
+          <Label htmlFor="login-code" className="mama-label">
+            Login code
+          </Label>
+          <Input
+            id="login-code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            className="mama-input"
+            value={code}
+            onChange={(event) => {
+              setCode(event.target.value.replace(/\D/g, '').slice(0, 8))
+              clearError()
+            }}
+          />
+          <button
+            type="button"
+            className="text-sm font-medium text-primary underline"
+            onClick={() => {
+              setPendingPhone('')
+              setCode('')
+              clearError()
+            }}
+          >
+            Change phone number
+          </button>
+        </div>
+      ) : null}
+
       {error ? <p className="mama-error">{error}</p> : null}
 
       <Button type="submit" className="mama-primary-action" disabled={isSubmitting}>
-        {isSubmitting ? 'Loading...' : 'Login >'}
+        {isSubmitting ? 'Loading...' : pendingPhone ? 'Verify code >' : 'Send code >'}
       </Button>
     </form>
   )

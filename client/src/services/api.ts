@@ -49,8 +49,7 @@ api.interceptors.request.use((config) => {
   }
 
   if (session && !full.includes('/api/public/') && !full.includes('/api/auth/')) {
-    config.headers['X-MamaAlert-Profile-Id'] = session.profileId
-    config.headers['X-MamaAlert-Role'] = session.role
+    config.headers.Authorization = `Bearer ${session.sessionToken}`
   }
   return config
 })
@@ -63,9 +62,27 @@ export interface AuthResponse {
   session: MamaAlertSession
 }
 
-export async function postAuthLogin(phone: string): Promise<AuthResponse> {
+export async function postAuthLoginRequest(phone: string): Promise<void> {
   try {
-    const response = await api.post<AuthResponse>('/api/auth/login', { phone })
+    await api.post('/api/auth/login', { phone })
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const msg =
+        typeof error.response?.data === 'object' &&
+        error.response.data !== null &&
+        'error' in error.response.data &&
+        typeof (error.response.data as { error: unknown }).error === 'string'
+          ? (error.response.data as { error: string }).error
+          : 'Could not send login code'
+      throw new Error(msg)
+    }
+    throw error
+  }
+}
+
+export async function postAuthLoginVerify(phone: string, code: string): Promise<AuthResponse> {
+  try {
+    const response = await api.post<AuthResponse>('/api/auth/login/verify', { phone, code })
     return response.data
   } catch (error) {
     if (axios.isAxiosError(error)) {

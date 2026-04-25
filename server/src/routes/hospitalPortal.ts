@@ -102,6 +102,18 @@ hospitalPortalRouter.post(
       res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
       return
     }
+    const alert = await prisma.alert.findFirst({
+      where: {
+        id: parsed.data.alertId,
+        nearestHospitalId: hospitalId,
+        status: { in: ['active', 'volunteer_responding', 'at_facility'] },
+      },
+      select: { id: true },
+    })
+    if (!alert) {
+      res.status(404).json({ error: 'Alert not found' })
+      return
+    }
     try {
       await prisma.hospitalAlertAck.create({
         data: {

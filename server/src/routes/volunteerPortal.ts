@@ -313,7 +313,11 @@ volunteerPortalRouter.post(
       return
     }
 
-    await applyVolunteerYes(vol, ar.id, alertId)
+    const result = await applyVolunteerYes(vol, ar.id, alertId)
+    if (!result.ok) {
+      res.status(409).json({ error: 'Could not claim alert', reason: result.reason })
+      return
+    }
     res.json({ success: true })
   }),
 )

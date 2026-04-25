@@ -145,7 +145,11 @@ adminDataRouter.get(
     const zoneId = req.healthWorker?.zone_id
 
     try {
+      const where: Prisma.AlertWhereInput = zoneId
+        ? { patient: { is: { zoneId } } }
+        : {}
       const alerts = await prisma.alert.findMany({
+        where,
         orderBy: { triggeredAt: 'desc' },
         take: 200,
         include: {
@@ -153,17 +157,7 @@ adminDataRouter.get(
         },
       })
 
-      const filtered = alerts.filter((a) => {
-        const p = a.patient
-        if (!p) {
-          return false
-        }
-        const pZone = p.zoneId
-        if (!zoneId) {
-          return true
-        }
-        return pZone === zoneId
-      })
+      const filtered = alerts
 
       const volIds = [
         ...new Set(

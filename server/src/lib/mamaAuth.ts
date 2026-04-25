@@ -5,6 +5,7 @@ import { logWarn } from '@/lib/logger'
 import { normalizePhone } from '@/lib/phone'
 import { prisma } from '@/lib/prisma'
 import { signVolunteerPortalToken } from '@/lib/portalJwt'
+import { signMamaSessionToken, verifyMamaSessionToken } from '@/lib/sessionToken'
 import { signSosPatientToken } from '@/lib/sosToken'
 import { resolveSelfRegHealthWorkerId } from '@/services/selfRegHealthWorker'
 
@@ -35,12 +36,26 @@ export interface AuthSessionResponse {
   profileId: string
   name: string
   signedInAt: number
+  sessionToken: string
   zoneId?: string | null
   sosToken?: string
   volunteerPortalToken?: string
 }
 
-function parseSessionHeaders(req: Request): SessionHeaderShape | null {
+function parseBearerSession(req: Request): SessionHeaderShape | null {
+  const hdr = req.headers.authorization
+  const token = hdr?.startsWith('Bearer ') ? hdr.slice(7).trim() : ''
+  if (!token) {
+    return null
+  }
+  const claims = verifyMamaSessionToken(token)
+  if (!claims) {
+    return null
+  }
+  return { role: claims.role, profileId: claims.sub }
+}
+
+function parseLegacySessionHeaders(req: Request): SessionHeaderShape | null {
   const roleHeader = req.headers['x-mamaalert-role']
   const profileIdHeader = req.headers['x-mamaalert-profile-id']
   const role = typeof roleHeader === 'string' ? roleHeader.trim() : ''
@@ -55,7 +70,15 @@ function parseSessionHeaders(req: Request): SessionHeaderShape | null {
 }
 
 export function readSessionHeaders(req: Request): SessionHeaderShape | null {
-  return parseSessionHeaders(req)
+  const bearer = parseBearerSession(req)
+  if (bearer) {
+    return bearer
+  }
+
+  const allowLegacy =
+    process.env.ALLOW_LEGACY_SESSION_HEADERS === 'true' ||
+    process.env.ALLOW_LEGACY_SESSION_HEADERS === '1'
+  return allowLegacy ? parseLegacySessionHeaders(req) : null
 }
 
 export function buildSessionResponse(input: {
@@ -73,6 +96,7 @@ export function buildSessionResponse(input: {
     profileId: input.profileId,
     name: input.name,
     signedInAt: Date.now(),
+    sessionToken: signMamaSessionToken(input.profileId, input.role),
     ...(input.zoneId !== undefined ? { zoneId: input.zoneId } : {}),
     ...(input.sosToken ? { sosToken: input.sosToken } : {}),
     ...(input.volunteerPortalToken ? { volunteerPortalToken: input.volunteerPortalToken } : {}),
@@ -215,7 +239,10 @@ export function resolveSignupCoordinates(input?: {
   }
 
   logWarn('signup using zeroed fallback coordinates; set SELF_REG_FALLBACK_LAT/LNG to improve accuracy')
-  return { lat: 0, lng: 0 }
+  throw Object.assign(
+    new Error('Location is required. Share browser location or configure SELF_REG_FALLBACK_LAT and SELF_REG_FALLBACK_LNG.'),
+    { statusCode: 400 },
+  )
 }
 
 export async function ensureAssignableHealthWorkerId(zoneId: string): Promise<string> {

@@ -69,8 +69,10 @@ function PhoneOtpPanel({
   t: TFunction
   countryHint: string
 }) {
-  const { login, isSubmitting, error } = useSignup()
+  const { requestLoginCode, verifyLoginCode, isSubmitting, error, clearError } = useSignup()
   const [phone, setPhone] = useState('')
+  const [pendingPhone, setPendingPhone] = useState('')
+  const [code, setCode] = useState('')
   const [localErr, setLocalErr] = useState<string | null>(null)
 
   const compactPhone = () => normalizePhoneInput(phone).replace(/\s/g, '')
@@ -83,7 +85,12 @@ function PhoneOtpPanel({
       return
     }
     try {
-      await login(p)
+      if (!pendingPhone) {
+        await requestLoginCode(p)
+        setPendingPhone(p)
+        return
+      }
+      await verifyLoginCode(pendingPhone, code.trim())
     } catch {
       /* handled by hook state */
     }
@@ -103,12 +110,44 @@ function PhoneOtpPanel({
           inputMode="tel"
           autoComplete="tel"
           value={phone}
-          onChange={(e) => setPhone(normalizePhoneInput(e.target.value))}
+          disabled={Boolean(pendingPhone)}
+          onChange={(e) => {
+            setPhone(normalizePhoneInput(e.target.value))
+            clearError()
+          }}
           placeholder={countryHint}
         />
       </div>
+      {pendingPhone ? (
+        <div className="space-y-2">
+          <Label htmlFor="otp-code">Login code</Label>
+          <Input
+            id="otp-code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            value={code}
+            onChange={(e) => {
+              setCode(e.target.value.replace(/\D/g, '').slice(0, 8))
+              clearError()
+            }}
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="px-0"
+            onClick={() => {
+              setPendingPhone('')
+              setCode('')
+              clearError()
+            }}
+          >
+            Change phone number
+          </Button>
+        </div>
+      ) : null}
       <Button type="button" className="w-full" disabled={isSubmitting} onClick={() => void submit()}>
-        {isSubmitting ? t('common.loading') : 'Login →'}
+        {isSubmitting ? t('common.loading') : pendingPhone ? 'Verify code ->' : 'Send code ->'}
       </Button>
       {localErr || error ? <p className="text-destructive text-center text-sm">{localErr ?? error}</p> : null}
     </div>

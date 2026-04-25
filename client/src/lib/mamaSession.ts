@@ -6,6 +6,7 @@ export interface MamaAlertSession {
   profileId: string
   name: string
   signedInAt: number
+  sessionToken: string
   zoneId?: string | null
   sosToken?: string
   volunteerPortalToken?: string
@@ -33,6 +34,7 @@ export function readMamaAlertSession(): MamaAlertSession | null {
       typeof parsed.profileId !== 'string' ||
       typeof parsed.name !== 'string' ||
       typeof parsed.signedInAt !== 'number' ||
+      typeof parsed.sessionToken !== 'string' ||
       !isMamaAlertRole(parsed.role)
     ) {
       return null
@@ -43,6 +45,7 @@ export function readMamaAlertSession(): MamaAlertSession | null {
       profileId: parsed.profileId,
       name: parsed.name,
       signedInAt: parsed.signedInAt,
+      sessionToken: parsed.sessionToken,
       ...(parsed.zoneId !== undefined ? { zoneId: parsed.zoneId } : {}),
       ...(typeof parsed.sosToken === 'string' ? { sosToken: parsed.sosToken } : {}),
       ...(typeof parsed.volunteerPortalToken === 'string'

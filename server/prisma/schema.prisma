@@ -232,7 +232,24 @@ model DelayedJob {
   payload   Json
   runAfter  DateTime  @map("run_after") @db.Timestamptz(6)
   lockedAt  DateTime? @map("locked_at") @db.Timestamptz(6)
+  attempts  Int       @default(0)
+  lastError String?   @map("last_error")
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   @@map("delayed_jobs")
+}
+
+model AuthOtpChallenge {
+  id         String    @id @default(uuid()) @db.Uuid
+  phoneE164  String    @map("phone_e164")
+  role       String
+  profileId  String    @map("profile_id") @db.Uuid
+  codeHash   String    @map("code_hash")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(6)
+  attempts   Int       @default(0)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([phoneE164, createdAt], map: "auth_otp_challenges_phone_created_idx")
+  @@map("auth_otp_challenges")
 }

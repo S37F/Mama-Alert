@@ -28,7 +28,7 @@ async function processJobRow(job: {
       cfg = await loadEscalationConfig(p.patientId)
     } catch (err) {
       logError('delayedJob: loadEscalationConfig failed', { err: String(err) })
-      cfg = { delayMs: defaultEscalationDelayMs(), r1: 10_000, r2: 20_000 }
+      cfg = { delayMs: defaultEscalationDelayMs(), r1: 10_000, r2: 20_000, r3: 50_000 }
     }
     await runEscalationTimer(p.alertId, p.patientId, p.wave, cfg)
     return
@@ -48,13 +48,17 @@ function isMissingTableError(err: unknown): boolean {
 
 async function tickOnce(): Promise<void> {
   const now = new Date()
-  let jobs: { id: string; jobType: string; payload: unknown }[] = []
+  const staleLockedBefore = new Date(Date.now() - 2 * 60 * 1000)
+  let jobs: { id: string; jobType: string; payload: unknown; attempts: number }[] = []
   try {
     jobs = await prisma.delayedJob.findMany({
-      where: { runAfter: { lte: now }, lockedAt: null },
+      where: {
+        runAfter: { lte: now },
+        OR: [{ lockedAt: null }, { lockedAt: { lt: staleLockedBefore } }],
+      },
       orderBy: { runAfter: 'asc' },
       take: 25,
-      select: { id: true, jobType: true, payload: true },
+      select: { id: true, jobType: true, payload: true, attempts: true },
     })
   } catch (err) {
     if (isMissingTableError(err)) {
@@ -68,7 +72,10 @@ async function tickOnce(): Promise<void> {
     const lockIso = new Date()
     try {
       const locked = await prisma.delayedJob.updateMany({
-        where: { id: job.id, lockedAt: null },
+        where: {
+          id: job.id,
+          OR: [{ lockedAt: null }, { lockedAt: { lt: staleLockedBefore } }],
+        },
         data: { lockedAt: lockIso },
       })
       if (locked.count === 0) {
@@ -80,11 +87,30 @@ async function tickOnce(): Promise<void> {
 
     try {
       await processJobRow(job)
+      await prisma.delayedJob.delete({ where: { id: job.id } })
     } catch (err) {
       logError('delayedJob: handler failed', { jobId: job.id, err: String(err) })
+      try {
+        const attempts = job.attempts + 1
+        const backoffMs = Math.min(5 * 60 * 1000, 10_000 * 2 ** Math.min(attempts, 5))
+        await prisma.delayedJob.update({
+          where: { id: job.id },
+          data: {
+            attempts,
+            lastError: String(err).slice(0, 1000),
+            lockedAt: null,
+            runAfter: new Date(Date.now() + backoffMs),
+          },
+        })
+      } catch (updateErr) {
+        logError('delayedJob: retry update failed', { jobId: job.id, err: String(updateErr) })
+      }
     } finally {
       try {
-        await prisma.delayedJob.delete({ where: { id: job.id } })
+        await prisma.delayedJob.updateMany({
+          where: { id: job.id, lockedAt: lockIso },
+          data: { lockedAt: null },
+        })
       } catch {
         /* ignore */
       }
