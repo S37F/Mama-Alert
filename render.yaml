@@ -1,0 +1,69 @@
+services:
+  - type: web
+    name: mamaalert-api
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: CLIENT_URL
+        sync: false
+      - key: CLIENT_ORIGINS
+        sync: false
+      - key: PUBLIC_APP_URL
+        sync: false
+      - key: SERVER_PUBLIC_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SOS_SIGNING_SECRET
+        generateValue: true
+      - key: PORTAL_JWT_SECRET
+        generateValue: true
+      - key: AUTH_SESSION_JWT_SECRET
+        generateValue: true
+      - key: HEALTH_WORKER_SIGNUP_CODE
+        sync: false
+      - key: ADMIN_SIGNUP_CODE
+        sync: false
+      - key: TWILIO_MOCK
+        value: "false"
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_NUMBER
+        sync: false
+      - key: SMS_SOS_KEYWORDS
+        value: HELP,SOS,EMERGENCY
+      - key: INCAPACITATION_DELAY_MS
+        value: "60000"
+      - key: ESCALATION_DELAY_MS
+        value: "300000"
+      - key: COORDINATOR_PHONE
+        sync: false
+      - key: AT_API_KEY
+        sync: false
+      - key: AT_USERNAME
+        sync: false
+      - key: COORDINATOR_VOICE_ON_ESCALATION
+        value: "false"
+      - key: SELF_REG_DEFAULT_HEALTH_WORKER_ID
+        sync: false
+      - key: SEND_FAMILY_STATUS_SMS_ON_REGISTER
+        value: "false"

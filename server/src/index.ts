@@ -46,7 +46,7 @@ function getAllowedOrigins(): Set<string> {
   )
 }
 
-// Railway / other reverse proxies send X-Forwarded-For; required for express-rate-limit client IPs
+// Render / other reverse proxies send X-Forwarded-For; required for express-rate-limit client IPs
 const trustProxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS ?? '1', 10)
 app.set('trust proxy', Number.isFinite(trustProxyHops) && trustProxyHops > 0 ? trustProxyHops : 1)
 const allowedOrigins = getAllowedOrigins()
