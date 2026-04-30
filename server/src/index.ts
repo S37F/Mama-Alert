@@ -38,33 +38,53 @@ function normalizeOrigin(value: string): string {
 
 function getAllowedOrigins(): Set<string> {
   const raw = [process.env.CLIENT_URL, process.env.CLIENT_ORIGINS].filter(Boolean).join(',')
-  return new Set(
-    raw
-      .split(',')
-      .map((value) => normalizeOrigin(value))
-      .filter(Boolean),
-  )
+  const origins = new Set<string>()
+
+  raw
+    .split(',')
+    .map((value) => normalizeOrigin(value))
+    .filter(Boolean)
+    .forEach((origin) => {
+      origins.add(origin)
+
+      try {
+        const url = new URL(origin)
+        if (url.hostname.startsWith('www.')) {
+          url.hostname = url.hostname.slice(4)
+          origins.add(url.origin)
+        } else if (url.hostname.includes('.')) {
+          url.hostname = `www.${url.hostname}`
+          origins.add(url.origin)
+        }
+      } catch {
+        // Keep the original normalized value for non-URL origins.
+      }
+    })
+
+  return origins
 }
 
 // Render / other reverse proxies send X-Forwarded-For; required for express-rate-limit client IPs
 const trustProxyHops = Number.parseInt(process.env.TRUST_PROXY_HOPS ?? '1', 10)
 app.set('trust proxy', Number.isFinite(trustProxyHops) && trustProxyHops > 0 ? trustProxyHops : 1)
 const allowedOrigins = getAllowedOrigins()
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true)
+      return
+    }
+    callback(null, allowedOrigins.has(normalizeOrigin(origin)))
+  },
+  methods: ['GET', 'HEAD', 'POST', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Health-Db-Token'],
+  credentials: true,
+  optionsSuccessStatus: 204,
+}
 
 app.use(helmet())
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) {
-        callback(null, true)
-        return
-      }
-      callback(null, allowedOrigins.has(normalizeOrigin(origin)))
-    },
-    methods: ['GET', 'POST', 'PATCH'],
-    credentials: true,
-  }),
-)
+app.use(cors(corsOptions))
+app.options('*', cors(corsOptions))
 app.use(generalRateLimit)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
