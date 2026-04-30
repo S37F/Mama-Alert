@@ -80,6 +80,7 @@ export function useSignup() {
     setError(null)
     try {
       const response = await postAuthLoginVerify(phone, code)
+      await tryCaptureLocation()
       writeMamaAlertSession(response.session)
       syncLegacyRoleState(response.session)
       navigate(redirectForRole(response.session.role), { replace: true })
