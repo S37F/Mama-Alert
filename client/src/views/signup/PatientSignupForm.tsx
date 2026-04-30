@@ -10,10 +10,14 @@ import { DIAL_CODES, LANGUAGE_OPTIONS } from '@/views/signup/constants'
 import { composePhone, sanitizeNumericInput, scrollToFirstError } from '@/views/signup/formUtils'
 
 const formSchema = z.object({
+  role: z.literal('patient'),
   name: z.string().min(2),
   dialCode: z.string().min(2),
   phoneLocal: z.string().min(6),
-  weeksPregnant: z.string().min(1),
+  weeksPregnant: z.string().regex(/^\d+$/).refine((value) => {
+    const weeks = Number.parseInt(value, 10)
+    return weeks >= 1 && weeks <= 44
+  }),
   village: z.string().min(2),
   landmark: z.string().optional(),
   language: z.string().min(2),
@@ -28,6 +32,7 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
     mode: 'onSubmit',
     reValidateMode: 'onChange',
     defaultValues: {
+      role: 'patient',
       name: '',
       dialCode: '+91',
       phoneLocal: '',
@@ -47,6 +52,7 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
   } = form
   const dialCode = useWatch({ control, name: 'dialCode' })
   const language = useWatch({ control, name: 'language' })
+  const roleField = register('role')
   const nameField = register('name')
   const phoneLocalField = register('phoneLocal')
   const weeksPregnantField = register('weeksPregnant')
@@ -59,7 +65,7 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
       const weeksPregnant = Number.parseInt(values.weeksPregnant, 10)
       await signup(
         {
-          role: 'patient',
+          role: values.role,
           name: values.name.trim(),
           phone: composePhone(values.dialCode, values.phoneLocal),
           weeksPregnant,
@@ -75,6 +81,7 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
 
   return (
     <form className="space-y-5" onSubmit={(event) => void onSubmit(event)}>
+      <input type="hidden" {...roleField} />
       <Button type="button" variant="ghost" className="-ml-3 text-muted-foreground" onClick={onBack}>
         Back
       </Button>
