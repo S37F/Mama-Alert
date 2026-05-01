@@ -4,12 +4,14 @@ import { asyncHandler } from '@/lib/asyncHandler'
 import { logAudit, logError, logWarn } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { verifyHospitalPortalToken } from '@/lib/portalJwt'
+import { HOSPITAL_PORTAL_COOKIE, readCookie, setHospitalPortalCookie } from '@/lib/httpCookies'
+import { recordAlertEvent } from '@/services/observability'
 
 export const hospitalPortalRouter = Router()
 
 function requireHospitalPortal(req: import('express').Request, res: import('express').Response, next: import('express').NextFunction): void {
   const hdr = req.headers.authorization
-  const token = hdr?.startsWith('Bearer ') ? hdr.slice(7) : undefined
+  const token = hdr?.startsWith('Bearer ') ? hdr.slice(7) : readCookie(req, HOSPITAL_PORTAL_COOKIE)
   const claims = token ? verifyHospitalPortalToken(token) : null
   if (!claims) {
     res.status(401).json({ error: 'Unauthorized' })
@@ -18,6 +20,30 @@ function requireHospitalPortal(req: import('express').Request, res: import('expr
   req.hospitalPortal = { hospitalId: claims.sub }
   next()
 }
+
+const sessionSchema = z.object({
+  token: z.string().min(20).optional(),
+})
+
+hospitalPortalRouter.post(
+  '/session',
+  asyncHandler(async (req, res) => {
+    const parsed = sessionSchema.safeParse(req.body ?? {})
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
+      return
+    }
+    const hdr = req.headers.authorization
+    const token = parsed.data.token ?? (hdr?.startsWith('Bearer ') ? hdr.slice(7) : readCookie(req, HOSPITAL_PORTAL_COOKIE))
+    const claims = token ? verifyHospitalPortalToken(token) : null
+    if (!token || !claims) {
+      res.status(401).json({ error: 'Invalid portal token' })
+      return
+    }
+    setHospitalPortalCookie(res, token)
+    res.json({ ok: true, hospitalId: claims.sub })
+  }),
+)
 
 hospitalPortalRouter.use(requireHospitalPortal)
 
@@ -128,6 +154,14 @@ hospitalPortalRouter.post(
       return
     }
     logAudit('hospital_ack', { hospitalId, alertId: parsed.data.alertId, type: parsed.data.type })
+    await recordAlertEvent({
+      alertId: parsed.data.alertId,
+      eventType: 'hospital_ack',
+      actorType: 'hospital',
+      actorId: hospitalId,
+      channel: 'portal',
+      metadata: { type: parsed.data.type },
+    })
     logWarn('hospital ack recorded', { alertId: parsed.data.alertId, type: parsed.data.type })
     res.json({ success: true })
   }),
@@ -175,6 +209,13 @@ hospitalPortalRouter.post(
       return
     }
     logAudit('hospital_resolve', { hospitalId, alertId })
+    await recordAlertEvent({
+      alertId,
+      eventType: 'hospital_resolved',
+      actorType: 'hospital',
+      actorId: hospitalId,
+      channel: 'portal',
+    })
     res.json({ success: true })
   }),
 )

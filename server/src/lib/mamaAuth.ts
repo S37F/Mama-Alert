@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 import type { Request } from 'express'
 import { z } from 'zod'
 import { logWarn } from '@/lib/logger'
+import { MAMA_SESSION_COOKIE, readCookie } from '@/lib/httpCookies'
 import { normalizePhone } from '@/lib/phone'
 import { prisma } from '@/lib/prisma'
 import { signVolunteerPortalToken } from '@/lib/portalJwt'
@@ -55,6 +56,18 @@ function parseBearerSession(req: Request): SessionHeaderShape | null {
   return { role: claims.role, profileId: claims.sub }
 }
 
+function parseCookieSession(req: Request): SessionHeaderShape | null {
+  const token = readCookie(req, MAMA_SESSION_COOKIE)
+  if (!token) {
+    return null
+  }
+  const claims = verifyMamaSessionToken(token)
+  if (!claims) {
+    return null
+  }
+  return { role: claims.role, profileId: claims.sub }
+}
+
 function parseLegacySessionHeaders(req: Request): SessionHeaderShape | null {
   const roleHeader = req.headers['x-mamaalert-role']
   const profileIdHeader = req.headers['x-mamaalert-profile-id']
@@ -70,6 +83,11 @@ function parseLegacySessionHeaders(req: Request): SessionHeaderShape | null {
 }
 
 export function readSessionHeaders(req: Request): SessionHeaderShape | null {
+  const cookie = parseCookieSession(req)
+  if (cookie) {
+    return cookie
+  }
+
   const bearer = parseBearerSession(req)
   if (bearer) {
     return bearer

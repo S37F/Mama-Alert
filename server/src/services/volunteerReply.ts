@@ -13,6 +13,7 @@ import {
 } from '@/services/messageBuilder'
 import { sendSMS, sendSmsMultipart } from '@/services/twilio'
 import { notifyVolunteerFeedRefresh } from '@/services/volunteerSseHub'
+import { recordAlertEvent } from '@/services/observability'
 import type { PatientSosRow } from '@/types/patientSos'
 import type { Patient } from '@/types/patient'
 import type { Volunteer } from '@/types/volunteer'
@@ -159,7 +160,17 @@ export async function applyVolunteerDone(volunteerId: string): Promise<boolean> 
     data: { status: 'at_facility' },
   })
 
-  return updated.count > 0
+  if (updated.count > 0) {
+    await recordAlertEvent({
+      alertId: alert.id,
+      eventType: 'patient_arrived',
+      actorType: 'volunteer',
+      actorId: volunteerId,
+      channel: 'sms_or_portal',
+    })
+    return true
+  }
+  return false
 }
 
 export async function applyVolunteerNo(responseId: string): Promise<void> {
@@ -180,6 +191,19 @@ export async function applyVolunteerNo(responseId: string): Promise<void> {
   }
   if (volunteerId) {
     notifyVolunteerFeedRefresh(volunteerId)
+    const response = await prisma.alertResponse.findUnique({
+      where: { id: responseId },
+      select: { alertId: true },
+    })
+    if (response?.alertId) {
+      await recordAlertEvent({
+        alertId: response.alertId,
+        eventType: 'volunteer_declined',
+        actorType: 'volunteer',
+        actorId: volunteerId,
+        channel: 'sms_or_portal',
+      })
+    }
   }
 }
 
@@ -247,11 +271,19 @@ export async function applyVolunteerYes(
   }
 
   logAudit('volunteer_claimed_alert', { alertId, volunteerId: vol.id })
+  await recordAlertEvent({
+    alertId,
+    eventType: 'volunteer_claimed',
+    actorType: 'volunteer',
+    actorId: vol.id,
+    channel: 'sms_or_portal',
+    metadata: { hospitalId: hospital?.id ?? null },
+  })
 
   try {
     if (hospital) {
       const dir = buildVolunteerDirectionsSMS(patient, vol, hospital, vol.language)
-      await sendSmsMultipart(vol.phone, dir)
+      await sendSmsMultipart(vol.phone, dir, { alertId })
     }
   } catch (err) {
     logError('volunteer-reply: directions SMS failed', { err: String(err) })
@@ -259,7 +291,7 @@ export async function applyVolunteerYes(
 
   try {
     const conf = buildPatientConfirmationSMS(vol.name, patient.language)
-    await sendSMS(patient.phone_primary, conf)
+    await sendSMS(patient.phone_primary, conf, { alertId })
   } catch (err) {
     logError('volunteer-reply: patient confirmation SMS failed', { err: String(err) })
   }
@@ -269,7 +301,7 @@ export async function applyVolunteerYes(
   const famMsg = buildFamilySMS(patient, vol.name, patient.status_token, patient.language)
   for (const ph of phones) {
     try {
-      await sendSmsMultipart(ph, famMsg)
+      await sendSmsMultipart(ph, famMsg, { alertId })
     } catch (err) {
       logError('volunteer-reply: family SMS failed', { err: String(err) })
     }
@@ -282,7 +314,14 @@ export async function applyVolunteerYes(
           ? Math.min(120, Math.max(10, Math.round((hospital.distance_m / 1000) * 2)))
           : 25
       const clinic = buildClinicPreAlertSMS(patient, vol, etaMinutes, patient.language)
-      await sendSmsMultipart(hospital.phone_emergency, clinic)
+      await sendSmsMultipart(hospital.phone_emergency, clinic, { alertId })
+      await recordAlertEvent({
+        alertId,
+        eventType: 'hospital_prealert_sent',
+        actorType: 'hospital',
+        actorId: hospital.id,
+        channel: 'sms',
+      })
     } catch (err) {
       logError('volunteer-reply: clinic pre-alert SMS failed', { err: String(err) })
     }

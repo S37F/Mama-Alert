@@ -10,6 +10,7 @@ export type VolunteerPortalContext = {
 
 declare module 'express-serve-static-core' {
   interface Request {
+    requestId?: string
     authUserId?: string
     healthWorker?: HealthWorkerContext
     volunteerPortal?: VolunteerPortalContext

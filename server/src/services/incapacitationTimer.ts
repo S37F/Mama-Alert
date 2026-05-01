@@ -15,6 +15,7 @@ import {
 import { getNearbyVolunteers } from '@/services/geo'
 import { sendSmsMultipart } from '@/services/twilio'
 import { notifyVolunteerFeedRefresh } from '@/services/volunteerSseHub'
+import { recordAlertEvent } from '@/services/observability'
 import type { Alert } from '@/types/alert'
 
 function incapacitationDelayMs(): number {
@@ -144,6 +145,12 @@ export async function runIncapacitationStep(alertId: string, patientId: string):
       where: { id: alertId, status: 'active' },
       data: { priority: 2, incapacitationSuspected: true },
     })
+    await recordAlertEvent({
+      alertId,
+      eventType: 'incapacitation_followup',
+      actorType: 'system',
+      channel: 'job',
+    })
   } catch (upErr) {
     logError('incapacitation: update alert failed', { alertId, error: String(upErr) })
     return
@@ -157,7 +164,7 @@ export async function runIncapacitationStep(alertId: string, patientId: string):
   )
   for (const to of phones) {
     try {
-      await sendSmsMultipart(to, famMsg)
+      await sendSmsMultipart(to, famMsg, { alertId })
     } catch (err) {
       logError('incapacitation: family SMS failed', { err: String(err) })
     }
@@ -185,7 +192,14 @@ export async function runIncapacitationStep(alertId: string, patientId: string):
       })
       notifyVolunteerFeedRefresh(v.id)
       const smsBody = buildVolunteerAlertSMS(patientForFamily, v, alertRow, v.language)
-      await sendSmsMultipart(v.phone, smsBody)
+      await sendSmsMultipart(v.phone, smsBody, { alertId })
+      await recordAlertEvent({
+        alertId,
+        eventType: 'volunteer_notified_incapacitation',
+        actorType: 'volunteer',
+        actorId: v.id,
+        channel: 'sms',
+      })
     } catch (err) {
       logError('incapacitation: volunteer SMS failed', { alertId, volunteerId: v.id, err: String(err) })
     }

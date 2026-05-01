@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import { extractFamilyPhones } from '@/lib/emergencyContacts'
 import { logAudit, logError } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
+import { recordAlertEvent } from '@/services/observability'
 import { buildFamilyPatientArrivedSms } from '@/services/messageBuilder'
 import { sendSmsMultipart } from '@/services/twilio'
 
@@ -93,12 +94,19 @@ export async function resolveLatestOpenAlertForHospital(hospitalId: string): Pro
   )
   for (const ph of phones) {
     try {
-      await sendSmsMultipart(ph, famMsg)
+      await sendSmsMultipart(ph, famMsg, { alertId: resolved.alertId })
     } catch (err) {
       logError('hospital arrived: family SMS failed', { err: String(err) })
     }
   }
 
   logAudit('hospital_arrived_sms', { hospitalId, alertId: resolved.alertId })
+  await recordAlertEvent({
+    alertId: resolved.alertId,
+    eventType: 'hospital_arrived_sms',
+    actorType: 'hospital',
+    actorId: hospitalId,
+    channel: 'sms',
+  })
   return true
 }

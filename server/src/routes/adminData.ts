@@ -178,6 +178,51 @@ adminDataRouter.get(
       let totalResolveMs = 0
       let resolveCount = 0
 
+      const alertIds = filtered.map((a) => a.id)
+      const [events, messages] =
+        alertIds.length > 0
+          ? await Promise.all([
+              prisma.alertEvent.findMany({
+                where: { alertId: { in: alertIds } },
+                orderBy: { createdAt: 'asc' },
+                select: {
+                  alertId: true,
+                  eventType: true,
+                  actorType: true,
+                  channel: true,
+                  createdAt: true,
+                },
+              }),
+              prisma.outboundMessage.findMany({
+                where: { alertId: { in: alertIds } },
+                orderBy: { createdAt: 'asc' },
+                select: {
+                  alertId: true,
+                  channel: true,
+                  provider: true,
+                  status: true,
+                  createdAt: true,
+                  statusUpdatedAt: true,
+                },
+              }),
+            ])
+          : [[], []]
+      const eventsByAlert = new Map<string, typeof events>()
+      for (const event of events) {
+        const list = eventsByAlert.get(event.alertId) ?? []
+        list.push(event)
+        eventsByAlert.set(event.alertId, list)
+      }
+      const messagesByAlert = new Map<string, typeof messages>()
+      for (const message of messages) {
+        if (!message.alertId) {
+          continue
+        }
+        const list = messagesByAlert.get(message.alertId) ?? []
+        list.push(message)
+        messagesByAlert.set(message.alertId, list)
+      }
+
       const rows = filtered.map((a) => {
         const rawP = a.patient
         const patientName = rawP?.name ?? ''
@@ -208,6 +253,23 @@ adminDataRouter.get(
           resolveTimeMs,
           volunteerName: volName,
           outcome: a.status,
+          unresolvedMinutes:
+            a.status !== 'resolved' && a.status !== 'cancelled'
+              ? Math.max(0, Math.floor((Date.now() - triggeredAt) / 60_000))
+              : null,
+          timeline: (eventsByAlert.get(a.id) ?? []).map((event) => ({
+            eventType: event.eventType,
+            actorType: event.actorType,
+            channel: event.channel,
+            createdAt: event.createdAt.toISOString(),
+          })),
+          messageStatuses: (messagesByAlert.get(a.id) ?? []).map((message) => ({
+            channel: message.channel,
+            provider: message.provider,
+            status: message.status,
+            createdAt: message.createdAt.toISOString(),
+            statusUpdatedAt: message.statusUpdatedAt?.toISOString() ?? null,
+          })),
         }
       })
 

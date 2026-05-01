@@ -128,7 +128,9 @@
     "another": "Register another patient",
     "locationRequired": "Capture your current location before submitting.",
     "captureLocation": "Capture my current location",
-    "validation": { "required": "Required" },
+    "validation": {
+      "required": "Required"
+    },
     "fields": {
       "name": "Full name",
       "age": "Age",
@@ -166,7 +168,9 @@
       "neighbour": "Neighbour",
       "other": "Other"
     },
-    "contact": { "n": "Contact {{n}}" }
+    "contact": {
+      "n": "Contact {{n}}"
+    }
   },
   "family": {
     "title": "MamaAlert Status",
@@ -220,7 +224,9 @@
     "completeProfileDesc": "Add village, at least one emergency contact, and optionally update map location.",
     "saveProfile": "Save and mark verified",
     "profilePending": "Profile pending",
-    "phoneCol": "Phone"
+    "phoneCol": "Phone",
+    "draftSaved": "Draft saved on this device until the server confirms it.",
+    "draftKept": "Your draft is still saved on this device."
   },
   "admin": {
     "title": "Zone Admin",
@@ -265,7 +271,15 @@
     "inviteName": "Display name",
     "invitePhone": "Phone (optional)",
     "inviteHelp": "Supabase sends a welcome email with a secure link to open /register, set a password, and access the worker dashboard.",
-    "sendInvite": "Send invite"
+    "sendInvite": "Send invite",
+    "activeVolunteers": "Active volunteers",
+    "coverageGaps": "Unassigned active alerts",
+    "highRiskPatients": "High-risk patients",
+    "hospitalReadiness": "Hospitals receiving alerts",
+    "unresolvedAge": "Open for",
+    "delivery": "Delivery",
+    "timeline": "Timeline",
+    "operationalSummary": "{{overdue}} ANC overdue · {{unresolved}} unresolved alerts"
   },
   "demo": {
     "title": "Demo flow",

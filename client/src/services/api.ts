@@ -10,6 +10,7 @@ export const api = axios.create({
   baseURL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 30_000,
+  withCredentials: true,
 })
 
 let volunteerPortalToken: string | null = null
@@ -23,10 +24,29 @@ export function setHospitalPortalToken(token: string | null): void {
   hospitalPortalToken = token
 }
 
+function readCookie(name: string): string | null {
+  if (typeof document === 'undefined') {
+    return null
+  }
+  const prefix = `${name}=`
+  const part = document.cookie
+    .split(';')
+    .map((s) => s.trim())
+    .find((s) => s.startsWith(prefix))
+  return part ? decodeURIComponent(part.slice(prefix.length)) : null
+}
+
 api.interceptors.request.use((config) => {
   const url = typeof config.url === 'string' ? config.url : ''
   const full = `${config.baseURL ?? ''}${url}`
   const session = readMamaAlertSession()
+  const method = (config.method ?? 'get').toUpperCase()
+  if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+    const csrf = readCookie('mama_csrf')
+    if (csrf) {
+      config.headers['X-CSRF-Token'] = csrf
+    }
+  }
 
   const volunteerTokenFromSession =
     volunteerPortalToken ??
@@ -48,7 +68,7 @@ api.interceptors.request.use((config) => {
     return config
   }
 
-  if (session && !full.includes('/api/public/') && !full.includes('/api/auth/')) {
+  if (session?.sessionToken && !full.includes('/api/public/') && !full.includes('/api/auth/')) {
     config.headers.Authorization = `Bearer ${session.sessionToken}`
   }
   return config
@@ -97,6 +117,10 @@ export async function postAuthLoginVerify(phone: string, code: string): Promise<
     }
     throw error
   }
+}
+
+export async function postAuthLogout(): Promise<void> {
+  await api.post('/api/auth/logout', {})
 }
 
 export async function postAuthSignup<TBody extends Record<string, unknown>>(body: TBody): Promise<AuthResponse> {
@@ -266,14 +290,14 @@ export async function getVolunteerFeed(): Promise<VolunteerFeedItem[]> {
 }
 
 /** Absolute or same-origin URL for volunteer live feed (SSE). Pass portal JWT as query (EventSource has no headers). */
-export function volunteerSseUrl(accessToken: string): string {
+export function volunteerSseUrl(accessToken?: string): string {
   const base = import.meta.env.VITE_API_URL ?? ''
   const trimmed = base.replace(/\/$/, '')
-  const q = `access_token=${encodeURIComponent(accessToken)}`
+  const q = accessToken ? `?access_token=${encodeURIComponent(accessToken)}` : ''
   if (trimmed.length === 0) {
-    return `/api/volunteer/events?${q}`
+    return `/api/volunteer/events${q}`
   }
-  return `${trimmed}/api/volunteer/events?${q}`
+  return `${trimmed}/api/volunteer/events${q}`
 }
 
 export async function postVolunteerOtpRequest(phone: string): Promise<void> {
@@ -327,6 +351,11 @@ export interface FamilyStatusPayload {
   patientArrivedAt: string | null
   volunteerFirstName: string | null
   hospitalName: string | null
+}
+
+export async function postHospitalSession(token?: string): Promise<{ ok: boolean; hospitalId: string }> {
+  const response = await api.post<{ ok: boolean; hospitalId: string }>('/api/hospital/session', token ? { token } : {})
+  return response.data
 }
 
 export async function getFamilyStatus(token: string): Promise<FamilyStatusPayload> {
@@ -483,6 +512,20 @@ export interface AdminAlertHistoryRow {
   resolveTimeMs: number | null
   volunteerName: string | null
   outcome: string
+  unresolvedMinutes: number | null
+  timeline: {
+    eventType: string
+    actorType: string | null
+    channel: string | null
+    createdAt: string
+  }[]
+  messageStatuses: {
+    channel: string
+    provider: string
+    status: string
+    createdAt: string
+    statusUpdatedAt: string | null
+  }[]
 }
 
 export async function getAdminAlertsHistory(): Promise<{

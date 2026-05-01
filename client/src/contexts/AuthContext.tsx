@@ -6,6 +6,7 @@ import {
   type MamaAlertRole,
   type MamaAlertSession,
 } from '@/lib/mamaSession'
+import { postAuthLogout } from '@/services/api'
 
 interface AuthContextValue {
   session: MamaAlertSession | null
@@ -28,6 +29,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const logout = async () => {
+    try {
+      await postAuthLogout()
+    } catch {
+      /* local cleanup still matters if the network is down */
+    }
     clearMamaAlertSession()
     localStorage.removeItem('mamaalert_access_token')
     localStorage.removeItem('mamaalert_refresh_token')
@@ -35,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('mamaalert_zone_id')
     localStorage.removeItem('mamaalert_volunteer_phone')
     localStorage.removeItem('mamaalert_volunteer_portal_token')
+    localStorage.removeItem('mamaalert_hospital_portal_token')
   }
 
   const value = useMemo(

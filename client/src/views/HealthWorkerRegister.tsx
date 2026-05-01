@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -38,6 +38,8 @@ const riskKeys = [
   'on_medication',
 ] as const
 
+const DRAFT_KEY = 'mamaalert_worker_patient_registration_draft_v1'
+
 const formSchema = z
   .object({
     name: z.string().min(1),
@@ -65,6 +67,17 @@ const formSchema = z
 
 type FormValues = z.infer<typeof formSchema>
 
+function hasRegistrationDraftContent(values: Partial<FormValues>, riskMap: Record<string, boolean>): boolean {
+  return (
+    Object.values(values).some((value) => {
+      if (typeof value === 'string') {
+        return value.trim().length > 0
+      }
+      return value === true
+    }) || Object.values(riskMap).some(Boolean)
+  )
+}
+
 interface HealthWorkerRegisterProps {
   /** When true, omit landmark `main#main-content` (parent route already provides it). */
   embedded?: boolean
@@ -88,6 +101,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
     sos_token: string
     phone_primary: string
   } | null>(null)
+  const [draftSaved, setDraftSaved] = useState(false)
 
   const wrapPage = (inner: ReactNode) =>
     embedded ? (
@@ -125,8 +139,59 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
     formState: { errors, isSubmitting },
   } = form
 
-  // react-hook-form watch() is the supported way to derive locale-driven labels
-  // eslint-disable-next-line react-hooks/incompatible-library -- RHF watch() for language field
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(DRAFT_KEY)
+      if (!raw) {
+        return
+      }
+      const parsed = JSON.parse(raw) as { values?: Partial<FormValues>; risk?: Partial<typeof risk> }
+      if (parsed.values) {
+        form.reset({ ...form.getValues(), ...parsed.values })
+      }
+      if (parsed.risk) {
+        setRisk((prev) => ({ ...prev, ...parsed.risk }))
+      }
+      setDraftSaved(true)
+    } catch {
+      /* ignore malformed drafts */
+    }
+    // Restore once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const sub = form.watch((values) => {
+      try {
+        if (!hasRegistrationDraftContent(values, risk)) {
+          localStorage.removeItem(DRAFT_KEY)
+          setDraftSaved(false)
+          return
+        }
+        localStorage.setItem(DRAFT_KEY, JSON.stringify({ values, risk, savedAt: new Date().toISOString() }))
+        setDraftSaved(true)
+      } catch {
+        /* private mode / quota */
+      }
+    })
+    return () => sub.unsubscribe()
+  }, [form, risk])
+
+  useEffect(() => {
+    try {
+      const values = form.getValues()
+      if (!hasRegistrationDraftContent(values, risk)) {
+        localStorage.removeItem(DRAFT_KEY)
+        setDraftSaved(false)
+        return
+      }
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ values, risk, savedAt: new Date().toISOString() }))
+      setDraftSaved(true)
+    } catch {
+      /* private mode / quota */
+    }
+  }, [form, risk])
+
   const lang = watch('language')
 
   const onSubmit = async (values: FormValues) => {
@@ -169,6 +234,8 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
         medication_name: risk.on_medication ? values.medication_name?.trim() || null : null,
         emergency_contacts,
       })
+      localStorage.removeItem(DRAFT_KEY)
+      setDraftSaved(false)
       setSuccess({ ...out, phone_primary: values.phone_primary.trim() })
     } catch (e) {
       setSubmitErr(e instanceof Error ? e.message : t('common.error'))
@@ -237,6 +304,8 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
                 boolean
               >,
             )
+            localStorage.removeItem(DRAFT_KEY)
+            setDraftSaved(false)
           }}
         >
           {t('register.another')}
@@ -251,6 +320,11 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
       <h1 className="mama-heading text-2xl">{t('register.title')}</h1>
 
       {submitErr ? <ErrorMessage message={submitErr} onRetry={() => setSubmitErr(null)} /> : null}
+      {draftSaved ? (
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          {t('worker.draftSaved')}
+        </p>
+      ) : null}
 
       <Card>
         <CardHeader>

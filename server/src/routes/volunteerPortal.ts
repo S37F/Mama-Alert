@@ -2,6 +2,7 @@ import { randomInt } from 'crypto'
 import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
+import { readCookie, setVolunteerPortalCookie, VOLUNTEER_PORTAL_COOKIE } from '@/lib/httpCookies'
 import { hashOtpCode } from '@/lib/otpHash'
 import { logError } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
@@ -128,6 +129,7 @@ volunteerPortalRouter.post(
     })
 
     const token = signVolunteerPortalToken(volunteer.id, volunteer.phoneE164 ?? phoneE164)
+    setVolunteerPortalCookie(res, token)
     res.json({
       access_token: token,
       volunteer: {
@@ -143,7 +145,7 @@ volunteerPortalRouter.post(
 /** EventSource cannot send Authorization; pass JWT as `?access_token=` */
 volunteerPortalRouter.get('/events', volunteerSseRateLimit, (req, res, next) => {
   const raw = req.query.access_token
-  const token = typeof raw === 'string' ? raw : undefined
+  const token = typeof raw === 'string' ? raw : readCookie(req, VOLUNTEER_PORTAL_COOKIE)
   const claims = token ? verifyVolunteerPortalToken(token) : null
   if (!claims) {
     res.status(401).json({ error: 'Unauthorized' })

@@ -11,8 +11,10 @@ import { ErrorMessage } from '@/components/ErrorMessage'
 import { NetworkOfflineBanner } from '@/components/NetworkOfflineBanner'
 import {
   getHospitalInbox,
+  postAuthLogout,
   postHospitalAck,
   postHospitalResolve,
+  postHospitalSession,
   setHospitalPortalToken,
   type HospitalInboxItem,
 } from '@/services/api'
@@ -37,6 +39,7 @@ export function HospitalInbox() {
 
   const [tokenInput, setTokenInput] = useState(initialToken)
   const [savedToken, setSavedToken] = useState(initialToken)
+  const [cookieReady, setCookieReady] = useState(false)
   const [items, setItems] = useState<HospitalInboxItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -44,29 +47,66 @@ export function HospitalInbox() {
   useEffect(() => {
     const q = searchParams.get('token')
     if (q && q.length > 20) {
-      localStorage.setItem(LS_HOSP_TOKEN, q)
       setTokenInput(q)
       setSavedToken(q)
+      void postHospitalSession(q)
+        .then(() => {
+          localStorage.removeItem(LS_HOSP_TOKEN)
+          setHospitalPortalToken(null)
+          setCookieReady(true)
+          window.history.replaceState(null, '', window.location.pathname)
+        })
+        .catch((e: unknown) => setError(e instanceof Error ? e.message : t('common.error')))
     }
-  }, [searchParams])
+  }, [searchParams, t])
 
   useEffect(() => {
-    if (savedToken.length > 20) {
+    if (initialToken.length > 20) {
+      const q = searchParams.get('token')
+      if (!q) {
+        void postHospitalSession(initialToken)
+          .then(() => {
+            localStorage.removeItem(LS_HOSP_TOKEN)
+            setHospitalPortalToken(null)
+            setCookieReady(true)
+          })
+          .catch(() => {
+            /* keep legacy bearer fallback */
+          })
+      }
+      return
+    }
+    void postHospitalSession()
+      .then(() => setCookieReady(true))
+      .catch(() => {
+        /* no existing cookie session */
+      })
+  }, [initialToken, searchParams])
+
+  useEffect(() => {
+    if (!cookieReady && savedToken.length > 20) {
       setHospitalPortalToken(savedToken)
     }
-  }, [savedToken])
+  }, [cookieReady, savedToken])
 
   const saveToken = useCallback(() => {
     const t = tokenInput.trim()
     if (t.length > 20) {
-      localStorage.setItem(LS_HOSP_TOKEN, t)
-      setSavedToken(t)
-      setHospitalPortalToken(t)
+      void postHospitalSession(t)
+        .then(() => {
+          localStorage.removeItem(LS_HOSP_TOKEN)
+          setSavedToken(t)
+          setHospitalPortalToken(null)
+          setCookieReady(true)
+        })
+        .catch((e: unknown) => setError(e instanceof Error ? e.message : 'Invalid portal token'))
     }
   }, [tokenInput])
 
+  const sessionReady = cookieReady || savedToken.length > 20
+
   const load = useCallback(async () => {
-    if (savedToken.length < 20) {
+    if (!sessionReady) {
       return
     }
     setLoading(true)
@@ -79,7 +119,7 @@ export function HospitalInbox() {
     } finally {
       setLoading(false)
     }
-  }, [savedToken, t])
+  }, [sessionReady, t])
 
   useEffect(() => {
     void load()
@@ -90,7 +130,7 @@ export function HospitalInbox() {
     return () => window.clearInterval(id)
   }, [load])
 
-  if (savedToken.length < 20) {
+  if (!sessionReady) {
     return (
       <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-4 p-6 outline-none">
         <NetworkOfflineBanner variant="liveData" />
@@ -131,6 +171,8 @@ export function HospitalInbox() {
               setHospitalPortalToken(null)
               setSavedToken('')
               setTokenInput('')
+              setCookieReady(false)
+              void postAuthLogout()
             }}
           >
             Sign out

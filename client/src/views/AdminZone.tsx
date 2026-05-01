@@ -320,6 +320,12 @@ export function AdminZone() {
   const avgVolunteerMin =
     avgVolunteerConfirmMs !== null ? Math.round(avgVolunteerConfirmMs / 60_000) : null
   const avgResolveMin = avgResolveMs !== null ? Math.round(avgResolveMs / 60_000) : null
+  const activeVolunteerCount = volunteers.filter((v) => v.is_active).length
+  const highRiskPatientCount = patients.filter((p) => p.riskFlags.length > 0).length
+  const overdueAncCount = patients.filter((p) => p.overdueAnc).length
+  const receivingHospitals = mapData?.hospitals.filter((h) => h.receive_alerts !== false).length ?? 0
+  const unresolvedAlerts = alerts.filter((a) => a.unresolvedMinutes !== null)
+  const coverageGapAlerts = unresolvedAlerts.filter((a) => !a.volunteerName).length
 
   return (
     <main id="main-content" tabIndex={-1} className="mama-page mama-page-shell mama-page-shell--dashboard">
@@ -333,6 +339,25 @@ export function AdminZone() {
 
       {error ? <ErrorMessage message={error} onRetry={() => void load()} /> : null}
       {loading && !patients.length ? <LoadingSpinner variant="inline" /> : null}
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-md border bg-card p-3">
+          <p className="text-muted-foreground text-xs">{t('admin.activeVolunteers')}</p>
+          <p className="text-2xl font-semibold">{activeVolunteerCount}</p>
+        </div>
+        <div className="rounded-md border bg-card p-3">
+          <p className="text-muted-foreground text-xs">{t('admin.coverageGaps')}</p>
+          <p className="text-2xl font-semibold">{coverageGapAlerts}</p>
+        </div>
+        <div className="rounded-md border bg-card p-3">
+          <p className="text-muted-foreground text-xs">{t('admin.highRiskPatients')}</p>
+          <p className="text-2xl font-semibold">{highRiskPatientCount}</p>
+        </div>
+        <div className="rounded-md border bg-card p-3">
+          <p className="text-muted-foreground text-xs">{t('admin.hospitalReadiness')}</p>
+          <p className="text-2xl font-semibold">{receivingHospitals}</p>
+        </div>
+      </div>
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex flex-wrap">
@@ -449,6 +474,9 @@ export function AdminZone() {
                   <TableHead>Volunteer confirm</TableHead>
                   <TableHead>Resolved</TableHead>
                   <TableHead>{t('admin.volunteer')}</TableHead>
+                  <TableHead>{t('admin.unresolvedAge')}</TableHead>
+                  <TableHead>{t('admin.delivery')}</TableHead>
+                  <TableHead>{t('admin.timeline')}</TableHead>
                   <TableHead>{t('admin.outcome')}</TableHead>
                 </TableRow>
               </TableHeader>
@@ -464,6 +492,23 @@ export function AdminZone() {
                       {a.resolveTimeMs !== null ? `${Math.round(a.resolveTimeMs / 60_000)} min` : '—'}
                     </TableCell>
                     <TableCell>{a.volunteerName ?? '—'}</TableCell>
+                    <TableCell>{a.unresolvedMinutes !== null ? `${a.unresolvedMinutes} min` : '-'}</TableCell>
+                    <TableCell className="max-w-[180px] text-xs">
+                      {a.messageStatuses.length
+                        ? a.messageStatuses
+                            .slice(-3)
+                            .map((m) => `${m.channel}:${m.status}`)
+                            .join(', ')
+                        : '-'}
+                    </TableCell>
+                    <TableCell className="max-w-[220px] text-xs">
+                      {a.timeline.length
+                        ? a.timeline
+                            .slice(-3)
+                            .map((event) => event.eventType)
+                            .join(' -> ')
+                        : '-'}
+                    </TableCell>
                     <TableCell>{a.outcome}</TableCell>
                   </TableRow>
                 ))}
@@ -568,6 +613,12 @@ export function AdminZone() {
 
               <div className="space-y-3">
                 <h2 className="text-lg font-semibold">{t('admin.healthWorkersTitle')}</h2>
+                <p className="text-muted-foreground text-xs">
+                  {t('admin.operationalSummary', {
+                    overdue: overdueAncCount,
+                    unresolved: unresolvedAlerts.length,
+                  })}
+                </p>
                   <div className="mama-table-shell">
                   <Table>
                     <TableHeader>

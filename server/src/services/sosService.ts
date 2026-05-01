@@ -9,6 +9,7 @@ import { scheduleIncapacitationFollowUp } from '@/services/incapacitationTimer'
 import { sendSmsMultipart } from '@/services/twilio'
 import { buildVolunteerAlertSMS } from '@/services/messageBuilder'
 import { notifyVolunteerFeedRefresh } from '@/services/volunteerSseHub'
+import { recordAlertEvent } from '@/services/observability'
 import type { Alert } from '@/types/alert'
 import type { PatientSosRow } from '@/types/patientSos'
 
@@ -47,6 +48,13 @@ export async function triggerSosFromPatientRow(
   }
 
   if (!parsed.ok && parsed.reason === 'duplicate' && typeof parsed.alert_id === 'string') {
+    await recordAlertEvent({
+      alertId: parsed.alert_id,
+      eventType: 'sos_duplicate_ack',
+      actorType: 'patient',
+      actorId: row.id,
+      channel: triggerMethod,
+    })
     return {
       success: true,
       alertId: parsed.alert_id,
@@ -80,6 +88,15 @@ export async function triggerSosFromPatientRow(
     incapacitation_suspected: incapacitation,
   }
 
+  await recordAlertEvent({
+    alertId: alertRow.id,
+    eventType: 'sos_triggered',
+    actorType: 'patient',
+    actorId: row.id,
+    channel: triggerMethod,
+    metadata: { incapacitationSuspected: incapacitation },
+  })
+
   let volunteers = await getNearbyVolunteers(row.lat, row.lng, 5000)
   if (volunteers.length === 0) {
     logWarn('sos: no volunteers within 5km; expanding to 10km', { patientId: row.id })
@@ -99,7 +116,14 @@ export async function triggerSosFromPatientRow(
       })
       notifyVolunteerFeedRefresh(v.id)
       const smsBody = buildVolunteerAlertSMS(patient, v, alertRow, v.language)
-      await sendSmsMultipart(v.phone, smsBody)
+      await sendSmsMultipart(v.phone, smsBody, { alertId: alertRow.id })
+      await recordAlertEvent({
+        alertId: alertRow.id,
+        eventType: 'volunteer_notified',
+        actorType: 'volunteer',
+        actorId: v.id,
+        channel: 'sms',
+      })
       notified += 1
     } catch (err) {
       logError('sos: volunteer SMS failed', { alertId: alertRow.id, volunteerId: v.id, err: String(err) })

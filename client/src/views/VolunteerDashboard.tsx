@@ -11,7 +11,6 @@ import { useAuth } from '@/hooks/useAuth'
 import {
   getVolunteerFeed,
   postVolunteerResponse,
-  setVolunteerPortalToken,
   volunteerSseUrl,
   type VolunteerFeedItem,
 } from '@/services/api'
@@ -26,22 +25,12 @@ export function VolunteerDashboard() {
   const { t } = useTranslation()
   const { session, logout } = useAuth()
   const portalToken = session?.role === 'volunteer' ? session.volunteerPortalToken ?? '' : ''
-  const sessionReady = portalToken.length > 20
+  const sessionReady = session?.role === 'volunteer'
   const [items, setItems] = useState<VolunteerFeedItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [actingId, setActingId] = useState<string | null>(null)
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (sessionReady) {
-      setVolunteerPortalToken(portalToken)
-      localStorage.setItem('mamaalert_volunteer_portal_token', portalToken)
-      localStorage.setItem('mamaalert_volunteer_phone', session?.phone ?? '')
-    } else {
-      setVolunteerPortalToken(null)
-    }
-  }, [portalToken, session?.phone, sessionReady])
 
   useEffect(() => {
     if (!sessionReady) {
@@ -70,7 +59,7 @@ export function VolunteerDashboard() {
 
     let es: EventSource | null = null
     try {
-      es = new EventSource(volunteerSseUrl(portalToken))
+      es = new EventSource(volunteerSseUrl(portalToken || undefined), { withCredentials: true })
       const onRefresh = () => {
         void load()
       }

@@ -15,6 +15,7 @@ import {
 import { getNearbyVolunteers } from '@/services/geo'
 import { sendSMS, sendSmsMultipart, sendVoiceConfirmation } from '@/services/twilio'
 import { notifyVolunteerFeedRefresh } from '@/services/volunteerSseHub'
+import { recordAlertEvent } from '@/services/observability'
 import type { Alert } from '@/types/alert'
 import type { Patient } from '@/types/patient'
 import type { Volunteer } from '@/types/volunteer'
@@ -116,7 +117,15 @@ async function notifyNewVolunteers(
       })
       notifyVolunteerFeedRefresh(v.id)
       const body = buildVolunteerAlertSMS(patient, v, alertRow, v.language)
-      await sendSmsMultipart(v.phone, body)
+      await sendSmsMultipart(v.phone, body, { alertId })
+      await recordAlertEvent({
+        alertId,
+        eventType: 'volunteer_notified_escalation',
+        actorType: 'volunteer',
+        actorId: v.id,
+        channel: 'sms',
+        metadata: { waveNumber },
+      })
     } catch (err) {
       logError('escalation: insert alert_response failed', {
         alertId,
@@ -207,7 +216,7 @@ async function runEscalationStep(params: {
   if (coord) {
     try {
       const msg = buildCoordinatorEscalationSMS(patient, alertId, minutesSinceStart, patient.language)
-      await sendSMS(coord, msg)
+      await sendSMS(coord, msg, { alertId })
     } catch (err) {
       logError('escalation: coordinator SMS failed', { alertId, err: String(err) })
     }
@@ -277,6 +286,7 @@ export async function runEscalationTimer(
   const minutesSince = Math.max(0, Math.floor((Date.now() - triggered) / 60_000))
 
   if (wave === 0) {
+    await recordAlertEvent({ alertId, eventType: 'escalation_wave_due', channel: 'job', metadata: { wave: 1 } })
     await runEscalationStep({
       alertId,
       patientPhone: phone,
@@ -287,6 +297,7 @@ export async function runEscalationTimer(
     })
     scheduleEscalation(alertId, alertRow.patientId, 1)
   } else if (wave === 1) {
+    await recordAlertEvent({ alertId, eventType: 'escalation_wave_due', channel: 'job', metadata: { wave: 2 } })
     await runEscalationStep({
       alertId,
       patientPhone: phone,
@@ -297,6 +308,7 @@ export async function runEscalationTimer(
     })
     scheduleEscalation(alertId, alertRow.patientId, 2)
   } else if (wave === 2) {
+    await recordAlertEvent({ alertId, eventType: 'escalation_wave_due', channel: 'job', metadata: { wave: 3 } })
     await runEscalationStep({
       alertId,
       patientPhone: phone,
@@ -320,10 +332,10 @@ export async function runEscalationTimer(
           const patient = patientSosRowToPatient(row)
           try {
             const msg = buildCoordinatorWave3ActionSMS(patient, alertId, phone, patient.language)
-            await sendSmsMultipart(coord, msg)
+            await sendSmsMultipart(coord, msg, { alertId })
             if (coordinatorVoiceOnEscalation() && !isTwilioMock()) {
               const voiceText = msg.slice(0, 400)
-              await sendVoiceConfirmation(coord, voiceText)
+              await sendVoiceConfirmation(coord, voiceText, { alertId })
             }
           } catch (err) {
             logError('escalation: final coordinator SMS failed', { alertId, err: String(err) })

@@ -178,8 +178,49 @@ model Alert {
   nearestHospital      Hospital?       @relation("NearestHospital", fields: [nearestHospitalId], references: [id], onDelete: SetNull)
   alertResponses       AlertResponse[]
   hospitalAlertAcks    HospitalAlertAck[]
+  alertEvents          AlertEvent[]
+  outboundMessages     OutboundMessage[]
 
   @@map("alerts")
+}
+
+model AlertEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  alertId   String   @map("alert_id") @db.Uuid
+  eventType String   @map("event_type")
+  actorType String?  @map("actor_type")
+  actorId   String?  @map("actor_id")
+  channel   String?
+  metadata  Json     @default("{}")
+  requestId String?  @map("request_id")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  alert Alert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+
+  @@index([alertId, createdAt], map: "alert_events_alert_created_idx")
+  @@map("alert_events")
+}
+
+model OutboundMessage {
+  id                String    @id @default(uuid()) @db.Uuid
+  alertId           String?   @map("alert_id") @db.Uuid
+  recipient         String
+  provider          String
+  providerMessageId String?   @map("provider_message_id")
+  channel           String    @default("sms")
+  status            String    @default("queued")
+  error             String?
+  metadata          Json      @default("{}")
+  requestId         String?   @map("request_id")
+  statusUpdatedAt   DateTime? @map("status_updated_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  alert Alert? @relation(fields: [alertId], references: [id], onDelete: SetNull)
+
+  @@index([alertId, createdAt], map: "outbound_messages_alert_created_idx")
+  @@index([providerMessageId], map: "outbound_messages_provider_message_idx")
+  @@map("outbound_messages")
 }
 
 model AlertResponse {

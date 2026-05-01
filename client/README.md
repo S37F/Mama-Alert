@@ -1,73 +1,29 @@
-# React + TypeScript + Vite
+# MamaAlert Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React/Vite frontend for MamaAlert: patient SOS PWA, phone sign-up/login, volunteer dashboard, hospital inbox, health-worker hub, and zone admin tools.
 
-Currently, two official plugins are available:
+## Local Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Install dependencies with `npm ci`.
+2. Create `.env` with `npm run env:init`, then set `VITE_API_URL=http://localhost:3000`.
+3. Start the app with `npm run dev`.
 
-## React Compiler
+Useful checks:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- `npm run lint`
+- `npm run i18n:check`
+- `npm run build`
 
-## Expanding the ESLint configuration
+## Auth And Security
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Dashboard sessions are cookie-first. The API sets HttpOnly auth cookies plus a readable `mama_csrf` cookie. Mutating dashboard requests send `X-CSRF-Token` automatically through the shared Axios client.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+The patient SOS PWA intentionally keeps its SOS token in browser storage so the offline emergency flow can work after installation or poor connectivity.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Offline Behavior
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+The SOS page queues emergency alerts in IndexedDB and registers Background Sync when available. Health-worker patient registration and profile completion forms save local drafts until the API confirms the submission.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Localization
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+Locale files must match `src/i18n/locales/en.json`; run `npm run i18n:check` after changing copy. Some non-English fallback strings may currently be English and should be reviewed by native speakers before production deployment.

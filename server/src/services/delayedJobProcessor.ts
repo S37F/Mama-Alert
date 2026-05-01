@@ -126,3 +126,5 @@ export function startDelayedJobPoller(): void {
   }, intervalMs)
   void tickOnce()
 }
+
+export const runDelayedJobTickForTest = tickOnce

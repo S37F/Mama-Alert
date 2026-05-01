@@ -105,3 +105,9 @@ export function getTwilioUssdWebhookUrl(): string {
   const base = process.env.SERVER_PUBLIC_URL ?? process.env.CLIENT_URL ?? ''
   return `${base.replace(/\/$/, '')}/api/ussd`
 }
+
+/** Twilio delivery status callback for outbound SMS. */
+export function getTwilioStatusWebhookUrl(): string {
+  const base = process.env.SERVER_PUBLIC_URL ?? process.env.CLIENT_URL ?? ''
+  return `${base.replace(/\/$/, '')}/api/sms-status`
+}

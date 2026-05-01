@@ -3,6 +3,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
 import {
+  type AuthSessionResponse,
   createHealthWorkerAccount,
   ensureAssignableHealthWorkerId,
   isPhoneRegistered,
@@ -11,6 +12,7 @@ import {
   resolveOrCreateZone,
   resolveSignupCoordinates,
 } from '@/lib/mamaAuth'
+import { clearAuthCookies, setMamaSessionCookie, setVolunteerPortalCookie } from '@/lib/httpCookies'
 import { hashOtpCode } from '@/lib/otpHash'
 import { normalizePhone } from '@/lib/phone'
 import { prisma } from '@/lib/prisma'
@@ -80,6 +82,13 @@ const loginVerifySchema = loginSchema.extend({
 
 function healthWorkerSignupCode(): string {
   return (process.env.HEALTH_WORKER_SIGNUP_CODE?.trim() || process.env.ADMIN_SIGNUP_CODE?.trim() || '')
+}
+
+function setAuthCookiesForSession(res: import('express').Response, session: AuthSessionResponse): void {
+  setMamaSessionCookie(res, session.sessionToken)
+  if (session.role === 'volunteer' && session.volunteerPortalToken) {
+    setVolunteerPortalCookie(res, session.volunteerPortalToken)
+  }
 }
 
 async function createAndSendLoginCode(phone: string): Promise<boolean> {
@@ -155,6 +164,7 @@ authRouter.post(
         res.status(500).json({ error: 'Could not create account' })
         return
       }
+      setAuthCookiesForSession(res, session)
       res.status(201).json({
         success: true,
         role: 'patient',
@@ -189,6 +199,7 @@ authRouter.post(
         res.status(500).json({ error: 'Could not create account' })
         return
       }
+      setAuthCookiesForSession(res, session)
       res.status(201).json({
         success: true,
         role: 'volunteer',
@@ -218,6 +229,7 @@ authRouter.post(
         organisation: body.organisation.trim(),
         roleTitle: body.roleTitle.trim(),
       })
+      setAuthCookiesForSession(res, session)
       res.status(201).json({
         success: true,
         role: 'health_worker',
@@ -246,6 +258,7 @@ authRouter.post(
       organisation: body.organisation.trim(),
       roleTitle: 'Administrator',
     })
+    setAuthCookiesForSession(res, session)
     res.status(201).json({
       success: true,
       role: 'admin',
@@ -325,6 +338,7 @@ authRouter.post(
       return
     }
 
+    setAuthCookiesForSession(res, session)
     res.json({
       role: session.role,
       profileId: session.profileId,
@@ -334,3 +348,8 @@ authRouter.post(
     })
   }),
 )
+
+authRouter.post('/logout', (_req, res) => {
+  clearAuthCookies(res)
+  res.json({ ok: true })
+})

@@ -6,7 +6,7 @@ export interface MamaAlertSession {
   profileId: string
   name: string
   signedInAt: number
-  sessionToken: string
+  sessionToken?: string
   zoneId?: string | null
   sosToken?: string
   volunteerPortalToken?: string
@@ -34,7 +34,6 @@ export function readMamaAlertSession(): MamaAlertSession | null {
       typeof parsed.profileId !== 'string' ||
       typeof parsed.name !== 'string' ||
       typeof parsed.signedInAt !== 'number' ||
-      typeof parsed.sessionToken !== 'string' ||
       !isMamaAlertRole(parsed.role)
     ) {
       return null
@@ -45,7 +44,7 @@ export function readMamaAlertSession(): MamaAlertSession | null {
       profileId: parsed.profileId,
       name: parsed.name,
       signedInAt: parsed.signedInAt,
-      sessionToken: parsed.sessionToken,
+      ...(typeof parsed.sessionToken === 'string' ? { sessionToken: parsed.sessionToken } : {}),
       ...(parsed.zoneId !== undefined ? { zoneId: parsed.zoneId } : {}),
       ...(typeof parsed.sosToken === 'string' ? { sosToken: parsed.sosToken } : {}),
       ...(typeof parsed.volunteerPortalToken === 'string'
@@ -67,7 +66,16 @@ export function writeMamaAlertSession(session: MamaAlertSession): void {
   if (typeof window === 'undefined') {
     return
   }
-  window.localStorage.setItem(MAMA_ALERT_SESSION_KEY, JSON.stringify(session))
+  const safeSession: MamaAlertSession = {
+    phone: session.phone,
+    role: session.role,
+    profileId: session.profileId,
+    name: session.name,
+    signedInAt: session.signedInAt,
+    ...(session.zoneId !== undefined ? { zoneId: session.zoneId } : {}),
+    ...(session.sosToken ? { sosToken: session.sosToken } : {}),
+  }
+  window.localStorage.setItem(MAMA_ALERT_SESSION_KEY, JSON.stringify(safeSession))
   dispatchSessionEvent()
 }
 

@@ -50,6 +50,8 @@ const relationshipValues: EmergencyRelationship[] = [
   'other',
 ]
 
+const COMPLETE_PROFILE_DRAFT_PREFIX = 'mamaalert_worker_complete_profile_draft_v1:'
+
 function CompletePatientDialog({
   patient,
   open,
@@ -73,13 +75,43 @@ function CompletePatientDialog({
 
   useEffect(() => {
     if (patient) {
-      setVillage(patient.village ?? '')
-      setCName('')
-      setCPhone('')
-      setCRel('husband')
+      try {
+        const raw = localStorage.getItem(`${COMPLETE_PROFILE_DRAFT_PREFIX}${patient.id}`)
+        const draft = raw
+          ? (JSON.parse(raw) as {
+              village?: string
+              cName?: string
+              cPhone?: string
+              cRel?: EmergencyRelationship
+            })
+          : null
+        setVillage(draft?.village ?? patient.village ?? '')
+        setCName(draft?.cName ?? '')
+        setCPhone(draft?.cPhone ?? '')
+        setCRel(draft?.cRel ?? 'husband')
+      } catch {
+        setVillage(patient.village ?? '')
+        setCName('')
+        setCPhone('')
+        setCRel('husband')
+      }
       setFormErr(null)
     }
   }, [patient])
+
+  useEffect(() => {
+    if (!patient) {
+      return
+    }
+    try {
+      localStorage.setItem(
+        `${COMPLETE_PROFILE_DRAFT_PREFIX}${patient.id}`,
+        JSON.stringify({ village, cName, cPhone, cRel, savedAt: new Date().toISOString() }),
+      )
+    } catch {
+      /* private mode / quota */
+    }
+  }, [cName, cPhone, cRel, patient, village])
 
   const save = async () => {
     if (!patient) {
@@ -103,10 +135,11 @@ function CompletePatientDialog({
         complete_profile: true,
         ...(lat !== null && lng !== null ? { lat, lng } : {}),
       })
+      localStorage.removeItem(`${COMPLETE_PROFILE_DRAFT_PREFIX}${patient.id}`)
       onSaved()
       onClose()
     } catch (e) {
-      setFormErr(e instanceof Error ? e.message : t('common.error'))
+      setFormErr(`${e instanceof Error ? e.message : t('common.error')} ${t('worker.draftKept')}`)
     } finally {
       setSaving(false)
     }
@@ -162,6 +195,7 @@ function CompletePatientDialog({
                 {lat.toFixed(5)}, {lng.toFixed(5)}
               </p>
             ) : null}
+            <p className="text-muted-foreground text-xs">{t('worker.draftSaved')}</p>
             {formErr ? <p className="text-destructive text-sm">{formErr}</p> : null}
           </div>
         ) : null}
