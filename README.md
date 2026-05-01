@@ -13,7 +13,7 @@ MamaAlert is a maternal emergency alert system with a React PWA client and an Ex
 1. Install dependencies in both apps: `cd server && npm ci`, then `cd ../client && npm ci`.
 2. Create env files with `npm run env:init` in each app.
 3. Set server database/Twilio/Supabase values in `server/.env`; local SMS can use `TWILIO_MOCK=true`.
-4. Run database migrations from `server/` with `npm run db:deploy` for deployed databases or `npm run db:migrate` for local development. Production starts also run `prisma migrate deploy` before serving traffic.
+4. Run database migrations from `server/` with `npm run db:deploy` for deployed databases or `npm run db:migrate` for local development. Production starts attempt `prisma migrate deploy` before serving traffic.
 5. Start the API with `npm run dev` in `server/`, then the client with `npm run dev` in `client/`.
 
 ## Required API Environment
@@ -21,6 +21,12 @@ MamaAlert is a maternal emergency alert system with a React PWA client and an Ex
 Core values: `DATABASE_URL`, `DIRECT_DATABASE_URL`, `CLIENT_URL`, `SOS_SIGNING_SECRET`, `PORTAL_JWT_SECRET`, `ADMIN_SIGNUP_CODE`.
 
 Production also needs `SERVER_PUBLIC_URL` so Twilio signature validation and delivery callbacks use the public API URL. For real SMS, set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_NUMBER`.
+
+For Supabase on Railway, use the Supavisor pooler connection strings unless Railway has IPv6 access to the direct database host. A typical setup is:
+
+- `DATABASE_URL`: Supavisor transaction pooler string, port `6543`, with `pgbouncer=true`.
+- `DIRECT_DATABASE_URL` or `MIGRATION_DATABASE_URL`: Supavisor session pooler string, port `5432`, for Prisma migrations.
+- `REQUIRE_DB_MIGRATIONS_ON_START=true`: optional; use only when the migration database URL is known reachable and startup should fail if migrations fail.
 
 ## Twilio Webhooks
 

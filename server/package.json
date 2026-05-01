@@ -14,7 +14,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "build": "prisma generate && tsc && tsc-alias -p tsconfig.json",
-    "start": "prisma migrate deploy && node dist/index.js",
+    "start": "node scripts/start.cjs",
+    "start:strict": "node scripts/start.cjs --strict",
     "test": "vitest run"
   },
   "keywords": [],
