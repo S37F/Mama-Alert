@@ -22,6 +22,7 @@ export function volunteerFeedItemToSummary(it: VolunteerFeedItem): AlertSummary 
     patientFirstName: it.patientFirstName,
     landmark: it.landmark,
     weeksPregnant: it.weeksPregnant,
+    patientRegistrationVerified: it.patientRegistrationVerified,
     distanceKm: it.distanceKm,
     response: it.response,
   }

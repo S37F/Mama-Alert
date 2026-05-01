@@ -84,6 +84,7 @@ alertsRouter.get(
               weeksPregnant: true,
               zoneId: true,
               healthWorkerId: true,
+              registrationVerified: true,
             },
           },
         },
@@ -128,6 +129,7 @@ alertsRouter.get(
             name: p?.name ?? '',
             landmark: p?.landmark ?? null,
             weeks_pregnant: p?.weeksPregnant ?? null,
+            registration_verified: p?.registrationVerified ?? true,
           },
           responding_volunteer_name: typeof rid === 'string' && volNames[rid] ? volNames[rid] : null,
         }

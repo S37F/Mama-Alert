@@ -179,7 +179,7 @@ volunteerPortalRouter.get(
               status: true,
               triggeredAt: true,
               patient: {
-                select: { id: true, name: true, landmark: true, weeksPregnant: true },
+                select: { id: true, name: true, landmark: true, weeksPregnant: true, registrationVerified: true },
               },
             },
           },
@@ -195,6 +195,7 @@ volunteerPortalRouter.get(
         patientFirstName: string
         landmark: string | null
         weeksPregnant: number | null
+        patientRegistrationVerified: boolean
         distanceKm: number | null
       }[] = []
 
@@ -214,12 +215,14 @@ volunteerPortalRouter.get(
         let landmark: string | null = null
         let weeksPregnant: number | null = null
         let patientId: string | null = null
+        let patientRegistrationVerified = true
         if (pRaw) {
           const name = pRaw.name
           patientFirstName = name.split(/\s+/)[0] ?? name
           landmark = pRaw.landmark
           weeksPregnant = pRaw.weeksPregnant
           patientId = pRaw.id
+          patientRegistrationVerified = pRaw.registrationVerified
         }
 
         let distanceKm: number | null = null
@@ -243,6 +246,7 @@ volunteerPortalRouter.get(
           patientFirstName,
           landmark,
           weeksPregnant,
+          patientRegistrationVerified,
           distanceKm,
         })
       }

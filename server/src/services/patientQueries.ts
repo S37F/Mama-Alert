@@ -15,7 +15,8 @@ function isPatientSosRow(value: unknown): value is PatientSosRow {
     typeof o.lat === 'number' &&
     typeof o.lng === 'number' &&
     typeof o.health_worker_id === 'string' &&
-    typeof o.status_token === 'string'
+    typeof o.status_token === 'string' &&
+    typeof o.registration_verified === 'boolean'
   )
 }
 

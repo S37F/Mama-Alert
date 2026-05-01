@@ -256,6 +256,7 @@ export interface VolunteerFeedItem {
   patientFirstName: string
   landmark: string | null
   weeksPregnant: number | null
+  patientRegistrationVerified: boolean
   distanceKm: number | null
 }
 
@@ -322,6 +323,8 @@ export async function postHospitalResolve(alertId: string): Promise<void> {
 export interface FamilyStatusPayload {
   patientFirstName: string
   alertStatus: string
+  resolvedAt: string | null
+  patientArrivedAt: string | null
   volunteerFirstName: string | null
   hospitalName: string | null
 }
@@ -615,6 +618,7 @@ export interface CoordinatorAlertItem {
     name: string
     landmark: string | null
     weeks_pregnant: number | null
+    registration_verified: boolean
   }
   responding_volunteer_name: string | null
 }

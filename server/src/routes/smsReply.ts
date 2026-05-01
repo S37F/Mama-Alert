@@ -41,6 +41,17 @@ smsReplyRouter.post(
     const answer = bodyRaw.trim().toUpperCase()
     const keywords = getSmsSosKeywordSet()
 
+    if (answer === 'ARRIVED') {
+      const hospitalId = await findHospitalIdBySmsFrom(from)
+      if (hospitalId) {
+        const ok = await resolveLatestOpenAlertForHospital(hospitalId)
+        res
+          .type('text/xml')
+          .send(twimlMessage(buildHospitalArrivedAck(ok ? 'confirmed' : 'none')))
+        return
+      }
+    }
+
     const volunteer = await prisma.volunteer.findFirst({
       where: { phoneE164: from },
       select: { id: true, name: true, phone: true, language: true, zoneId: true, skills: true },
@@ -72,17 +83,6 @@ smsReplyRouter.post(
         res
           .type('text/xml')
           .send(ok ? twimlMessage(buildVolunteerDoneAck(vol.language)) : '<Response></Response>')
-        return
-      }
-    }
-
-    if (answer === 'ARRIVED') {
-      const hospitalId = await findHospitalIdBySmsFrom(from)
-      if (hospitalId) {
-        const ok = await resolveLatestOpenAlertForHospital(hospitalId)
-        res
-          .type('text/xml')
-          .send(twimlMessage(buildHospitalArrivedAck(ok ? 'confirmed' : 'none')))
         return
       }
     }

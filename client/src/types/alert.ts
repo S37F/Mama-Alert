@@ -38,6 +38,7 @@ export interface AlertSummary {
   patientFirstName: string
   landmark: string | null
   weeksPregnant: number | null
+  patientRegistrationVerified: boolean
   distanceKm: number | null
   response: string | null
 }

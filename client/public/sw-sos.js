@@ -78,10 +78,14 @@ function isSosPayload(payload) {
   }
   const token = payload.sosToken
   if (typeof token === 'string' && token.length >= 24) {
-    return true
+    return payload.incapacitationSuspected === undefined || typeof payload.incapacitationSuspected === 'boolean'
   }
   const phone = payload.phone
-  return typeof phone === 'string' && phone.length >= 8
+  return (
+    typeof phone === 'string' &&
+    phone.length >= 8 &&
+    (payload.incapacitationSuspected === undefined || typeof payload.incapacitationSuspected === 'boolean')
+  )
 }
 
 async function processPendingSOS() {
@@ -121,7 +125,13 @@ async function processPendingSOS() {
               ? { incapacitationSuspected }
               : {}),
           }
-        : { phone, triggerMethod: 'pwa' }
+        : {
+            phone,
+            triggerMethod: 'pwa',
+            ...(typeof incapacitationSuspected === 'boolean'
+              ? { incapacitationSuspected }
+              : {}),
+          }
     try {
       const res = await fetch(url, {
         method: 'POST',

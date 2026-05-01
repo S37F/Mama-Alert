@@ -28,6 +28,8 @@ statusRouter.get(
       orderBy: { triggeredAt: 'desc' },
       select: {
         status: true,
+        resolvedAt: true,
+        patientArrivedAt: true,
         respondingVolunteerId: true,
         nearestHospitalId: true,
       },
@@ -38,9 +40,13 @@ statusRouter.get(
     let volunteerFirstName: string | null = null
     let hospitalName: string | null = null
     let alertStatus = 'none'
+    let resolvedAt: string | null = null
+    let patientArrivedAt: string | null = null
 
     if (latest) {
       alertStatus = latest.status
+      resolvedAt = latest.resolvedAt?.toISOString() ?? null
+      patientArrivedAt = latest.patientArrivedAt?.toISOString() ?? null
       if (latest.respondingVolunteerId) {
         const v = await prisma.volunteer.findUnique({
           where: { id: latest.respondingVolunteerId },
@@ -61,6 +67,8 @@ statusRouter.get(
     res.json({
       patientFirstName: firstName,
       alertStatus,
+      resolvedAt,
+      patientArrivedAt,
       volunteerFirstName,
       hospitalName,
     })

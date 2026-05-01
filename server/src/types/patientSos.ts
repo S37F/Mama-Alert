@@ -17,4 +17,5 @@ export interface PatientSosRow {
   risk_flags?: string[] | null
   weeks_pregnant?: number | null
   preferred_hospital_id?: string | null
+  registration_verified: boolean
 }

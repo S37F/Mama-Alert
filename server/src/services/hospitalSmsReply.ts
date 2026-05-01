@@ -27,52 +27,70 @@ export async function findHospitalIdBySmsFrom(fromRaw: string): Promise<string |
 
 /** Resolves the latest open alert for this hospital (SMS ARRIVED); notifies family + sets patient_arrived_at. */
 export async function resolveLatestOpenAlertForHospital(hospitalId: string): Promise<boolean> {
-  const alert = await prisma.alert.findFirst({
-    where: {
-      nearestHospitalId: hospitalId,
-      status: { in: ['active', 'volunteer_responding', 'at_facility'] },
-    },
-    orderBy: { triggeredAt: 'desc' },
-    include: {
-      patient: {
-        select: {
-          name: true,
-          language: true,
-          statusToken: true,
-          emergencyContacts: true,
-        },
-      },
-      nearestHospital: { select: { name: true } },
-    },
-  })
-
-  if (!alert?.patient) {
-    return false
-  }
-
+  const openStatuses = ['active', 'volunteer_responding', 'at_facility']
   const now = new Date()
-  const patient = alert.patient
-  const firstName = patient.name.split(/\s+/)[0] ?? patient.name
-  const hospitalName = alert.nearestHospital?.name ?? 'clinic'
-  const token = patient.statusToken
-  const lang = patient.language ?? 'en'
+  const resolved = await prisma.$transaction(async (tx) => {
+    const alert = await tx.alert.findFirst({
+      where: {
+        nearestHospitalId: hospitalId,
+        status: { in: openStatuses },
+      },
+      orderBy: { triggeredAt: 'desc' },
+      include: {
+        patient: {
+          select: {
+            name: true,
+            language: true,
+            statusToken: true,
+            emergencyContacts: true,
+          },
+        },
+        nearestHospital: { select: { name: true } },
+      },
+    })
 
-  await prisma.$transaction([
-    prisma.alert.update({
-      where: { id: alert.id },
+    if (!alert?.patient) {
+      return null
+    }
+
+    const updated = await tx.alert.updateMany({
+      where: { id: alert.id, status: { in: openStatuses } },
       data: { status: 'resolved', resolvedAt: now, patientArrivedAt: now },
-    }),
-    prisma.hospitalAlertAck.create({
+    })
+    if (updated.count === 0) {
+      return null
+    }
+
+    await tx.hospitalAlertAck.create({
       data: {
         alertId: alert.id,
         hospitalId,
         ackType: 'arrived_sms',
       },
-    }),
-  ])
+    })
 
-  const phones = extractFamilyPhones(patient.emergencyContacts)
-  const famMsg = buildFamilyPatientArrivedSms(firstName, hospitalName, token, lang)
+    return {
+      alertId: alert.id,
+      patientName: alert.patient.name,
+      patientLanguage: alert.patient.language ?? 'en',
+      patientStatusToken: alert.patient.statusToken,
+      patientEmergencyContacts: alert.patient.emergencyContacts,
+      hospitalName: alert.nearestHospital?.name ?? 'clinic',
+    }
+  })
+
+  if (!resolved) {
+    return false
+  }
+
+  const firstName = resolved.patientName.split(/\s+/)[0] ?? resolved.patientName
+  const phones = extractFamilyPhones(resolved.patientEmergencyContacts)
+  const famMsg = buildFamilyPatientArrivedSms(
+    firstName,
+    resolved.hospitalName,
+    resolved.patientStatusToken,
+    resolved.patientLanguage,
+  )
   for (const ph of phones) {
     try {
       await sendSmsMultipart(ph, famMsg)
@@ -81,6 +99,6 @@ export async function resolveLatestOpenAlertForHospital(hospitalId: string): Pro
     }
   }
 
-  logAudit('hospital_arrived_sms', { hospitalId, alertId: alert.id })
+  logAudit('hospital_arrived_sms', { hospitalId, alertId: resolved.alertId })
   return true
 }

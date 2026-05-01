@@ -31,6 +31,9 @@ export async function triggerSosFromPatientRow(
   incapacitationSuspected?: boolean,
 ): Promise<TriggerSosResult> {
   const patient = patientSosRowToPatient(row)
+  if (!row.registration_verified) {
+    logWarn('sos: unverified patient allowed to trigger SOS', { patientId: row.id, triggerMethod })
+  }
 
   const incapacitation =
     Boolean(incapacitationSuspected) || triggerMethod === 'ussd'
@@ -63,40 +66,18 @@ export async function triggerSosFromPatientRow(
     throw new Error('Alert insert returned no id')
   }
 
-  const inserted = await prisma.alert.findUnique({
-    where: { id: alertId },
-    select: {
-      id: true,
-      patientId: true,
-      status: true,
-      priority: true,
-      triggeredAt: true,
-      resolvedAt: true,
-      respondingVolunteerId: true,
-      volunteerConfirmedAt: true,
-      nearestHospitalId: true,
-      waveNumber: true,
-      incapacitationSuspected: true,
-    },
-  })
-
-  if (!inserted) {
-    logError('sos: fetch alert after insert failed', { patientId: row.id })
-    throw new Error('Alert fetch failed')
-  }
-
   const alertRow: Alert = {
-    id: inserted.id,
-    patient_id: inserted.patientId,
-    status: inserted.status as Alert['status'],
-    priority: inserted.priority as Alert['priority'],
-    triggered_at: inserted.triggeredAt.toISOString(),
-    resolved_at: inserted.resolvedAt?.toISOString() ?? null,
-    responding_volunteer_id: inserted.respondingVolunteerId,
-    volunteer_confirmed_at: inserted.volunteerConfirmedAt?.toISOString() ?? null,
-    nearest_hospital_id: inserted.nearestHospitalId,
-    wave_number: inserted.waveNumber,
-    incapacitation_suspected: Boolean(inserted.incapacitationSuspected),
+    id: alertId,
+    patient_id: row.id,
+    status: 'active',
+    priority: 1,
+    triggered_at: new Date().toISOString(),
+    resolved_at: null,
+    responding_volunteer_id: null,
+    volunteer_confirmed_at: null,
+    nearest_hospital_id: null,
+    wave_number: 1,
+    incapacitation_suspected: incapacitation,
   }
 
   let volunteers = await getNearbyVolunteers(row.lat, row.lng, 5000)

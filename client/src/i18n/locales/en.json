@@ -94,6 +94,7 @@
     "pastAlerts": "Past alerts",
     "watching": "Watching for alerts...",
     "directionsSent": "Directions sent to your phone.",
+    "profilePending": "Profile pending",
     "enterPhone": "Enter the phone number you registered with.",
     "savePhone": "Save and continue",
     "phoneLabel": "Your volunteer phone"
@@ -218,6 +219,7 @@
     "completeProfileTitle": "Finish patient profile",
     "completeProfileDesc": "Add village, at least one emergency contact, and optionally update map location.",
     "saveProfile": "Save and mark verified",
+    "profilePending": "Profile pending",
     "phoneCol": "Phone"
   },
   "admin": {

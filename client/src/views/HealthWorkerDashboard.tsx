@@ -26,6 +26,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { NetworkOfflineBanner } from '@/components/NetworkOfflineBanner'
 import { useAuth } from '@/hooks/useAuth'
+import { useAlertsRealtimeRefresh } from '@/hooks/useAlertsRealtimeRefresh'
 import { useZoneId } from '@/hooks/useZoneId'
 import { useGeolocation } from '@/hooks/useGeolocation'
 import {
@@ -218,6 +219,8 @@ export function HealthWorkerDashboard() {
     }
   }, [])
 
+  useAlertsRealtimeRefresh(tab === 'overview', zoneId, refreshCoordinatorAlerts)
+
   useEffect(() => {
     void load()
   }, [load])
@@ -274,7 +277,12 @@ export function HealthWorkerDashboard() {
                       className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm"
                     >
                       <span className="font-medium">{a.patient.name}</span>
-                      <Badge variant="outline">{a.status}</Badge>
+                      <div className="flex items-center gap-2">
+                        {!a.patient.registration_verified ? (
+                          <Badge variant="secondary">{t('worker.profilePending')}</Badge>
+                        ) : null}
+                        <Badge variant="outline">{a.status}</Badge>
+                      </div>
                       <span className="text-muted-foreground">
                         {a.responding_volunteer_name ?? a.patient.landmark ?? '—'}
                       </span>

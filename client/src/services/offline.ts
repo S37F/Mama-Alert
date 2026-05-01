@@ -1,4 +1,5 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
+import type { SosPayload } from '@/types/api'
 
 const DB_NAME = 'mamaalert-offline'
 const STORE = 'pending_alerts'
@@ -8,7 +9,7 @@ const DB_VERSION = 2
 interface MamaAlertDB extends DBSchema {
   [STORE]: {
     key: string
-    value: { id: string; payload: unknown; createdAt: string }
+    value: { id: string; payload: SosPayload; createdAt: string }
   }
   [META_STORE]: {
     key: string
@@ -41,7 +42,7 @@ export async function setOfflineApiBase(url: string): Promise<void> {
   await db.put(META_STORE, { id: 'apiBase', value: trimmed })
 }
 
-export async function queueOfflineAlert(payload: unknown): Promise<string> {
+export async function queueOfflineAlert(payload: SosPayload): Promise<string> {
   const base = typeof import.meta.env.VITE_API_URL === 'string' ? import.meta.env.VITE_API_URL : ''
   if (base.length > 0) {
     await setOfflineApiBase(base)
@@ -58,7 +59,7 @@ export async function queueOfflineAlert(payload: unknown): Promise<string> {
 }
 
 export async function listPendingAlerts(): Promise<
-  { id: string; payload: unknown; createdAt: string }[]
+  { id: string; payload: SosPayload; createdAt: string }[]
 > {
   const db = await getDb()
   return db.getAll(STORE)

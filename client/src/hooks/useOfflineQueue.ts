@@ -12,7 +12,14 @@ function isSosPayload(value: unknown): value is SosPayload {
     return false
   }
   const o = value as Record<string, unknown>
-  return typeof o.sosToken === 'string' && o.sosToken.length >= 24 && o.triggerMethod === 'pwa'
+  if (o.triggerMethod !== 'pwa') {
+    return false
+  }
+  const hasToken = typeof o.sosToken === 'string' && o.sosToken.length >= 24
+  const hasPhone = typeof o.phone === 'string' && o.phone.length >= 8
+  const hasValidIncapacitation =
+    o.incapacitationSuspected === undefined || typeof o.incapacitationSuspected === 'boolean'
+  return (hasToken || hasPhone) && hasValidIncapacitation
 }
 
 function toPendingAlerts(

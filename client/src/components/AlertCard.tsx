@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from '@/components/StatusBadge'
 import type { AlertSummary } from '@/types/alert'
 
@@ -33,7 +34,12 @@ export function AlertCard({
     <Card>
       <CardHeader className="pb-2">
         <div className="flex flex-row items-start justify-between gap-2">
-          <CardTitle className="text-lg font-semibold">{alert.patientFirstName}</CardTitle>
+          <div className="min-w-0 space-y-1">
+            <CardTitle className="text-lg font-semibold">{alert.patientFirstName}</CardTitle>
+            {!alert.patientRegistrationVerified ? (
+              <Badge variant="secondary">{t('volunteer.profilePending')}</Badge>
+            ) : null}
+          </div>
           <StatusBadge status={alert.status} />
         </div>
         <p className="text-muted-foreground text-sm">
