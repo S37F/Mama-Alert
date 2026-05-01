@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken'
 import type { SessionRole } from '@/lib/mamaAuth'
 
 function sessionSecret(): string {
-  const s = process.env.AUTH_SESSION_JWT_SECRET ?? process.env.PORTAL_JWT_SECRET
+  const s = process.env.AUTH_SESSION_JWT_SECRET?.trim() || process.env.PORTAL_JWT_SECRET?.trim()
   if (!s || s.length < 16) {
     throw new Error('AUTH_SESSION_JWT_SECRET or PORTAL_JWT_SECRET must be set (min 16 chars)')
   }
