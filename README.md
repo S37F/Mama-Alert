@@ -6,14 +6,14 @@ MamaAlert is a maternal emergency alert system with a React PWA client and an Ex
 
 - `client/` - React, Vite, Tailwind, PWA service worker, i18n locale files.
 - `server/` - Express API, Prisma schema/migrations, Twilio webhooks, delayed jobs.
-- `render.yaml` - Render web service deployment for the API.
+- `render.yaml` - Render web service deployment for the API. Railway/Procfile deployments run the same API start command from `server/`.
 
 ## Local Setup
 
 1. Install dependencies in both apps: `cd server && npm ci`, then `cd ../client && npm ci`.
 2. Create env files with `npm run env:init` in each app.
 3. Set server database/Twilio/Supabase values in `server/.env`; local SMS can use `TWILIO_MOCK=true`.
-4. Run database migrations from `server/` with `npm run db:deploy` for deployed databases or `npm run db:migrate` for local development.
+4. Run database migrations from `server/` with `npm run db:deploy` for deployed databases or `npm run db:migrate` for local development. Production starts also run `prisma migrate deploy` before serving traffic.
 5. Start the API with `npm run dev` in `server/`, then the client with `npm run dev` in `client/`.
 
 ## Required API Environment

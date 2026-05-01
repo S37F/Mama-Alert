@@ -28,6 +28,7 @@ export async function insertPatientWithLocation(input: {
 }): Promise<{ id: string; status_token: string }> {
   const registrationVerified = input.registrationVerified ?? true
   const registrationSource = input.registrationSource ?? 'health_worker'
+  const emergencyContactsJson = JSON.stringify(input.emergencyContacts)
   const rows = await prisma.$queryRaw<{ id: string; status_token: string }[]>`
     INSERT INTO public.patients (
       health_worker_id,
@@ -72,7 +73,7 @@ export async function insertPatientWithLocation(input: {
       ${input.language},
       ${input.riskFlags}::text[],
       ${input.medicationName},
-      ${input.emergencyContacts}::jsonb,
+      ${emergencyContactsJson}::jsonb,
       ${registrationVerified}::boolean,
       ${registrationSource}
     )
