@@ -2,6 +2,26 @@
 
 MamaAlert is a maternal emergency alert system with a React PWA client and an Express/Prisma API. It supports patient SOS alerts, SMS/USSD replies, volunteer dispatch, hospital pre-alerts, family status pages, health-worker registration, and zone administration.
 
+## Screenshots
+
+Captured from the live PWA — same alert, three points of view.
+
+### Patient
+
+| Sending alert | Help is coming |
+| --- | --- |
+| ![Patient sending alert](docs/screenshots/patient-sending.jpeg) | ![Patient — help is coming](docs/screenshots/patient-help-coming.jpeg) |
+
+### Volunteer
+
+| Active alert | After responding |
+| --- | --- |
+| ![Volunteer active alert](docs/screenshots/volunteer-active-alert.jpeg) | ![Volunteer responding](docs/screenshots/volunteer-responding.jpeg) |
+
+### Clinic
+
+![Clinic incoming alert inbox](docs/screenshots/clinic-inbox.jpeg)
+
 ## Project Layout
 
 - `client/` - React, Vite, Tailwind, PWA service worker, i18n locale files.
