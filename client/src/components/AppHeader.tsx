@@ -27,7 +27,7 @@ export function AppHeader() {
         </Link>
 
         <nav className="flex shrink-0 items-center gap-2" aria-label="App">
-          <Link to="/sos" className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'inline-flex shrink-0')}>
+          <Link to="/sos/register" className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'inline-flex shrink-0')}>
             SOS
           </Link>
           <Link to="/signup" className={cn(buttonVariants({ size: 'sm' }), pathname === '/signup' && 'hidden')}>

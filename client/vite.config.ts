@@ -20,7 +20,7 @@ export default defineConfig({
         background_color: '#FDFAF6',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/sos',
+        start_url: '/sos/register',
         scope: '/sos',
         id: '/sos',
         icons: [

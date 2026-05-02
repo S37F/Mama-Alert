@@ -40,7 +40,7 @@ export function usePWAInstall() {
   const install = useCallback(async () => {
     const ev = getInstallPrompt()
     if (!ev) {
-      window.location.assign(isInstalled ? '/sos' : '/signup')
+      window.location.assign(isInstalled ? '/sos/register' : '/signup')
       return
     }
     setIsInstalling(true)

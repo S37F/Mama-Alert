@@ -26,30 +26,32 @@
     "helpHow": "Como funciona",
     "howItWorks": "Tap SOS once to send an emergency alert. If network is weak, your alert is saved and sent automatically when signal returns.",
     "access": {
-      "intro": "Sign in with the phone number on your record, register yourself if your program allows it, or open the SOS link your health worker sent you.",
+      "intro": "Entre com o seu telefone, ou registe-se se for novo.",
       "signInPhone": "Entrar com número de telefone",
       "selfRegister": "Registar-me",
-      "haveLink": "Tem um link? Abra-o neste dispositivo. Ele contém um token privado. Também pode pedir ao profissional de saúde para reenviar.",
-      "phoneHelp": "Use the same number you gave when you registered (include country code, e.g. {{dialCode}}). Tap continue to sign in.",
-      "continue": "Continue",
+      "tryDemo": "Experimentar Demo",
+      "demoHint": "Veja como funciona sem se registar.",
+      "alreadyRegistered": "Já registado? Entre com o seu número de telefone.",
+      "phoneHelp": "Use o mesmo número que deu no registo (com indicativo, ex. {{dialCode}}). Toque em continuar.",
+      "continue": "Continuar",
       "sendCode": "Enviar código",
       "codeLabel": "Código do SMS",
       "verify": "Verificar e continuar",
-      "useDifferentNumber": "Use a different number",
+      "useDifferentNumber": "Usar outro número",
       "back": "Voltar",
       "phoneInvalid": "Introduza um número válido com indicativo do país.",
       "codeInvalid": "Introduza o código do SMS.",
-      "sendCodeFailed": "Could not send the code. Try again later.",
-      "verifyFailed": "Invalid or expired code. Request a new code and try again."
+      "sendCodeFailed": "Não foi possível enviar o código. Tente mais tarde.",
+      "verifyFailed": "Código inválido ou expirado. Peça um novo código."
     },
     "shortLink": {
-      "title": "Use your full SOS link or sign in",
-      "body": "This page only has your phone number. Sign in with that number to unlock your secure SOS token, or ask your health worker to resend the complete link.",
-      "signInCta": "Sign in with this phone number"
+      "title": "Entre para continuar",
+      "body": "Entre com o seu número de telefone registado para aceder ao seu botão SOS.",
+      "signInCta": "Entrar com este número"
     },
     "selfReg": {
       "title": "Auto-registo",
-      "subtitle": "If your area allows it, you can enroll without a link from a health worker. One trusted contact will get the read-only status link by SMS when enabled on the server.",
+      "subtitle": "Registe-se para obter o seu botão SOS pessoal. Um contacto de confiança receberá o link de estado por SMS se ativado.",
       "back": "Voltar ao SOS",
       "zoneLabel": "Your area / program",
       "zonePlaceholder": "Choose your area",

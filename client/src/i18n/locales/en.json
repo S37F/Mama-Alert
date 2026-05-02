@@ -26,10 +26,12 @@
     "helpHow": "How it works",
     "howItWorks": "Tap SOS once to send an emergency alert. If network is weak, your alert is saved and sent automatically when signal returns.",
     "access": {
-      "intro": "Sign in with the phone number on your record, register yourself if your program allows it, or open the SOS link your health worker sent you.",
+      "intro": "Sign in with your phone number, or register yourself if you're new.",
       "signInPhone": "Sign in with phone number",
       "selfRegister": "Register myself",
-      "haveLink": "Have a link? Open it on this device — it contains a private token. You can also ask your health worker to resend it.",
+      "tryDemo": "Try Demo",
+      "demoHint": "See how it works without registering.",
+      "alreadyRegistered": "Already registered? Sign in with your phone number.",
       "phoneHelp": "Use the same number you gave when you registered (include country code, e.g. {{dialCode}}). Tap continue to sign in.",
       "continue": "Continue",
       "sendCode": "Send code",
@@ -43,13 +45,13 @@
       "verifyFailed": "Invalid or expired code. Request a new code and try again."
     },
     "shortLink": {
-      "title": "Use your full SOS link or sign in",
-      "body": "This page only has your phone number. Sign in with that number to unlock your secure SOS token, or ask your health worker to resend the complete link.",
+      "title": "Sign in to continue",
+      "body": "Sign in with your registered phone number to access your SOS button.",
       "signInCta": "Sign in with this phone number"
     },
     "selfReg": {
       "title": "Self-registration",
-      "subtitle": "If your area allows it, you can enroll without a link from a health worker. One trusted contact will get the read-only status link by SMS when enabled on the server.",
+      "subtitle": "Register yourself to get your personal SOS button. One trusted contact will get the read-only status link by SMS when enabled on the server.",
       "back": "Back to SOS",
       "zoneLabel": "Your area / program",
       "zonePlaceholder": "Choose your area",

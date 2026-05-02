@@ -26,10 +26,12 @@
     "helpHow": "Jinsi inavyofanya kazi",
     "howItWorks": "Bonyeza SOS mara moja kutuma tahadhari ya dharura. Mtandao ukiwa dhaifu, tahadhari huhifadhiwa na kutumwa ishara ikirudi.",
     "access": {
-      "intro": "Ingia kwa nambari ya simu iliyo kwenye rekodi yako, jisajili ikiwa programu yako inaruhusu, au fungua kiungo cha SOS kutoka kwa mhudumu wako wa afya.",
+      "intro": "Ingia kwa nambari yako ya simu, au jisajili ukiwa mpya.",
       "signInPhone": "Ingia kwa nambari ya simu",
       "selfRegister": "Nijisajili",
-      "haveLink": "Una kiungo? Kifungue kwenye kifaa hiki. Kina tokeni ya siri. Unaweza pia kumuomba mhudumu wa afya akutumie tena.",
+      "tryDemo": "Jaribu Demo",
+      "demoHint": "Ona jinsi inavyofanya kazi bila kusajili.",
+      "alreadyRegistered": "Umesajiliwa tayari? Ingia kwa nambari yako ya simu.",
       "phoneHelp": "Tumia nambari uliyotoa wakati wa usajili, pamoja na msimbo wa nchi (mfano {{dialCode}}). Gusa endelea kuingia.",
       "continue": "Endelea",
       "sendCode": "Tuma msimbo",
@@ -43,13 +45,13 @@
       "verifyFailed": "Msimbo si sahihi au umeisha muda. Omba msimbo mpya na ujaribu tena."
     },
     "shortLink": {
-      "title": "Tumia kiungo kamili cha SOS au ingia",
-      "body": "Ukurasa huu una nambari yako ya simu tu. Ingia kwa nambari hiyo ili kufungua tokeni yako ya SOS, au mwombe mhudumu akutumie kiungo kamili tena.",
+      "title": "Ingia ili kuendelea",
+      "body": "Ingia kwa nambari yako ya simu uliyosajili ili kufikia kitufe chako cha SOS.",
       "signInCta": "Ingia kwa nambari hii"
     },
     "selfReg": {
       "title": "Kujisajili",
-      "subtitle": "Ikiwa eneo lako linaruhusu, unaweza kujiandikisha bila kiungo kutoka kwa mhudumu wa afya.",
+      "subtitle": "Jisajili ili kupata kitufe chako cha SOS. Mtu wa kuaminika atapokea kiungo cha hali kwa SMS ikiwa imewezeshwa.",
       "back": "Rudi SOS",
       "zoneLabel": "Eneo/programu yako",
       "zonePlaceholder": "Chagua eneo lako",

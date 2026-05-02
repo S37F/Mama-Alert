@@ -544,9 +544,6 @@ export function PatientSOS() {
                     {t('sos.access.selfRegister')}
                   </Link>
                 </div>
-                <p className="text-muted-foreground border-t border-border pt-3 text-center text-xs">
-                  {t('sos.access.haveLink')}
-                </p>
               </div>
             ) : (
               <div className="mama-panel-compact w-full max-w-sm space-y-4 p-4">
@@ -562,9 +559,15 @@ export function PatientSOS() {
                     {t('sos.access.selfRegister')}
                   </Link>
                 </div>
-                <p className="text-muted-foreground border-t border-border pt-3 text-center text-xs">
-                  {t('sos.access.haveLink')}
-                </p>
+                <div className="border-t border-border pt-3 text-center">
+                  <Link
+                    to="/demo"
+                    className="text-sm text-primary underline-offset-2 hover:underline"
+                  >
+                    {t('sos.access.tryDemo')}
+                  </Link>
+                  <p className="text-muted-foreground mt-1 text-xs">{t('sos.access.demoHint')}</p>
+                </div>
               </div>
             )
           ) : (

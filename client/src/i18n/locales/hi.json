@@ -26,16 +26,18 @@
     "helpHow": "यह कैसे काम करता है",
     "howItWorks": "Tap SOS once to send an emergency alert. If network is weak, your alert is saved and sent automatically when signal returns.",
     "access": {
-      "intro": "Sign in with the phone number on your record, register yourself if your program allows it, or open the SOS link your health worker sent you.",
+      "intro": "अपने फोन नंबर से साइन इन करें, या नए हैं तो खुद पंजीकरण करें.",
       "signInPhone": "फोन नंबर से साइन इन करें",
       "selfRegister": "खुद पंजीकरण करें",
-      "haveLink": "लिंक है? इसे इस डिवाइस पर खोलें. इसमें आपका निजी टोकन है. आप अपने हेल्थ वर्कर से इसे फिर भेजने को कह सकते हैं.",
-      "phoneHelp": "Use the same number you gave when you registered (include country code, e.g. {{dialCode}}). Tap continue to sign in.",
-      "continue": "Continue",
+      "tryDemo": "डेमो देखें",
+      "demoHint": "बिना पंजीकरण के देखें कैसे काम करता है.",
+      "alreadyRegistered": "पहले से पंजीकृत? अपने फोन नंबर से साइन इन करें.",
+      "phoneHelp": "पंजीकरण के समय दिया गया नंबर डालें (देश कोड सहित, जैसे {{dialCode}}). जारी रखें पर टैप करें.",
+      "continue": "जारी रखें",
       "sendCode": "कोड भेजें",
       "codeLabel": "SMS से आया कोड",
       "verify": "सत्यापित करें और जारी रखें",
-      "useDifferentNumber": "Use a different number",
+      "useDifferentNumber": "दूसरा नंबर इस्तेमाल करें",
       "back": "वापस",
       "phoneInvalid": "देश कोड के साथ सही फोन नंबर डालें.",
       "codeInvalid": "SMS का कोड डालें.",
@@ -43,13 +45,13 @@
       "verifyFailed": "कोड गलत या समाप्त है. नया कोड मांगें और फिर कोशिश करें."
     },
     "shortLink": {
-      "title": "Use your full SOS link or sign in",
-      "body": "This page only has your phone number. Sign in with that number to unlock your secure SOS token, or ask your health worker to resend the complete link.",
-      "signInCta": "Sign in with this phone number"
+      "title": "जारी रखने के लिए साइन इन करें",
+      "body": "अपने SOS बटन तक पहुँचने के लिए अपने पंजीकृत फोन नंबर से साइन इन करें.",
+      "signInCta": "इस फोन नंबर से साइन इन करें"
     },
     "selfReg": {
       "title": "स्व-पंजीकरण",
-      "subtitle": "If your area allows it, you can enroll without a link from a health worker. One trusted contact will get the read-only status link by SMS when enabled on the server.",
+      "subtitle": "अपना व्यक्तिगत SOS बटन पाने के लिए खुद पंजीकरण करें. सर्वर सक्षम होने पर एक भरोसेमंद संपर्क को SMS द्वारा स्थिति लिंक मिलेगा.",
       "back": "SOS पर वापस",
       "zoneLabel": "आपका क्षेत्र / प्रोग्राम",
       "zonePlaceholder": "Choose your area",
