@@ -3,12 +3,10 @@ import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
 import {
   type AuthSessionResponse,
-  createHealthWorkerAccount,
   ensureAssignableHealthWorkerId,
   isPhoneRegistered,
   lookupSessionByPhone,
   resolveCommunityZoneId,
-  resolveOrCreateZone,
   resolveSignupCoordinates,
 } from '@/lib/mamaAuth'
 import { clearAuthCookies, setMamaSessionCookie, setVolunteerPortalCookie } from '@/lib/httpCookies'
@@ -42,39 +40,14 @@ const volunteerSignupSchema = z.object({
   lng: z.number().min(-180).max(180).optional(),
 })
 
-const healthWorkerSignupSchema = z.object({
-  role: z.literal('health_worker'),
-  name: z.string().min(2),
-  phone: z.string().min(10),
-  roleTitle: z.string().min(2),
-  organisation: z.string().min(2),
-  zone: z.string().min(2),
-  accessCode: z.string().min(1),
-})
-
-const adminSignupSchema = z.object({
-  role: z.literal('admin'),
-  name: z.string().min(2),
-  phone: z.string().min(10),
-  organisation: z.string().min(2),
-  zone: z.string().min(2),
-  adminCode: z.string().min(1),
-})
-
 const signupSchema = z.discriminatedUnion('role', [
   patientSignupSchema,
   volunteerSignupSchema,
-  healthWorkerSignupSchema,
-  adminSignupSchema,
 ])
 
 const loginSchema = z.object({
   phone: z.string().min(10),
 })
-
-function healthWorkerSignupCode(): string {
-  return (process.env.HEALTH_WORKER_SIGNUP_CODE?.trim() || process.env.ADMIN_SIGNUP_CODE?.trim() || '')
-}
 
 function setAuthCookiesForSession(res: import('express').Response, session: AuthSessionResponse): void {
   setMamaSessionCookie(res, session.sessionToken)
@@ -181,62 +154,7 @@ authRouter.post(
       return
     }
 
-    if (body.role === 'health_worker') {
-      const expected = healthWorkerSignupCode()
-      if (!expected) {
-        throw Object.assign(new Error('Missing HEALTH_WORKER_SIGNUP_CODE or ADMIN_SIGNUP_CODE'), { statusCode: 500 })
-      }
-      if (body.accessCode.trim() !== expected) {
-        res.status(403).json({ error: 'Invalid access code' })
-        return
-      }
-
-      const zone = await resolveOrCreateZone(body.zone, body.organisation)
-      const session = await createHealthWorkerAccount({
-        name: body.name.trim(),
-        phone: body.phone.trim(),
-        zoneId: zone.id,
-        accessLevel: 'health_worker',
-        organisation: body.organisation.trim(),
-        roleTitle: body.roleTitle.trim(),
-      })
-      setAuthCookiesForSession(res, session)
-      res.status(201).json({
-        success: true,
-        role: 'health_worker',
-        name: body.name.trim(),
-        profileId: session.profileId,
-        session,
-      })
-      return
-    }
-
-    const adminCode = process.env.ADMIN_SIGNUP_CODE?.trim()
-    if (!adminCode) {
-      throw new Error('Missing ADMIN_SIGNUP_CODE - admin sign-up will be disabled.')
-    }
-    if (body.adminCode.trim() !== adminCode) {
-      res.status(403).json({ error: 'Invalid access code' })
-      return
-    }
-
-    const zone = await resolveOrCreateZone(body.zone, body.organisation)
-    const session = await createHealthWorkerAccount({
-      name: body.name.trim(),
-      phone: body.phone.trim(),
-      zoneId: zone.id,
-      accessLevel: 'admin',
-      organisation: body.organisation.trim(),
-      roleTitle: 'Administrator',
-    })
-    setAuthCookiesForSession(res, session)
-    res.status(201).json({
-      success: true,
-      role: 'admin',
-      name: body.name.trim(),
-      profileId: session.profileId,
-      session,
-    })
+    res.status(400).json({ error: 'Invalid role' })
   }),
 )
 

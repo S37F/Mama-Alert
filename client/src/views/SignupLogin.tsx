@@ -3,15 +3,13 @@ import { useSearchParams } from 'react-router-dom'
 import { BrandLogo } from '@/components/BrandLogo'
 import { useAuth } from '@/hooks/useAuth'
 import { redirectForRole, type MamaAlertRole } from '@/lib/mamaSession'
-import { AdminSignupForm } from '@/views/signup/AdminSignupForm'
-import { HealthWorkerSignupForm } from '@/views/signup/HealthWorkerSignupForm'
 import { LoginForm } from '@/views/signup/LoginForm'
 import { PatientSignupForm } from '@/views/signup/PatientSignupForm'
 import { RolePicker } from '@/views/signup/RolePicker'
 import { VolunteerSignupForm } from '@/views/signup/VolunteerSignupForm'
 
 type AuthMode = 'signup' | 'login'
-const SIGNUP_ROLES: MamaAlertRole[] = ['patient', 'volunteer', 'health_worker', 'admin']
+const SIGNUP_ROLES: MamaAlertRole[] = ['patient', 'volunteer']
 
 export function SignupLogin() {
   const { session } = useAuth()
@@ -70,12 +68,6 @@ export function SignupLogin() {
     if (selectedRole === 'volunteer') {
       return <VolunteerSignupForm onBack={backToRolePicker} />
     }
-    if (selectedRole === 'health_worker') {
-      return <HealthWorkerSignupForm onBack={backToRolePicker} />
-    }
-    if (selectedRole === 'admin') {
-      return <AdminSignupForm onBack={backToRolePicker} />
-    }
     return null
   }
 
@@ -99,7 +91,7 @@ export function SignupLogin() {
                 </h1>
                 <p className="max-w-md text-base leading-7 text-[var(--mama-sand-dark)]">
                   Sign up or log in with a phone number, then go straight where you need to be. Patients reach SOS.
-                  Volunteers see live alerts. Workers and admins land in their dashboards.
+                  Volunteers see live alerts. Clinics use their portal token.
                 </p>
               </div>
             </div>

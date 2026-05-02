@@ -18,10 +18,6 @@ const SignupLogin = lazy(() =>
 const VolunteerDashboard = lazy(() =>
   import('@/views/VolunteerDashboard').then((m) => ({ default: m.VolunteerDashboard })),
 )
-const HealthWorkerDashboard = lazy(() =>
-  import('@/views/HealthWorkerDashboard').then((m) => ({ default: m.HealthWorkerDashboard })),
-)
-const AdminZone = lazy(() => import('@/views/AdminZone').then((m) => ({ default: m.AdminZone })))
 const DemoFlow = lazy(() => import('@/views/DemoFlow').then((m) => ({ default: m.DemoFlow })))
 const FamilyStatus = lazy(() =>
   import('@/views/FamilyStatus').then((m) => ({ default: m.FamilyStatus })),
@@ -67,24 +63,6 @@ export function App() {
             }
           />
           <Route path="/hospital" element={<HospitalInbox />} />
-          <Route
-            path="/register"
-            element={
-              <ProtectedRoute role="health_worker">
-                <HealthWorkerDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/worker" element={<Navigate to="/register" replace />} />
-          <Route path="/dashboard" element={<Navigate to="/register" replace />} />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute role="admin">
-                <AdminZone />
-              </ProtectedRoute>
-            }
-          />
           <Route path="/demo" element={<DemoFlow />} />
           <Route path="/status/:token" element={<FamilyStatus />} />
 

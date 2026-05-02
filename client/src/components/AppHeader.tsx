@@ -6,8 +6,7 @@ import { cn } from '@/lib/utils'
 const routeLabels: Record<string, string> = {
   '/signup': 'Access',
   '/volunteer': 'Volunteer',
-  '/register': 'Health worker',
-  '/admin': 'Admin',
+  '/hospital': 'Clinic',
   '/demo': 'Demo',
 }
 

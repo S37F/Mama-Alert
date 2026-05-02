@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { Building2, HeartPulse, Link2, Radio, Shield, Stethoscope } from 'lucide-react'
+import { Building2, HeartPulse, Radio } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { fadeUpVariants, useScrollReveal } from '@/landing/hooks/useScrollReveal'
@@ -8,10 +8,7 @@ import { fadeUpVariants, useScrollReveal } from '@/landing/hooks/useScrollReveal
 const ROLE_TARGETS = {
   patient: 'role-card-patient',
   volunteer: 'role-card-volunteer',
-  hospital: 'role-card-hospital',
-  worker: 'role-card-worker',
-  family: 'role-card-family',
-  admin: 'role-card-admin',
+  clinic: 'role-card-clinic',
 } as const
 
 type RoleKey = keyof typeof ROLE_TARGETS
@@ -19,10 +16,7 @@ type RoleKey = keyof typeof ROLE_TARGETS
 const ROLE_TAB_LABEL: Record<RoleKey, string> = {
   patient: 'Patient',
   volunteer: 'Volunteer',
-  hospital: 'Hospital',
-  worker: 'Worker',
-  family: 'Family',
-  admin: 'Admin',
+  clinic: 'Clinic',
 }
 
 type CardAction = { to: string; label: string; variant: 'terra' | 'ghost' }
@@ -53,48 +47,21 @@ function buildRoleCards(): RoleCardDef[] {
   },
   {
     roleKey: 'volunteer',
-    title: 'Community volunteer',
+    title: 'Community Volunteer',
     badge: 'Phone ID',
     Icon: Radio,
     body: 'A live feed of nearby maternal emergencies. Tap YES or NO to respond; when you are needed, directions land on your phone.',
-    actions: [{ to: '/signup?role=volunteer', label: 'Join as volunteer', variant: 'terra' }],
+    actions: [{ to: '/signup?role=volunteer', label: 'Join as Volunteer', variant: 'terra' }],
     pathHint: '/volunteer',
   },
   {
-    roleKey: 'hospital',
-    title: 'Hospital inbox',
+    roleKey: 'clinic',
+    title: 'Clinic / Hospital',
     badge: 'Facility access',
     Icon: Building2,
-    body:
-      'Receive maternity pre-alert SMS with patient summary, blood type, and ETA. Reply ARRIVED when the patient arrives to close the alert—no web app required.',
-    actions: [{ to: '/hospital', label: 'Open hospital inbox', variant: 'terra' }],
-    pathHint: 'SMS pre-alert / reply ARRIVED',
-  },
-  {
-    roleKey: 'worker',
-    title: 'Health worker',
-    badge: 'Staff sign-in',
-    Icon: Stethoscope,
-    body: 'Onboard women into the program, keep records straight, and run follow-ups from the worker dashboard.',
-    actions: [{ to: '/signup?role=health_worker', label: 'Open worker portal', variant: 'terra' }],
-    pathHint: '/register',
-  },
-  {
-    roleKey: 'family',
-    title: 'Family updates',
-    badge: 'SMS link',
-    Icon: Link2,
-    body: 'During an active alert, trusted contacts get a read-only status link by text—no app install, no editing, just clarity.',
-    pathHint: 'URL pattern: /status/:token',
-  },
-  {
-    roleKey: 'admin',
-    title: 'Zone administration',
-    badge: 'Restricted',
-    Icon: Shield,
-    body: 'NGO zone leads manage volunteers, hospitals, and locality rules so the right people see the right alerts.',
-    actions: [{ to: '/signup?role=admin', label: 'Open admin console', variant: 'terra' }],
-    pathHint: '/admin',
+    body: 'Receive maternity pre-alert SMS with patient summary, blood type, and ETA. Reply ARRIVED when the patient arrives to close the alert—or use the web inbox.',
+    actions: [{ to: '/hospital', label: 'Open Clinic Inbox', variant: 'terra' }],
+    pathHint: '/hospital',
   },
 ]
 }

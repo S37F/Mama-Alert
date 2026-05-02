@@ -1,11 +1,8 @@
 import cors from 'cors'
 import express from 'express'
 import helmet from 'helmet'
-import { adminDataRouter } from '@/routes/adminData'
-import { alertsRouter } from '@/routes/alerts'
 import { authRouter } from '@/routes/auth'
 import { hospitalPortalRouter } from '@/routes/hospitalPortal'
-import { registerRouter } from '@/routes/register'
 import { volunteerPortalRouter } from '@/routes/volunteerPortal'
 import { smsReplyRouter } from '@/routes/smsReply'
 import { smsStatusRouter } from '@/routes/smsStatus'
@@ -15,7 +12,6 @@ import { ussdRouter } from '@/routes/ussd'
 import { generalRateLimit, patientHintsRateLimit, sosRateLimit } from '@/middleware/rateLimiter'
 import { publicPatientRouter } from '@/routes/publicPatient'
 import { publicPatientAccessRouter } from '@/routes/publicPatientAccess'
-import { workerPortalRouter } from '@/routes/workerPortal'
 import { validateTwilioUssdSignature } from '@/middleware/twilioValidate'
 import { csrfProtection } from '@/middleware/csrf'
 import { requestContextMiddleware } from '@/lib/requestContext'
@@ -116,12 +112,8 @@ export function createApp(): express.Express {
   app.use('/api/sms-reply', smsReplyRouter)
   app.use('/api/sms-status', smsStatusRouter)
   app.use('/api/ussd', validateTwilioUssdSignature, ussdRouter)
-  app.use('/api/register', registerRouter)
   app.use('/api/volunteer', volunteerPortalRouter)
   app.use('/api/hospital', hospitalPortalRouter)
-  app.use('/api/admin', adminDataRouter)
-  app.use('/api/alerts', alertsRouter)
-  app.use('/api/worker', workerPortalRouter)
   app.use('/api/auth', authRouter)
   app.use('/api/status', statusRouter)
 

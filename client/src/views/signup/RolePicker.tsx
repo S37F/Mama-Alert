@@ -2,6 +2,8 @@ import type { MamaAlertRole } from '@/lib/mamaSession'
 import { Button } from '@/components/ui/button'
 import { ROLE_COPY } from '@/views/signup/constants'
 
+type SignupRole = 'patient' | 'volunteer'
+
 export function RolePicker({
   selectedRole,
   onSelect,
@@ -11,9 +13,9 @@ export function RolePicker({
   onSelect: (role: MamaAlertRole) => void
   onContinue: () => void
 }) {
-  const roles = (Object.keys(ROLE_COPY) as MamaAlertRole[]).map((role) => ({
+  const roles = (Object.keys(ROLE_COPY) as SignupRole[]).map((role) => ({
     role,
-    ...ROLE_COPY[role],
+    ...ROLE_COPY[role]!,
   }))
 
   return (

@@ -11,7 +11,7 @@ export const LANGUAGE_OPTIONS = [
   { value: 'pt', label: 'Portuguese' },
 ] as const
 
-export const ROLE_COPY: Record<
+export const ROLE_COPY: Partial<Record<
   MamaAlertRole,
   {
     title: string
@@ -19,7 +19,7 @@ export const ROLE_COPY: Record<
     colorClass: string
     iconClass: string
   }
-> = {
+>> = {
   patient: {
     title: 'I am a Patient',
     description: 'Register for emergency help',
@@ -31,18 +31,6 @@ export const ROLE_COPY: Record<
     description: 'Help women in my community',
     colorClass: 'border-emerald-300 bg-emerald-50/80',
     iconClass: 'bg-emerald-500',
-  },
-  health_worker: {
-    title: 'I am a Health Worker',
-    description: 'Register and monitor patients',
-    colorClass: 'border-sky-300 bg-sky-50/80',
-    iconClass: 'bg-sky-500',
-  },
-  admin: {
-    title: 'I am an Admin',
-    description: 'Manage a zone or NGO network',
-    colorClass: 'border-slate-300 bg-slate-100/80',
-    iconClass: 'bg-slate-500',
   },
 }
 
