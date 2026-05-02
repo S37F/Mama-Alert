@@ -30,7 +30,8 @@
       "signInPhone": "Ingia kwa nambari ya simu",
       "selfRegister": "Nijisajili",
       "haveLink": "Una kiungo? Kifungue kwenye kifaa hiki. Kina tokeni ya siri. Unaweza pia kumuomba mhudumu wa afya akutumie tena.",
-      "phoneHelp": "Tutatuma msimbo kwa nambari hii. Tumia nambari uliyotoa wakati wa usajili, pamoja na msimbo wa nchi, mfano {{dialCode}}.",
+      "phoneHelp": "Tumia nambari uliyotoa wakati wa usajili, pamoja na msimbo wa nchi (mfano {{dialCode}}). Gusa endelea kuingia.",
+      "continue": "Endelea",
       "sendCode": "Tuma msimbo",
       "codeLabel": "Msimbo kutoka SMS",
       "verify": "Thibitisha na uendelee",
@@ -43,7 +44,7 @@
     },
     "shortLink": {
       "title": "Tumia kiungo kamili cha SOS au ingia",
-      "body": "Ukurasa huu una nambari yako tu. Ingia kwa SMS kufungua tokeni salama ya SOS, au mwombe mhudumu akutumie kiungo kamili tena.",
+      "body": "Ukurasa huu una nambari yako ya simu tu. Ingia kwa nambari hiyo ili kufungua tokeni yako ya SOS, au mwombe mhudumu akutumie kiungo kamili tena.",
       "signInCta": "Ingia kwa nambari hii"
     },
     "selfReg": {
@@ -96,7 +97,7 @@
     "savePhone": "Save and continue",
     "phoneLabel": "Your volunteer phone",
     "smsPrimary": "SMS is the primary way to respond to alerts. This dashboard is optional for live updates.",
-    "loginIntro": "Sign in with the phone number your health worker registered. We will text you a one-time code.",
+    "loginIntro": "Ingia kwa nambari ya simu ulioisajili.",
     "profilePending": "Profile pending"
   },
   "hospital": {

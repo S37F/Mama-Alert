@@ -73,7 +73,7 @@ export function PatientSignupForm({ onBack }: { onBack: () => void }) {
           landmark: values.landmark?.trim() || undefined,
           language: values.language,
         },
-        { captureLocation: true, weeksPregnant },
+        { captureBestEffort: true, weeksPregnant },
       )
     },
     (invalid) => scrollToFirstError(invalid),

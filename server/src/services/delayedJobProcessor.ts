@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client'
-import { logError } from '@/lib/logger'
+import { logError, logWarn } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { loadEscalationConfig, runEscalationTimer } from '@/services/escalation'
 import { runIncapacitationStep } from '@/services/incapacitationTimer'
@@ -82,6 +82,7 @@ async function tickOnce(): Promise<void> {
         continue
       }
     } catch (err) {
+      logWarn('delayedJob: lock update failed', { jobId: job.id, error: String(err) })
       continue
     }
 

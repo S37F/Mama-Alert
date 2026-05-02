@@ -119,8 +119,8 @@ export function AdminZone() {
       setPatients(p)
       setVolunteers(v)
       setAlerts(a.alerts)
-      setAvgVolunteerConfirmMs(a.avgVolunteerConfirmMs ?? a.avgResponseMs)
-      setAvgResolveMs(a.avgResolveMs ?? a.avgResponseMs)
+      setAvgVolunteerConfirmMs(a.avgVolunteerConfirmMs)
+      setAvgResolveMs(a.avgResolveMs)
       setMapData(m)
 
       if (zoneId) {

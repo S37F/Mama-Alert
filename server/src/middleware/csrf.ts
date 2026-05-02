@@ -7,7 +7,6 @@ function isExemptPath(path: string): boolean {
   return (
     path === '/api/auth/logout' ||
     path === '/api/auth/login' ||
-    path === '/api/auth/login/verify' ||
     path === '/api/auth/signup' ||
     path === '/api/hospital/session' ||
     path.startsWith('/api/health') ||

@@ -72,7 +72,7 @@ export function VolunteerSignupForm({ onBack }: { onBack: () => void }) {
           availableHours: values.availableHours,
           maxRadiusKm: Number.parseInt(values.maxRadiusKm, 10),
         },
-        { captureLocation: true },
+        { captureBestEffort: true },
       )
     },
     (invalid) => scrollToFirstError(invalid),

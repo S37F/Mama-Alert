@@ -1,5 +1,6 @@
 import request from 'supertest'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Express } from 'express'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const prismaMock = vi.hoisted(() => ({
   zone: { findFirst: vi.fn() },
@@ -12,6 +13,16 @@ const prismaMock = vi.hoisted(() => ({
 vi.mock('@/lib/prisma', () => ({ prisma: prismaMock }))
 
 describe('cookie dashboard auth and CSRF', () => {
+  let createApp: () => Express
+  let signHospitalPortalToken: (hospitalId: string) => string
+
+  beforeAll(async () => {
+    const appMod = await import('@/app')
+    const portalMod = await import('@/lib/portalJwt')
+    createApp = appMod.createApp
+    signHospitalPortalToken = portalMod.signHospitalPortalToken
+  })
+
   beforeEach(() => {
     process.env.PORTAL_JWT_SECRET = 'test-portal-secret-with-32-chars'
     process.env.CLIENT_URL = 'http://localhost:5173'
@@ -20,8 +31,6 @@ describe('cookie dashboard auth and CSRF', () => {
   })
 
   it('exchanges a hospital portal token for HttpOnly auth and readable CSRF cookies', async () => {
-    const { createApp } = await import('@/app')
-    const { signHospitalPortalToken } = await import('@/lib/portalJwt')
     const token = signHospitalPortalToken('11111111-1111-4111-8111-111111111111')
 
     const res = await request(createApp()).post('/api/hospital/session').send({ token }).expect(200)
@@ -34,8 +43,6 @@ describe('cookie dashboard auth and CSRF', () => {
   })
 
   it('rejects cookie-authenticated dashboard mutations without a matching CSRF header', async () => {
-    const { createApp } = await import('@/app')
-    const { signHospitalPortalToken } = await import('@/lib/portalJwt')
     const token = signHospitalPortalToken('11111111-1111-4111-8111-111111111111')
     const app = createApp()
     const session = await request(app).post('/api/hospital/session').send({ token }).expect(200)
@@ -48,8 +55,6 @@ describe('cookie dashboard auth and CSRF', () => {
   })
 
   it('accepts cookie-authenticated dashboard mutations with CSRF', async () => {
-    const { createApp } = await import('@/app')
-    const { signHospitalPortalToken } = await import('@/lib/portalJwt')
     const token = signHospitalPortalToken('11111111-1111-4111-8111-111111111111')
     const app = createApp()
     const session = await request(app).post('/api/hospital/session').send({ token }).expect(200)
@@ -75,7 +80,6 @@ describe('cookie dashboard auth and CSRF', () => {
   })
 
   it('records Twilio SMS delivery callbacks', async () => {
-    const { createApp } = await import('@/app')
     prismaMock.outboundMessage.updateMany.mockResolvedValue({ count: 1 })
 
     await request(createApp())

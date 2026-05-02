@@ -30,7 +30,8 @@
       "signInPhone": "تسجيل الدخول برقم الهاتف",
       "selfRegister": "أسجل نفسي",
       "haveLink": "هل لديك رابط? افتحيه على هذا الجهاز. يحتوي على رمز خاص. يمكنك أيضا طلب إعادة إرساله من العاملة الصحية.",
-      "phoneHelp": "We will text a code to this number. Use the same number you gave when you registered (include country code, e.g. {{dialCode}}).",
+      "phoneHelp": "Use the same number you gave when you registered (include country code, e.g. {{dialCode}}). Tap continue to sign in.",
+      "continue": "Continue",
       "sendCode": "إرسال الرمز",
       "codeLabel": "رمز الرسالة",
       "verify": "تحقق ومتابعة",
@@ -43,7 +44,7 @@
     },
     "shortLink": {
       "title": "Use your full SOS link or sign in",
-      "body": "This page only has your phone number. Sign in with SMS to unlock your secure SOS token, or ask your health worker to resend the complete link.",
+      "body": "This page only has your phone number. Sign in with that number to unlock your secure SOS token, or ask your health worker to resend the complete link.",
       "signInCta": "Sign in with this phone number"
     },
     "selfReg": {
@@ -96,7 +97,7 @@
     "savePhone": "Save and continue",
     "phoneLabel": "Your volunteer phone",
     "smsPrimary": "SMS is the primary way to respond to alerts. This dashboard is optional for live updates.",
-    "loginIntro": "Sign in with the phone number your health worker registered. We will text you a one-time code.",
+    "loginIntro": "Sign in with the phone number you registered.",
     "profilePending": "Profile pending"
   },
   "hospital": {

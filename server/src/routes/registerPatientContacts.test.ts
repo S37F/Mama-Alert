@@ -1,5 +1,7 @@
 import request from 'supertest'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SessionRole } from '@/lib/mamaAuth'
+import type { Express } from 'express'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const HEALTH_WORKER_ID = '11111111-1111-4111-8111-111111111111'
 const ZONE_ID = '22222222-2222-4222-8222-222222222222'
@@ -68,6 +70,16 @@ function patientPayload(emergencyContacts: Contact[]) {
 }
 
 describe('patient registration emergency contacts', () => {
+  let createApp: () => Express
+  let signMamaSessionToken: (profileId: string, role: SessionRole) => string
+
+  beforeAll(async () => {
+    const appMod = await import('@/app')
+    const sessionMod = await import('@/lib/sessionToken')
+    createApp = appMod.createApp
+    signMamaSessionToken = sessionMod.signMamaSessionToken
+  })
+
   beforeEach(() => {
     process.env.CLIENT_URL = 'http://localhost:5173'
     process.env.PORTAL_JWT_SECRET = 'test-portal-secret-with-32-chars'
@@ -84,9 +96,7 @@ describe('patient registration emergency contacts', () => {
     })
   })
 
-  async function postPatient(emergencyContacts: Contact[]) {
-    const { createApp } = await import('@/app')
-    const { signMamaSessionToken } = await import('@/lib/sessionToken')
+  function postPatient(emergencyContacts: Contact[]) {
     const token = signMamaSessionToken(HEALTH_WORKER_ID, 'health_worker')
     return request(createApp())
       .post('/api/register/patient')

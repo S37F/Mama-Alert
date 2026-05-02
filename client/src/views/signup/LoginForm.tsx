@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -18,9 +17,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>
 
 export function LoginForm() {
-  const { requestLoginCode, verifyLoginCode, isSubmitting, error, clearError } = useSignup()
-  const [pendingPhone, setPendingPhone] = useState('')
-  const [code, setCode] = useState('')
+  const { loginWithPhone, isSubmitting, error, clearError } = useSignup()
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     mode: 'onSubmit',
@@ -45,12 +42,7 @@ export function LoginForm() {
     async (values) => {
       clearError()
       const phone = composePhone(values.dialCode, values.phoneLocal)
-      if (!pendingPhone) {
-        await requestLoginCode(phone)
-        setPendingPhone(phone)
-        return
-      }
-      await verifyLoginCode(pendingPhone, code.trim())
+      await loginWithPhone(phone)
     },
     (invalid) => scrollToFirstError(invalid),
   )
@@ -61,7 +53,7 @@ export function LoginForm() {
         <p className="mama-kicker">Phone login</p>
         <h2 className="mama-heading text-3xl">Welcome back</h2>
         <p className="mama-copy text-sm">
-          Enter your phone number and we'll send you straight to the right dashboard.
+          Enter the phone number you used to register. We will sign you in to the right dashboard.
         </p>
       </div>
 
@@ -108,40 +100,10 @@ export function LoginForm() {
         {errors.phoneLocal ? <p className="text-sm text-destructive">Enter a valid phone number.</p> : null}
       </div>
 
-      {pendingPhone ? (
-        <div className="space-y-2">
-          <Label htmlFor="login-code" className="mama-label">
-            Login code
-          </Label>
-          <Input
-            id="login-code"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            className="mama-input"
-            value={code}
-            onChange={(event) => {
-              setCode(event.target.value.replace(/\D/g, '').slice(0, 8))
-              clearError()
-            }}
-          />
-          <button
-            type="button"
-            className="text-sm font-medium text-primary underline"
-            onClick={() => {
-              setPendingPhone('')
-              setCode('')
-              clearError()
-            }}
-          >
-            Change phone number
-          </button>
-        </div>
-      ) : null}
-
       {error ? <p className="mama-error">{error}</p> : null}
 
       <Button type="submit" className="mama-primary-action" disabled={isSubmitting}>
-        {isSubmitting ? 'Loading...' : pendingPhone ? 'Verify code >' : 'Send code >'}
+        {isSubmitting ? 'Loading...' : 'Continue'}
       </Button>
     </form>
   )

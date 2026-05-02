@@ -54,3 +54,12 @@ export const patientSelfRegisterRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 })
+
+/** Phone-only web login — tighter than general limit to slow account probing. */
+export const authPhoneLoginRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 25,
+  message: { error: 'Too many login attempts' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})

@@ -82,27 +82,9 @@ export interface AuthResponse {
   session: MamaAlertSession
 }
 
-export async function postAuthLoginRequest(phone: string): Promise<void> {
+export async function postAuthLogin(phone: string): Promise<AuthResponse> {
   try {
-    await api.post('/api/auth/login', { phone })
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const msg =
-        typeof error.response?.data === 'object' &&
-        error.response.data !== null &&
-        'error' in error.response.data &&
-        typeof (error.response.data as { error: unknown }).error === 'string'
-          ? (error.response.data as { error: string }).error
-          : 'Could not send login code'
-      throw new Error(msg)
-    }
-    throw error
-  }
-}
-
-export async function postAuthLoginVerify(phone: string, code: string): Promise<AuthResponse> {
-  try {
-    const response = await api.post<AuthResponse>('/api/auth/login/verify', { phone, code })
+    const response = await api.post<AuthResponse>('/api/auth/login', { phone })
     return response.data
   } catch (error) {
     if (axios.isAxiosError(error)) {
@@ -532,13 +514,14 @@ export async function getAdminAlertsHistory(): Promise<{
   alerts: AdminAlertHistoryRow[]
   avgVolunteerConfirmMs: number | null
   avgResolveMs: number | null
-  avgResponseMs: number | null
+  /** @deprecated Duplicate of avgResolveMs; may be removed from API. */
+  avgResponseMs?: number | null
 }> {
   const response = await api.get<{
     alerts: AdminAlertHistoryRow[]
     avgVolunteerConfirmMs: number | null
     avgResolveMs: number | null
-    avgResponseMs: number | null
+    avgResponseMs?: number | null
   }>('/api/admin/alerts-history')
   return response.data
 }

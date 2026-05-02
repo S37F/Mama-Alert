@@ -58,7 +58,14 @@ export function App() {
 
           <Route path="/sos" element={<PatientSOS />} />
           <Route path="/sos/register" element={<PatientSelfRegister />} />
-          <Route path="/volunteer" element={<VolunteerDashboard />} />
+          <Route
+            path="/volunteer"
+            element={
+              <ProtectedRoute role="volunteer" redirectTo="/signup?mode=login">
+                <VolunteerDashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/hospital" element={<HospitalInbox />} />
           <Route
             path="/register"

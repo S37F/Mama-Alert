@@ -61,7 +61,7 @@ function normalizePhoneInput(value: string): string {
   return withPlus.replace(/\s+/g, ' ').trim()
 }
 
-function PhoneOtpPanel({
+function PhoneLoginPanel({
   onBack,
   t,
   countryHint,
@@ -70,10 +70,8 @@ function PhoneOtpPanel({
   t: TFunction
   countryHint: string
 }) {
-  const { requestLoginCode, verifyLoginCode, isSubmitting, error, clearError } = useSignup()
+  const { loginWithPhone, isSubmitting, error, clearError } = useSignup()
   const [phone, setPhone] = useState('')
-  const [pendingPhone, setPendingPhone] = useState('')
-  const [code, setCode] = useState('')
   const [localErr, setLocalErr] = useState<string | null>(null)
 
   const compactPhone = () => normalizePhoneInput(phone).replace(/\s/g, '')
@@ -86,12 +84,7 @@ function PhoneOtpPanel({
       return
     }
     try {
-      if (!pendingPhone) {
-        await requestLoginCode(p)
-        setPendingPhone(p)
-        return
-      }
-      await verifyLoginCode(pendingPhone, code.trim())
+      await loginWithPhone(p)
     } catch {
       /* handled by hook state */
     }
@@ -104,14 +97,13 @@ function PhoneOtpPanel({
       </Button>
       <p className="text-muted-foreground text-sm">{t('sos.access.phoneHelp', { dialCode: countryHint })}</p>
       <div className="space-y-2">
-        <Label htmlFor="otp-phone">{t('sos.phoneLabel')}</Label>
+        <Label htmlFor="login-phone">{t('sos.phoneLabel')}</Label>
         <Input
-          id="otp-phone"
+          id="login-phone"
           type="tel"
           inputMode="tel"
           autoComplete="tel"
           value={phone}
-          disabled={Boolean(pendingPhone)}
           onChange={(e) => {
             setPhone(normalizePhoneInput(e.target.value))
             clearError()
@@ -119,36 +111,8 @@ function PhoneOtpPanel({
           placeholder={countryHint}
         />
       </div>
-      {pendingPhone ? (
-        <div className="space-y-2">
-          <Label htmlFor="otp-code">Login code</Label>
-          <Input
-            id="otp-code"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            value={code}
-            onChange={(e) => {
-              setCode(e.target.value.replace(/\D/g, '').slice(0, 8))
-              clearError()
-            }}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="px-0"
-            onClick={() => {
-              setPendingPhone('')
-              setCode('')
-              clearError()
-            }}
-          >
-            Change phone number
-          </Button>
-        </div>
-      ) : null}
       <Button type="button" className="w-full" disabled={isSubmitting} onClick={() => void submit()}>
-        {isSubmitting ? t('common.loading') : pendingPhone ? 'Verify code ->' : 'Send code ->'}
+        {isSubmitting ? t('common.loading') : t('sos.access.continue')}
       </Button>
       {localErr || error ? <p className="text-destructive text-center text-sm">{localErr ?? error}</p> : null}
     </div>
@@ -604,7 +568,7 @@ export function PatientSOS() {
               </div>
             )
           ) : (
-            <PhoneOtpPanel
+            <PhoneLoginPanel
               t={t}
               countryHint={countryHint}
               onBack={() => setAccessMode('menu')}

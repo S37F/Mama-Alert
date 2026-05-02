@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { redirectForRole, writeMamaAlertSession, type MamaAlertSession } from '@/lib/mamaSession'
-import { postAuthLoginRequest, postAuthLoginVerify, postAuthSignup } from '@/services/api'
+import { postAuthLogin, postAuthSignup } from '@/services/api'
 
 function clearLegacyRoleState(): void {
   localStorage.removeItem('mamaalert_sos_token')
@@ -70,25 +70,11 @@ export function useSignup() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const requestLoginCode = async (phone: string) => {
+  const loginWithPhone = async (phone: string) => {
     setIsSubmitting(true)
     setError(null)
     try {
-      await postAuthLoginRequest(phone)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Could not send login code'
-      setError(message)
-      throw err
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const verifyLoginCode = async (phone: string, code: string) => {
-    setIsSubmitting(true)
-    setError(null)
-    try {
-      const response = await postAuthLoginVerify(phone, code)
+      const response = await postAuthLogin(phone)
       await tryCaptureLocation()
       writeMamaAlertSession(response.session)
       syncLegacyRoleState(response.session)
@@ -105,12 +91,26 @@ export function useSignup() {
 
   const signup = async <TBody extends Record<string, unknown>>(
     body: TBody,
-    options?: { captureLocation?: boolean; weeksPregnant?: number | null },
+    options?: {
+      /** @deprecated Prefer captureBestEffort; server falls back via SELF_REG_FALLBACK_LAT/LNG when omitted. */
+      captureLocation?: boolean
+      /** When true, attaches lat/lng if the browser permits; signup still succeeds using server fallback. */
+      captureBestEffort?: boolean
+      weeksPregnant?: number | null
+    },
   ) => {
     setIsSubmitting(true)
     setError(null)
     try {
-      const location = options?.captureLocation ? await captureRequiredLocation() : {}
+      let location: Record<string, number> = {}
+      if (options?.captureLocation) {
+        location = await captureRequiredLocation()
+      } else if (options?.captureBestEffort) {
+        const g = await tryCaptureLocation()
+        if (typeof g.lat === 'number' && typeof g.lng === 'number') {
+          location = { lat: g.lat, lng: g.lng }
+        }
+      }
       const response = await postAuthSignup({
         ...body,
         ...location,
@@ -132,8 +132,7 @@ export function useSignup() {
     error,
     isSubmitting,
     clearError: () => setError(null),
-    requestLoginCode,
-    verifyLoginCode,
+    loginWithPhone,
     signup,
   }
 }

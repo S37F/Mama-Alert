@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -25,7 +24,6 @@ export function VolunteerDashboard() {
   const { t } = useTranslation()
   const { session, logout } = useAuth()
   const portalToken = session?.role === 'volunteer' ? session.volunteerPortalToken ?? '' : ''
-  const sessionReady = session?.role === 'volunteer'
   const [items, setItems] = useState<VolunteerFeedItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -33,7 +31,7 @@ export function VolunteerDashboard() {
   const [confirmMsg, setConfirmMsg] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!sessionReady) {
+    if (session?.role !== 'volunteer') {
       return
     }
     let cancelled = false
@@ -78,7 +76,7 @@ export function VolunteerDashboard() {
       window.clearInterval(pollId)
       es?.close()
     }
-  }, [portalToken, sessionReady, t])
+  }, [portalToken, session, t])
 
   const { active, past } = useMemo(() => {
     const activeItems: VolunteerFeedItem[] = []
@@ -92,10 +90,6 @@ export function VolunteerDashboard() {
     }
     return { active: activeItems, past: pastItems }
   }, [items])
-
-  if (!session || session.role !== 'volunteer' || !sessionReady) {
-    return <Navigate to="/signup?mode=login" replace />
-  }
 
   const reload = async () => {
     try {
@@ -138,7 +132,7 @@ export function VolunteerDashboard() {
       <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="mama-heading text-2xl">{t('volunteer.title')}</h1>
-          <p className="mama-copy text-sm">{session.name}</p>
+          <p className="mama-copy text-sm">{session?.name ?? ''}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{items.length}</Badge>

@@ -2,14 +2,19 @@ import type { ReactNode } from 'react'
 import { Navigate } from 'react-router-dom'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { useAuth } from '@/hooks/useAuth'
+import type { MamaAlertRole } from '@/lib/mamaSession'
 
 interface ProtectedRouteProps {
   children: ReactNode
-  role?: 'admin' | 'health_worker'
+  /** When set, only this role may view the route. */
+  role?: MamaAlertRole
+  /** Where to send unauthenticated users or wrong-role sessions. Defaults to `/signup`. */
+  redirectTo?: string
 }
 
-export function ProtectedRoute({ children, role }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, role, redirectTo }: ProtectedRouteProps) {
   const { session, isLoading } = useAuth()
+  const fallback = redirectTo ?? '/signup'
 
   if (isLoading) {
     return (
@@ -20,15 +25,11 @@ export function ProtectedRoute({ children, role }: ProtectedRouteProps) {
   }
 
   if (!session) {
-    return <Navigate to="/signup" replace />
+    return <Navigate to={fallback} replace />
   }
 
-  if (role === 'admin' && session.role !== 'admin') {
-    return <Navigate to="/signup" replace />
-  }
-
-  if (role === 'health_worker' && session.role !== 'health_worker') {
-    return <Navigate to="/signup" replace />
+  if (role !== undefined && session.role !== role) {
+    return <Navigate to={fallback} replace />
   }
 
   return <>{children}</>
