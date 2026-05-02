@@ -247,7 +247,7 @@ export function PatientSelfRegister() {
           <div className="space-y-2">
             <Label htmlFor="sr-zone">{t('sos.selfReg.zoneLabel')}</Label>
             <Select value={zoneId} onValueChange={(v) => setZoneId(v ?? '')}>
-              <SelectTrigger id="sr-zone">
+              <SelectTrigger id="sr-zone" className="w-full">
                 <SelectValue placeholder={t('sos.selfReg.zonePlaceholder')} />
               </SelectTrigger>
               <SelectContent>
@@ -262,7 +262,7 @@ export function PatientSelfRegister() {
           <div className="space-y-2">
             <Label htmlFor="sr-lang">{t('register.fields.language')}</Label>
             <Select value={language} onValueChange={(v) => setLanguage(v as (typeof langs)[number])}>
-              <SelectTrigger id="sr-lang">
+              <SelectTrigger id="sr-lang" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -310,7 +310,7 @@ export function PatientSelfRegister() {
             <div className="space-y-2">
               <Label>{t('register.fields.relationship')}</Label>
               <Select value={c1Rel} onValueChange={(v) => setC1Rel(v as (typeof relationshipValues)[number])}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

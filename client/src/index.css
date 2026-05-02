@@ -200,7 +200,7 @@
 
   .mama-label {
     color: var(--mama-terra-dark);
-    @apply text-[11px] font-semibold uppercase tracking-[0.16em];
+    @apply text-xs font-semibold uppercase tracking-[0.16em];
   }
 
   .mama-input {
@@ -235,6 +235,34 @@
 }
 
 @layer utilities {
+  /* Mobile notches / home indicators (with viewport-fit=cover in index.html) */
+  .safe-pt-screen {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .safe-pb-screen {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .safe-pl-screen {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+  .safe-pr-screen {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  .safe-px-screen {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  .mama-sticky-header-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  /** SOS fixed bar: layout padding stacks on top of device inset */
+  .mama-sos-footer-safe {
+    padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+    padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+    padding-top: 0.5rem;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-pulse {
       animation: none;

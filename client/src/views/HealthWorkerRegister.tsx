@@ -360,7 +360,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
           <div className="space-y-2">
             <Label htmlFor="language">{t('register.fields.language')}</Label>
             <Select value={lang} onValueChange={(v) => setValue('language', v as FormValues['language'])}>
-              <SelectTrigger id="language">
+              <SelectTrigger id="language" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -505,7 +505,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
                 value={watch('c1_rel')}
                 onValueChange={(v) => setValue('c1_rel', v as FormValues['c1_rel'])}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -542,7 +542,7 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
                   setValue('c2_rel', v as FormValues['c2_rel'], { shouldValidate: true })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

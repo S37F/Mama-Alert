@@ -56,7 +56,7 @@ export function AlertCard({
           <>
             <Button
               type="button"
-              className="w-full bg-green-600 text-white hover:bg-green-700"
+              className="min-h-12 w-full bg-green-600 text-white hover:bg-green-700"
               disabled={actionsDisabled}
               aria-label={`${t('volunteer.accept')}, ${alert.patientFirstName}`}
               onClick={() => void onAccept(alert.id)}
@@ -67,8 +67,7 @@ export function AlertCard({
             <Button
               type="button"
               variant="outline"
-              size="sm"
-              className="w-full"
+              className="min-h-12 w-full"
               disabled={actionsDisabled}
               aria-label={`${t('volunteer.decline')}, ${alert.patientFirstName}`}
               onClick={() => void onDecline(alert.id)}

@@ -177,7 +177,7 @@ export function WorkerVolunteerRegisterForm({ zoneId, onRegistered }: WorkerVolu
           <div className="space-y-2">
             <Label htmlFor="vol-vehicle">{t('admin.vehicle')}</Label>
             <Select value={vehicle} onValueChange={(v) => setVehicle(v as (typeof vehicles)[number])}>
-              <SelectTrigger id="vol-vehicle">
+              <SelectTrigger id="vol-vehicle" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -201,7 +201,7 @@ export function WorkerVolunteerRegisterForm({ zoneId, onRegistered }: WorkerVolu
           <div className="space-y-2">
             <Label htmlFor="vol-lang">{t('register.fields.language')}</Label>
             <Select value={language} onValueChange={(v) => setLanguage(v as (typeof langs)[number])}>
-              <SelectTrigger id="vol-lang">
+              <SelectTrigger id="vol-lang" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

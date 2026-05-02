@@ -246,7 +246,9 @@
     "volunteerConfirmLabel": "Volunteer confirm",
     "resolvedLabel": "Resolved",
     "portal": "Portal",
-    "copyPortalToken": "Copy portal token"
+    "copyPortalToken": "Copy portal token",
+    "tokenCopyManual": "Token created — automatic copy failed (use HTTPS or allow clipboard access). Copy it from the dialog below.",
+    "tokenCopyPrompt": "Hospital portal token — copy manually:"
   },
   "demo": {
     "title": "Fluxo de demonstração",

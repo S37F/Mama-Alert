@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Menu, X } from 'lucide-react'
@@ -10,6 +10,8 @@ export function NavBar() {
   const [solid, setSolid] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const { install, isInstalled, isInstalling, canInstall } = usePWAInstall()
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const prevMenuOpen = useRef(false)
 
   useEffect(() => {
     const onScroll = () => setSolid(window.scrollY > 80)
@@ -31,9 +33,31 @@ export function NavBar() {
     return () => window.removeEventListener('keydown', onKey)
   }, [menuOpen])
 
+  useEffect(() => {
+    if (prevMenuOpen.current && !menuOpen) {
+      window.requestAnimationFrame(() => menuButtonRef.current?.focus())
+    }
+    prevMenuOpen.current = menuOpen
+  }, [menuOpen])
+
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [menuOpen])
+
   const label = isInstalled ? 'Open App' : canInstall ? 'Install App' : 'Continue in browser'
 
   return (
+    <>
+      {menuOpen ? (
+        <div
+          className="landing-nav-menu-backdrop"
+          aria-hidden
+          onClick={() => setMenuOpen(false)}
+        />
+      ) : null}
     <header
       style={{
         position: 'fixed',
@@ -89,6 +113,7 @@ export function NavBar() {
         </nav>
 
         <button
+          ref={menuButtonRef}
           type="button"
           className="landing-nav-burger landing-btn landing-btn--ghost"
           aria-label={menuOpen ? t('a11y.closeMenu') : t('a11y.openMenu')}
@@ -141,6 +166,12 @@ export function NavBar() {
       ) : null}
 
       <style>{`
+        .landing-nav-menu-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 95;
+          background: rgba(44, 36, 22, 0.35);
+        }
         .landing-nav-burger { display: none; }
         .landing-nav-desktop { display: flex; }
         @media (max-width: 767px) {
@@ -149,5 +180,6 @@ export function NavBar() {
         }
       `}</style>
     </header>
+    </>
   )
 }

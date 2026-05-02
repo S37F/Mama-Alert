@@ -173,7 +173,7 @@ function CompletePatientDialog({
               <div className="space-y-2">
                 <Label>{t('register.fields.relationship')}</Label>
                 <Select value={cRel} onValueChange={(v) => setCRel(v as EmergencyRelationship)}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -335,30 +335,55 @@ export function HealthWorkerDashboard() {
               {incompletePatients.length === 0 ? (
                 <p className="text-muted-foreground text-sm">—</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('register.fields.name')}</TableHead>
-                      <TableHead>{t('worker.phoneCol')}</TableHead>
-                      <TableHead>{t('register.fields.village')}</TableHead>
-                      <TableHead />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  <div className="space-y-2 md:hidden">
                     {incompletePatients.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell>{p.name}</TableCell>
-                        <TableCell className="whitespace-nowrap text-xs">{p.phonePrimary}</TableCell>
-                        <TableCell>{p.village ?? '—'}</TableCell>
-                        <TableCell className="text-right">
-                          <Button type="button" size="sm" variant="secondary" onClick={() => setCompletePatient(p)}>
+                      <Card key={p.id}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">{p.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                          <p className="break-all">
+                            <span className="text-muted-foreground">{t('worker.phoneCol')}:</span> {p.phonePrimary}
+                          </p>
+                          <p>
+                            <span className="text-muted-foreground">{t('register.fields.village')}:</span>{' '}
+                            {p.village ?? '—'}
+                          </p>
+                          <Button type="button" className="w-full" variant="secondary" onClick={() => setCompletePatient(p)}>
                             {t('worker.completeProfile')}
                           </Button>
-                        </TableCell>
-                      </TableRow>
+                        </CardContent>
+                      </Card>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('register.fields.name')}</TableHead>
+                          <TableHead>{t('worker.phoneCol')}</TableHead>
+                          <TableHead>{t('register.fields.village')}</TableHead>
+                          <TableHead />
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {incompletePatients.map((p) => (
+                          <TableRow key={p.id}>
+                            <TableCell>{p.name}</TableCell>
+                            <TableCell className="whitespace-nowrap text-xs">{p.phonePrimary}</TableCell>
+                            <TableCell>{p.village ?? '—'}</TableCell>
+                            <TableCell className="text-right">
+                              <Button type="button" size="sm" variant="secondary" onClick={() => setCompletePatient(p)}>
+                                {t('worker.completeProfile')}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -371,32 +396,58 @@ export function HealthWorkerDashboard() {
               {patients.length === 0 ? (
                 <p className="text-muted-foreground text-sm">{t('worker.noPatients')}</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('register.fields.name')}</TableHead>
-                      <TableHead>{t('worker.weeksCol')}</TableHead>
-                      <TableHead>{t('admin.atRiskAnc')}</TableHead>
-                      <TableHead>{t('register.sections.risks')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  <div className="space-y-2 md:hidden">
                     {patients.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell>{p.name}</TableCell>
-                        <TableCell>
-                          {p.weeksPregnant !== null ? t('worker.weeksShort', { n: p.weeksPregnant }) : '—'}
-                        </TableCell>
-                        <TableCell>
-                          {p.overdueAnc ? <Badge variant="destructive">{t('worker.ancOverdue')}</Badge> : '—'}
-                        </TableCell>
-                        <TableCell className="max-w-[140px] truncate text-xs">
-                          {p.riskFlags.length ? p.riskFlags.join(', ') : '—'}
-                        </TableCell>
-                      </TableRow>
+                      <Card key={p.id}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">{p.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                          <p>
+                            <span className="text-muted-foreground">{t('worker.weeksCol')}:</span>{' '}
+                            {p.weeksPregnant !== null ? t('worker.weeksShort', { n: p.weeksPregnant }) : '—'}
+                          </p>
+                          <div>
+                            {p.overdueAnc ? <Badge variant="destructive">{t('worker.ancOverdue')}</Badge> : '—'}
+                          </div>
+                          <p className="break-words text-xs">
+                            <span className="text-muted-foreground">{t('register.sections.risks')}:</span>{' '}
+                            {p.riskFlags.length ? p.riskFlags.join(', ') : '—'}
+                          </p>
+                        </CardContent>
+                      </Card>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('register.fields.name')}</TableHead>
+                          <TableHead>{t('worker.weeksCol')}</TableHead>
+                          <TableHead>{t('admin.atRiskAnc')}</TableHead>
+                          <TableHead>{t('register.sections.risks')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {patients.map((p) => (
+                          <TableRow key={p.id}>
+                            <TableCell>{p.name}</TableCell>
+                            <TableCell>
+                              {p.weeksPregnant !== null ? t('worker.weeksShort', { n: p.weeksPregnant }) : '—'}
+                            </TableCell>
+                            <TableCell>
+                              {p.overdueAnc ? <Badge variant="destructive">{t('worker.ancOverdue')}</Badge> : '—'}
+                            </TableCell>
+                            <TableCell className="max-w-[140px] truncate text-xs">
+                              {p.riskFlags.length ? p.riskFlags.join(', ') : '—'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>
@@ -410,24 +461,46 @@ export function HealthWorkerDashboard() {
               {!zoneId ? null : volunteers.length === 0 ? (
                 <p className="text-muted-foreground text-sm">—</p>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t('register.fields.name')}</TableHead>
-                      <TableHead>{t('admin.vehicle')}</TableHead>
-                      <TableHead>{t('admin.active')}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  <div className="space-y-2 md:hidden">
                     {volunteers.map((v) => (
-                      <TableRow key={v.id}>
-                        <TableCell>{v.name}</TableCell>
-                        <TableCell>{v.vehicle ?? '—'}</TableCell>
-                        <TableCell>{v.is_active ? t('admin.active') : t('admin.deactivate')}</TableCell>
-                      </TableRow>
+                      <Card key={v.id}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">{v.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-1 text-sm">
+                          <p>
+                            <span className="text-muted-foreground">{t('admin.vehicle')}:</span> {v.vehicle ?? '—'}
+                          </p>
+                          <p>
+                            <span className="text-muted-foreground">{t('admin.active')}:</span>{' '}
+                            {v.is_active ? t('admin.active') : t('admin.deactivate')}
+                          </p>
+                        </CardContent>
+                      </Card>
                     ))}
-                  </TableBody>
-                </Table>
+                  </div>
+                  <div className="hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('register.fields.name')}</TableHead>
+                          <TableHead>{t('admin.vehicle')}</TableHead>
+                          <TableHead>{t('admin.active')}</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {volunteers.map((v) => (
+                          <TableRow key={v.id}>
+                            <TableCell>{v.name}</TableCell>
+                            <TableCell>{v.vehicle ?? '—'}</TableCell>
+                            <TableCell>{v.is_active ? t('admin.active') : t('admin.deactivate')}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

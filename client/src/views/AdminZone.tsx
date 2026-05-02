@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { MapView } from '@/components/MapView'
@@ -231,7 +232,21 @@ export function AdminZone() {
   const copyHospitalPortalToken = async (hospitalId: string) => {
     try {
       const { token } = await postAdminHospitalPortalToken(hospitalId)
-      await navigator.clipboard.writeText(token)
+      const canClipboard =
+        typeof navigator !== 'undefined' &&
+        Boolean(navigator.clipboard?.writeText) &&
+        (typeof window === 'undefined' || window.isSecureContext)
+      if (canClipboard) {
+        try {
+          await navigator.clipboard.writeText(token)
+          setError(null)
+          return
+        } catch {
+          /* fall through to manual copy */
+        }
+      }
+      setError(t('admin.tokenCopyManual'))
+      window.prompt(t('admin.tokenCopyPrompt'), token)
     } catch (e) {
       setError(e instanceof Error ? e.message : t('common.error'))
     }
@@ -374,7 +389,41 @@ export function AdminZone() {
               {t('admin.exportCsv')}
             </Button>
           </div>
-          <div className="mama-table-shell">
+          <div className="space-y-2 md:hidden">
+            {patients.map((p) => (
+              <Card key={p.id}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{p.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">{t('admin.healthWorker')}:</span> {p.healthWorkerName}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">{t('register.fields.weeksPregnant')}:</span>{' '}
+                    {p.weeksPregnant ?? '—'}
+                  </p>
+                  <div className="flex flex-wrap gap-1">
+                    {p.riskFlags.map((r) => (
+                      <Badge key={r} variant="secondary" className="text-xs">
+                        {r}
+                      </Badge>
+                    ))}
+                    {p.overdueAnc ? (
+                      <Badge variant="destructive" className="text-xs">
+                        {t('admin.atRiskAnc')}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <p>
+                    <span className="text-muted-foreground">{t('register.fields.lastAnc')}:</span>{' '}
+                    {p.lastAncDate ?? '—'}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="mama-table-shell hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -419,7 +468,36 @@ export function AdminZone() {
               {t('admin.exportCsv')}
             </Button>
           </div>
-          <div className="mama-table-shell">
+          <div className="space-y-2 md:hidden">
+            {volunteers.map((v) => (
+              <Card key={v.id}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{v.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">{t('admin.skills')}:</span>{' '}
+                    {v.skills.join(', ') || '—'}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">{t('admin.vehicle')}:</span> {v.vehicle}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">{t('admin.radius')}:</span>{' '}
+                    {v.max_radius_km} km
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">{t('admin.lastResponse')}:</span>{' '}
+                    {v.last_response_at ?? '—'}
+                  </p>
+                  <Button type="button" className="w-full" variant="outline" onClick={() => void toggleVol(v.id, v.is_active)}>
+                    {v.is_active ? t('admin.deactivate') : t('admin.activate')}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="mama-table-shell hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -466,7 +544,57 @@ export function AdminZone() {
               {t('admin.exportCsv')}
             </Button>
           </div>
-          <div className="mama-table-shell">
+          <div className="space-y-2 md:hidden">
+            {alerts.map((a) => (
+              <Card key={a.id}>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">{a.patientName}</CardTitle>
+                  <p className="text-muted-foreground text-xs font-normal">
+                    {new Date(a.triggeredAt).toLocaleString()}
+                  </p>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <p>
+                    <span className="text-muted-foreground">{t('admin.volunteerConfirmLabel')}:</span>{' '}
+                    {a.volunteerConfirmMs !== null ? `${Math.round(a.volunteerConfirmMs / 60_000)} min` : '—'}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">{t('admin.resolvedLabel')}:</span>{' '}
+                    {a.resolveTimeMs !== null ? `${Math.round(a.resolveTimeMs / 60_000)} min` : '—'}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">{t('admin.volunteer')}:</span> {a.volunteerName ?? '—'}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">{t('admin.unresolvedAge')}:</span>{' '}
+                    {a.unresolvedMinutes !== null ? `${a.unresolvedMinutes} min` : '-'}
+                  </p>
+                  <p className="break-words text-xs">
+                    <span className="text-muted-foreground">{t('admin.delivery')}:</span>{' '}
+                    {a.messageStatuses.length
+                      ? a.messageStatuses
+                          .slice(-3)
+                          .map((m) => `${m.channel}:${m.status}`)
+                          .join(', ')
+                      : '-'}
+                  </p>
+                  <p className="break-words text-xs">
+                    <span className="text-muted-foreground">{t('admin.timeline')}:</span>{' '}
+                    {a.timeline.length
+                      ? a.timeline
+                          .slice(-3)
+                          .map((event) => event.eventType)
+                          .join(' -> ')
+                      : '-'}
+                  </p>
+                  <p>
+                    <span className="text-muted-foreground">{t('admin.outcome')}:</span> {a.outcome}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="mama-table-shell hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -522,38 +650,68 @@ export function AdminZone() {
           <p className="text-muted-foreground text-xs">{t('admin.mapLegend')}</p>
           {mapData ? <AdminZoneMap data={mapData} /> : null}
           {mapData && mapData.hospitals.length > 0 ? (
-            <div className="mama-table-shell">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('admin.hospitalName')}</TableHead>
-                    <TableHead>{t('admin.receiveAlerts')}</TableHead>
-                    <TableHead>{t('admin.portal')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mapData.hospitals.map((h) => (
-                    <TableRow key={h.id}>
-                      <TableCell className="font-medium">{h.name}</TableCell>
-                      <TableCell>
+            <>
+              <div className="space-y-2 md:hidden">
+                {mapData.hospitals.map((h) => (
+                  <Card key={h.id}>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base">{h.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <label className="flex cursor-pointer items-center gap-3">
                         <input
                           type="checkbox"
-                          className="size-4 accent-primary"
+                          className="size-5 shrink-0 accent-primary"
                           checked={h.receive_alerts !== false}
                           onChange={(e) => void onHospitalReceiveToggle(h.id, e.target.checked)}
-                          aria-label={t('admin.receiveAlerts')}
                         />
-                      </TableCell>
-                      <TableCell>
-                        <Button type="button" size="sm" variant="outline" onClick={() => void copyHospitalPortalToken(h.id)}>
-                          {t('admin.copyPortalToken')}
-                        </Button>
-                      </TableCell>
+                        <span>{t('admin.receiveAlerts')}</span>
+                      </label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => void copyHospitalPortalToken(h.id)}
+                      >
+                        {t('admin.copyPortalToken')}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <div className="mama-table-shell hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('admin.hospitalName')}</TableHead>
+                      <TableHead>{t('admin.receiveAlerts')}</TableHead>
+                      <TableHead>{t('admin.portal')}</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {mapData.hospitals.map((h) => (
+                      <TableRow key={h.id}>
+                        <TableCell className="font-medium">{h.name}</TableCell>
+                        <TableCell>
+                          <input
+                            type="checkbox"
+                            className="size-4 accent-primary"
+                            checked={h.receive_alerts !== false}
+                            onChange={(e) => void onHospitalReceiveToggle(h.id, e.target.checked)}
+                            aria-label={t('admin.receiveAlerts')}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button type="button" size="sm" variant="outline" onClick={() => void copyHospitalPortalToken(h.id)}>
+                            {t('admin.copyPortalToken')}
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           ) : null}
         </TabsContent>
 
@@ -620,26 +778,43 @@ export function AdminZone() {
                     unresolved: unresolvedAlerts.length,
                   })}
                 </p>
-                  <div className="mama-table-shell">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>{t('register.fields.name')}</TableHead>
-                        <TableHead>{t('admin.phone')}</TableHead>
-                        <TableHead>{t('admin.accessLevel')}</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {healthWorkers.map((hw) => (
-                        <TableRow key={hw.user_id}>
-                          <TableCell className="font-medium">{hw.name}</TableCell>
-                          <TableCell>{hw.phone ?? '—'}</TableCell>
-                          <TableCell>{hw.access_level}</TableCell>
+                  <div className="space-y-2 md:hidden">
+                    {healthWorkers.map((hw) => (
+                      <Card key={hw.user_id}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">{hw.name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-1 text-sm">
+                          <p className="break-all">
+                            <span className="text-muted-foreground">{t('admin.phone')}:</span> {hw.phone ?? '—'}
+                          </p>
+                          <p>
+                            <span className="text-muted-foreground">{t('admin.accessLevel')}:</span> {hw.access_level}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  <div className="mama-table-shell hidden md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>{t('register.fields.name')}</TableHead>
+                          <TableHead>{t('admin.phone')}</TableHead>
+                          <TableHead>{t('admin.accessLevel')}</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {healthWorkers.map((hw) => (
+                          <TableRow key={hw.user_id}>
+                            <TableCell className="font-medium">{hw.name}</TableCell>
+                            <TableCell>{hw.phone ?? '—'}</TableCell>
+                            <TableCell>{hw.access_level}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
               </div>
             </>
           )}

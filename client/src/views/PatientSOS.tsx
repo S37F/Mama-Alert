@@ -500,7 +500,7 @@ export function PatientSOS() {
       <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">
         {statusAnnouncement}
       </div>
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-20 pt-16 text-base">
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-[calc(6rem+env(safe-area-inset-bottom,0px))] pt-16 text-base">
         <BrandLogo size="md" tone="light" animated />
         <div className="text-center">
           <h1 className="mama-heading text-3xl md:text-4xl">
@@ -656,14 +656,14 @@ export function PatientSOS() {
         ) : null}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card/95 px-3 py-2 backdrop-blur">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card/95 backdrop-blur mama-sos-footer-safe">
         <div className="mx-auto grid w-full max-w-md grid-cols-3 gap-2">
           <a
             href={`tel:${helpPhone}`}
             aria-label={t('a11y.callEmergency', { phone: helpPhone })}
             className={cn(
-              buttonVariants({ variant: 'outline', size: 'sm' }),
-              'justify-center text-center text-xs font-semibold',
+              buttonVariants({ variant: 'outline', size: 'default' }),
+              'min-h-11 justify-center text-center text-sm font-semibold',
             )}
           >
             {t('sos.helpCall')}
@@ -671,7 +671,10 @@ export function PatientSOS() {
           <DropdownMenu>
             <DropdownMenuTrigger
               type="button"
-              className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'text-xs font-semibold')}
+              className={cn(
+                buttonVariants({ variant: 'outline', size: 'default' }),
+                'min-h-11 justify-center px-3 text-sm font-semibold',
+              )}
               aria-label={t('a11y.chooseLanguage')}
             >
               {t('sos.language')}
@@ -688,8 +691,8 @@ export function PatientSOS() {
             id="sos-how-toggle"
             type="button"
             variant="outline"
-            size="sm"
-            className="text-xs font-semibold"
+            size="default"
+            className="min-h-11 text-sm font-semibold"
             onClick={() => setShowHowItWorks((prev) => !prev)}
             aria-expanded={showHowItWorks}
             aria-controls="sos-how-works"

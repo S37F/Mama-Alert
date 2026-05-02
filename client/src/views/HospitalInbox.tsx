@@ -145,7 +145,9 @@ export function HospitalInbox() {
             value={tokenInput}
             onChange={(e) => setTokenInput(e.target.value)}
             autoComplete="off"
-            className="font-mono text-xs"
+            spellCheck={false}
+            inputMode="text"
+            className="min-h-11 font-mono text-sm break-all"
           />
           <Button type="button" className="w-full" onClick={saveToken}>
             {t('common.save')}

@@ -115,13 +115,16 @@ export function GlobalImpact() {
               <Suspense
                 fallback={
                   <div
+                    role="progressbar"
+                    aria-busy="true"
+                    aria-label="Loading globe"
                     style={{
-                      height: 600,
-                      background: 'var(--color-sand)',
+                      minHeight: 400,
+                      height: '100%',
+                      background: 'linear-gradient(160deg, var(--color-sand) 0%, var(--color-cream) 100%)',
                       border: '1px solid var(--color-sand-dark)',
                       borderRadius: 16,
                     }}
-                    aria-hidden
                   />
                 }
               >
