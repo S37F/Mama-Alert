@@ -45,8 +45,11 @@ function buildRoleCards(): RoleCardDef[] {
     badge: 'Phone access',
     Icon: HeartPulse,
     body: 'One tap raises an alert with location so responders and facilities can act immediately—no password. Sign in with your phone (SMS code), self-register where your program allows it, or open the private link from your health worker.',
-    actions: [{ to: '/signup', label: 'Sign up / Login', variant: 'terra' }],
-    pathHint: '/sos',
+    actions: [
+      { to: '/sos', label: 'Open SOS', variant: 'terra' },
+      { to: '/sos/register', label: 'Register myself', variant: 'ghost' },
+    ],
+    pathHint: '/sos/register',
   },
   {
     roleKey: 'volunteer',
@@ -54,7 +57,7 @@ function buildRoleCards(): RoleCardDef[] {
     badge: 'Phone ID',
     Icon: Radio,
     body: 'A live feed of nearby maternal emergencies. Tap YES or NO to respond; when you are needed, directions land on your phone.',
-    actions: [{ to: '/signup', label: 'Join as volunteer', variant: 'terra' }],
+    actions: [{ to: '/signup?role=volunteer', label: 'Join as volunteer', variant: 'terra' }],
     pathHint: '/volunteer',
   },
   {
@@ -64,8 +67,8 @@ function buildRoleCards(): RoleCardDef[] {
     Icon: Building2,
     body:
       'Receive maternity pre-alert SMS with patient summary, blood type, and ETA. Reply ARRIVED when the patient arrives to close the alert—no web app required.',
-    actions: [],
-    pathHint: 'SMS pre-alert · reply ARRIVED',
+    actions: [{ to: '/hospital', label: 'Open hospital inbox', variant: 'terra' }],
+    pathHint: 'SMS pre-alert / reply ARRIVED',
   },
   {
     roleKey: 'worker',
@@ -73,7 +76,7 @@ function buildRoleCards(): RoleCardDef[] {
     badge: 'Staff sign-in',
     Icon: Stethoscope,
     body: 'Onboard women into the program, keep records straight, and run follow-ups from the worker dashboard.',
-    actions: [{ to: '/signup', label: 'Open worker portal', variant: 'terra' }],
+    actions: [{ to: '/signup?role=health_worker', label: 'Open worker portal', variant: 'terra' }],
     pathHint: '/register',
   },
   {
@@ -90,7 +93,7 @@ function buildRoleCards(): RoleCardDef[] {
     badge: 'Restricted',
     Icon: Shield,
     body: 'NGO zone leads manage volunteers, hospitals, and locality rules so the right people see the right alerts.',
-    actions: [{ to: '/signup', label: 'Open admin console', variant: 'terra' }],
+    actions: [{ to: '/signup?role=admin', label: 'Open admin console', variant: 'terra' }],
     pathHint: '/admin',
   },
 ]
@@ -104,7 +107,11 @@ export function RoleAccessHub() {
 
   const jumpToRole = (key: RoleKey) => {
     setActiveRole(key)
-    document.getElementById(ROLE_TARGETS[key])?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    document.getElementById(ROLE_TARGETS[key])?.scrollIntoView({
+      behavior: reduceMotion ? 'auto' : 'smooth',
+      block: 'start',
+    })
   }
 
   useEffect(() => {
@@ -163,13 +170,13 @@ export function RoleAccessHub() {
             This page explains the system. The links below jump straight into the live routes—same URLs responders bookmark in
             the field.
           </p>
-          <div className="landing-role-access-tabs" role="tablist" aria-label="Role shortcuts">
+          <div className="landing-role-access-tabs" aria-label="Role shortcuts">
             {roleEntries.map(([key]) => (
               <button
                 key={key}
                 type="button"
-                role="tab"
-                aria-selected={activeRole === key}
+                aria-controls={ROLE_TARGETS[key]}
+                aria-pressed={activeRole === key}
                 className={`landing-role-access-tab ${activeRole === key ? 'landing-role-access-tab--active' : ''}`}
                 onClick={() => jumpToRole(key)}
               >

@@ -77,9 +77,9 @@ export function MeetTheWomen() {
               lineHeight: 1.15,
             }}
           >
-            Real emergencies.
+            Real-world patterns.
             <br />
-            Real women.
+            Composite stories.
             <br />
             Real minutes that mattered.
           </motion.h2>
@@ -170,9 +170,9 @@ export function MeetTheWomen() {
               marginRight: 'auto',
             }}
           >
-            These are not hypotheticals.
+            These are composite scenarios based on documented maternal-emergency patterns.
             <br />
-            These are the documented patterns behind 260,000 deaths a year.
+            They show how delays in recognition, transport, and facility readiness can compound.
             <br />
             MamaAlert is built around every single edge case.
           </motion.p>

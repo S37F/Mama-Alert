@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
+import { WorldMapStatic } from '@/landing/components/WorldMapStatic'
 
 const ALERT_LATLON: [number, number][] = [
   [20, 77],
@@ -285,19 +286,31 @@ function disposeHierarchy(root: THREE.Object3D) {
 
 export default function GlobeCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [failed, setFailed] = useState(() => {
+    if (typeof document === 'undefined') return false
+    const probe = document.createElement('canvas')
+    return !(probe.getContext('webgl2') || probe.getContext('webgl'))
+  })
 
   useEffect(() => {
+    if (failed) return
     const container = containerRef.current
     if (!container) return
 
-    const width = container.clientWidth
+    const width = container.clientWidth || 1
     const height = container.clientHeight || 600
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100)
     camera.position.z = 5.2
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
+    let renderer: THREE.WebGLRenderer
+    try {
+      renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true })
+    } catch {
+      window.setTimeout(() => setFailed(true), 0)
+      return
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.setSize(width, height)
     renderer.setClearColor(0x000000, 0)
@@ -386,13 +399,6 @@ export default function GlobeCanvas() {
     tilt.add(dotGroup)
 
     let visible = true
-    const io = new IntersectionObserver(
-      ([e]) => {
-        visible = e?.isIntersecting ?? false
-      },
-      { threshold: 0.08 },
-    )
-    io.observe(container)
 
     let targetTiltX = 0
     let targetTiltY = 0
@@ -409,9 +415,8 @@ export default function GlobeCanvas() {
     let raf = 0
 
     const animate = () => {
-      raf = requestAnimationFrame(animate)
-
       if (!visible) {
+        raf = 0
         return
       }
 
@@ -427,11 +432,23 @@ export default function GlobeCanvas() {
       })
 
       renderer.render(scene, camera)
+      raf = requestAnimationFrame(animate)
     }
-    animate()
+
+    const io = new IntersectionObserver(
+      ([e]) => {
+        visible = e?.isIntersecting ?? false
+        if (visible && !raf) {
+          raf = requestAnimationFrame(animate)
+        }
+      },
+      { threshold: 0.08 },
+    )
+    io.observe(container)
+    raf = requestAnimationFrame(animate)
 
     const onResize = () => {
-      const w = container.clientWidth
+      const w = container.clientWidth || 1
       const h = container.clientHeight || 600
       camera.aspect = w / h
       camera.updateProjectionMatrix()
@@ -450,7 +467,11 @@ export default function GlobeCanvas() {
         container.removeChild(renderer.domElement)
       }
     }
-  }, [])
+  }, [failed])
+
+  if (failed) {
+    return <WorldMapStatic />
+  }
 
   return (
     <div

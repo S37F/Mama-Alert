@@ -11,13 +11,16 @@ import { RolePicker } from '@/views/signup/RolePicker'
 import { VolunteerSignupForm } from '@/views/signup/VolunteerSignupForm'
 
 type AuthMode = 'signup' | 'login'
+const SIGNUP_ROLES: MamaAlertRole[] = ['patient', 'volunteer', 'health_worker', 'admin']
 
 export function SignupLogin() {
   const { session } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const mode: AuthMode = searchParams.get('mode') === 'login' ? 'login' : 'signup'
-  const [selectedRole, setSelectedRole] = useState<MamaAlertRole | null>(null)
-  const [step, setStep] = useState<1 | 2>(1)
+  const roleParam = searchParams.get('role') as MamaAlertRole | null
+  const initialRole = mode === 'signup' && roleParam && SIGNUP_ROLES.includes(roleParam) ? roleParam : null
+  const [selectedRole, setSelectedRole] = useState<MamaAlertRole | null>(initialRole)
+  const [step, setStep] = useState<1 | 2>(initialRole ? 2 : 1)
 
   useEffect(() => {
     if (session) {
@@ -29,11 +32,20 @@ export function SignupLogin() {
     setSelectedRole(null)
     setStep(1)
     const next = new URLSearchParams(searchParams)
+    next.delete('role')
     if (nextMode === 'login') {
       next.set('mode', 'login')
     } else {
       next.delete('mode')
     }
+    setSearchParams(next, { replace: true })
+  }
+
+  const backToRolePicker = () => {
+    setStep(1)
+    setSelectedRole(null)
+    const next = new URLSearchParams(searchParams)
+    next.delete('role')
     setSearchParams(next, { replace: true })
   }
 
@@ -53,16 +65,16 @@ export function SignupLogin() {
     }
 
     if (selectedRole === 'patient') {
-      return <PatientSignupForm onBack={() => { setStep(1); setSelectedRole(null) }} />
+      return <PatientSignupForm onBack={backToRolePicker} />
     }
     if (selectedRole === 'volunteer') {
-      return <VolunteerSignupForm onBack={() => { setStep(1); setSelectedRole(null) }} />
+      return <VolunteerSignupForm onBack={backToRolePicker} />
     }
     if (selectedRole === 'health_worker') {
-      return <HealthWorkerSignupForm onBack={() => { setStep(1); setSelectedRole(null) }} />
+      return <HealthWorkerSignupForm onBack={backToRolePicker} />
     }
     if (selectedRole === 'admin') {
-      return <AdminSignupForm onBack={() => { setStep(1); setSelectedRole(null) }} />
+      return <AdminSignupForm onBack={backToRolePicker} />
     }
     return null
   }

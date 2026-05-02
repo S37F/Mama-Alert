@@ -80,7 +80,7 @@
 .landing-card {
   background: var(--color-card);
   border: 1px solid var(--color-sand-dark);
-  border-radius: 16px;
+  border-radius: 8px;
 }
 
 .landing-btn {

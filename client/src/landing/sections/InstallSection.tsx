@@ -3,7 +3,7 @@ import { usePWAInstall } from '@/landing/hooks/usePWAInstall'
 
 export function InstallSection() {
   const { install, isInstalled, isInstalling, canInstall } = usePWAInstall()
-  const primary = isInstalled ? 'Open App' : canInstall ? 'Install App' : 'Open App'
+  const primary = isInstalled ? 'Open App' : canInstall ? 'Install App' : 'Continue in browser'
 
   return (
     <section
@@ -77,7 +77,7 @@ export function InstallSection() {
             disabled={isInstalling}
             aria-describedby="pwa-install-explainer"
           >
-            {isInstalling ? '…' : primary}
+            {isInstalling ? '...' : primary}
           </button>
           <Link
             to="/signup"

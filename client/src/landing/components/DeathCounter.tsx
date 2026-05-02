@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 
 const DEATH_INTERVAL_MS = 121800
+const COUNTER_UPDATE_MS = 1000
 
 export function DeathCounter() {
   const startRef = useRef<number | null>(null)
-  const rafRef = useRef<number>(0)
   const [deaths, setDeaths] = useState(0)
   const [progress, setProgress] = useState(0)
   const [flashKey, setFlashKey] = useState(0)
@@ -27,12 +27,11 @@ export function DeathCounter() {
         prevFloor.current = fl
         setFlashKey((k) => k + 1)
       }
-
-      rafRef.current = requestAnimationFrame(tick)
     }
 
-    rafRef.current = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(rafRef.current)
+    tick()
+    const interval = window.setInterval(tick, COUNTER_UPDATE_MS)
+    return () => window.clearInterval(interval)
   }, [])
 
   const display = Number.isFinite(deaths) ? deaths.toFixed(1) : '0.0'
@@ -65,7 +64,6 @@ export function DeathCounter() {
         </p>
 
         <p
-          aria-live="polite"
           aria-label="Deaths in childbirth since page load"
           className="landing-death-counter__number will-change-transform"
           style={{
@@ -75,7 +73,7 @@ export function DeathCounter() {
             color: 'var(--color-terra)',
             lineHeight: 1,
             margin: '0 0 16px',
-            letterSpacing: '-0.02em',
+            letterSpacing: 0,
           }}
         >
           {display}
@@ -100,7 +98,7 @@ export function DeathCounter() {
               width: `${progress}%`,
               background: barColor,
               borderRadius: 4,
-              transition: 'width 0.08s linear, background 0.3s ease',
+              transition: 'width 1s linear, background 0.3s ease',
             }}
           />
         </div>
@@ -153,7 +151,16 @@ export function DeathCounter() {
           maxWidth: 320,
         }}
       >
-        Based on WHO Global Health Estimates 2023.
+        Based on{' '}
+        <a
+          href="https://www.who.int/news-room/fact-sheets/detail/maternal-mortality"
+          target="_blank"
+          rel="noreferrer"
+          style={{ color: 'inherit', textDecoration: 'underline' }}
+        >
+          WHO 2023 estimates
+        </a>
+        .
         <br />
         Maternal deaths during pregnancy or within 42 days of termination.
       </p>

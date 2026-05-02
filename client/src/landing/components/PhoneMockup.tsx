@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { BrandLogo } from '@/components/BrandLogo'
 
 interface PhoneMockupProps {
   /** 1–5 — matches How it works steps */
@@ -52,18 +53,58 @@ function PhoneChrome({ children }: { children: ReactNode }) {
 
 function ScreenPatientSos() {
   return (
-    <iframe
-      title="MamaAlert patient SOS preview"
-      src="/sos"
+    <div
+      aria-label="Static preview of the patient SOS screen"
       style={{
-        width: '100%',
         height: '100%',
-        border: 'none',
-        display: 'block',
-        transform: 'scale(0.92)',
-        transformOrigin: 'top center',
+        padding: 18,
+        background: 'linear-gradient(180deg, #fff8f2 0%, #fdfaf6 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center',
+        fontFamily: 'var(--font-body)',
       }}
-    />
+    >
+      <BrandLogo tone="light" size="sm" stacked className="justify-center" />
+      <p style={{ margin: '22px 0 8px', fontSize: 12, color: 'var(--color-warm-gray)' }}>
+        Emergency help
+      </p>
+      <div
+        style={{
+          width: 150,
+          height: 150,
+          borderRadius: '50%',
+          background: 'var(--color-alert)',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 900,
+          fontSize: 36,
+          boxShadow: '0 18px 44px rgba(190, 30, 45, 0.28)',
+        }}
+      >
+        SOS
+      </div>
+      <p style={{ margin: '18px 0 0', fontSize: 13, lineHeight: 1.45, color: 'var(--color-charcoal)' }}>
+        One tap shares location with responders and the nearest facility.
+      </p>
+      <div
+        style={{
+          marginTop: 'auto',
+          width: '100%',
+          borderRadius: 12,
+          padding: 10,
+          background: '#fff',
+          border: '1px solid var(--color-sand-dark)',
+          color: 'var(--color-warm-gray)',
+          fontSize: 11,
+        }}
+      >
+        Works offline and retries by SMS when data is weak.
+      </div>
+    </div>
   )
 }
 
@@ -112,9 +153,8 @@ function ScreenVolunteer() {
         <p style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 600 }}>Priya Sharma</p>
         <p style={{ margin: 0, fontSize: 12, color: 'var(--color-warm-gray)' }}>1.2 km · needs transport</p>
       </div>
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button
-          type="button"
+      <div style={{ display: 'flex', gap: 10 }} aria-hidden="true">
+        <div
           style={{
             flex: 1,
             padding: '12px 8px',
@@ -127,9 +167,8 @@ function ScreenVolunteer() {
           }}
         >
           YES
-        </button>
-        <button
-          type="button"
+        </div>
+        <div
           style={{
             flex: 1,
             padding: '12px 8px',
@@ -141,7 +180,7 @@ function ScreenVolunteer() {
           }}
         >
           NO
-        </button>
+        </div>
       </div>
     </div>
   )

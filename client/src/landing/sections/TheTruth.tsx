@@ -1,6 +1,4 @@
 import { motion } from 'framer-motion'
-import { useInView } from 'react-intersection-observer'
-import CountUp from 'react-countup'
 import { StatBlock } from '@/landing/components/StatBlock'
 import {
   fadeUpVariants,
@@ -10,7 +8,6 @@ import {
 
 export function TheTruth() {
   const { ref, inView } = useScrollReveal(0.12)
-  const { ref: statsRef, inView: statsInView } = useInView({ threshold: 0.15, triggerOnce: true })
 
   return (
     <section
@@ -43,7 +40,6 @@ export function TheTruth() {
             The numbers they don&apos;t put on billboards.
           </motion.h2>
           <motion.div
-            ref={statsRef}
             variants={staggerContainerVariants}
             style={{
               display: 'grid',
@@ -54,32 +50,26 @@ export function TheTruth() {
             className="landing-truth-grid"
           >
             <StatBlock
-              stat="42–52%"
+              stat="260k"
               label={
                 <>
-                  of maternal deaths in South Asia
+                  women died during and following
                   <br />
-                  happen at home or in transit —
+                  pregnancy and childbirth in 2023,
                   <br />
-                  never reaching a hospital.
+                  according to WHO estimates.
                 </>
               }
             />
             <StatBlock
-              stat={
-                statsInView ? (
-                  <CountUp start={0} end={4.1} decimals={1} duration={2.2} suffix="×" />
-                ) : (
-                  '0×'
-                )
-              }
+              stat="2 min"
               label={
                 <>
-                  more likely — rural mothers face
+                  is roughly how often one maternal
                   <br />
-                  this delay than urban mothers,
+                  death occurred worldwide in 2023.
                   <br />
-                  even controlling for poverty.
+                  Timely response still matters.
                 </>
               }
             />
@@ -96,6 +86,28 @@ export function TheTruth() {
               }
             />
           </motion.div>
+          <motion.p
+            variants={fadeUpVariants}
+            style={{
+              margin: '28px auto 0',
+              maxWidth: 720,
+              fontFamily: 'var(--font-body)',
+              fontSize: 'var(--text-xs)',
+              color: 'var(--color-muted)',
+              lineHeight: 1.6,
+            }}
+          >
+            Source:{' '}
+            <a
+              href="https://www.who.int/news-room/fact-sheets/detail/maternal-mortality"
+              target="_blank"
+              rel="noreferrer"
+              style={{ color: 'inherit', textDecoration: 'underline' }}
+            >
+              WHO maternal mortality fact sheet
+            </a>
+            , 2023 estimates.
+          </motion.p>
         </motion.div>
       </div>
       <style>{`

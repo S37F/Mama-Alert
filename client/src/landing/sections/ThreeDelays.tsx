@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import type { ReactNode } from 'react'
+import { useState } from 'react'
 import { fadeUpVariants, useScrollReveal } from '@/landing/hooks/useScrollReveal'
 
 function IconHourglass() {
@@ -73,7 +74,7 @@ const DELAYS: [DelayItem, DelayItem, DelayItem] = [
     id: 'delay-2',
     icon: <IconRoad />,
     title: 'No car. No road. No one awake.',
-    body: '42% of mothers in rural India die before reaching a hospital. Not from untreatable conditions — from not getting there.',
+    body: 'Many emergencies become fatal before skilled care is reached. MamaAlert focuses on the minutes lost to transport, distance, and late mobilization.',
     duration: 'Average: 1.5–3 hours lost',
   },
   {
@@ -145,6 +146,16 @@ function DelayCardMotion({ item }: { item: DelayItem }) {
 
 export function ThreeDelays() {
   const { ref: ansRef, inView: ansInView } = useScrollReveal(0.15)
+  const [openDelayIds, setOpenDelayIds] = useState<Set<string>>(() => new Set([DELAYS[0]?.id ?? 'delay-1']))
+
+  const setDelayOpen = (id: string, open: boolean) => {
+    setOpenDelayIds((current) => {
+      const next = new Set(current)
+      if (open) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
 
   return (
     <section className="landing-section" style={{ background: 'var(--color-cream)' }}>
@@ -199,11 +210,12 @@ export function ThreeDelays() {
         </div>
 
         <div className="landing-delays-mobile" style={{ marginBottom: 48 }}>
-          {DELAYS.map((item, index) => (
+          {DELAYS.map((item) => (
             <details
               key={item.id}
               className="landing-card landing-delay-details"
-              open={index === 0}
+              open={openDelayIds.has(item.id)}
+              onToggle={(event) => setDelayOpen(item.id, event.currentTarget.open)}
               style={{ padding: 0, marginBottom: 12 }}
             >
               <summary
@@ -217,9 +229,14 @@ export function ThreeDelays() {
                   listStyle: 'none',
                 }}
               >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ display: 'flex', width: 40, justifyContent: 'center' }}>{item.icon}</span>
-                  {item.title}
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ display: 'flex', width: 40, justifyContent: 'center' }}>{item.icon}</span>
+                    {item.title}
+                  </span>
+                  <span aria-hidden="true" style={{ color: 'var(--color-terra)', fontFamily: 'var(--font-body)' }}>
+                    {openDelayIds.has(item.id) ? '-' : '+'}
+                  </span>
                 </span>
               </summary>
               <div style={{ padding: '0 24px 24px', borderTop: '1px solid var(--color-sand-dark)' }}>

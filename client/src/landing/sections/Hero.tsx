@@ -4,7 +4,7 @@ import { usePWAInstall } from '@/landing/hooks/usePWAInstall'
 
 export function Hero() {
   const { install, isInstalled, isInstalling, canInstall } = usePWAInstall()
-  const installLabel = isInstalled ? 'Open App' : canInstall ? 'Install MamaAlert' : 'Open App'
+  const installLabel = isInstalled ? 'Open App' : canInstall ? 'Install MamaAlert' : 'Continue in browser'
 
   return (
     <section
@@ -90,7 +90,7 @@ export function Hero() {
                 disabled={isInstalling}
                 aria-describedby="pwa-install-explainer"
               >
-                {isInstalling ? '…' : installLabel}
+                {isInstalling ? '...' : installLabel}
               </button>
               <Link to="/signup" className="landing-btn landing-btn--ghost landing-btn--hero-primary">
                 Sign Up / Login →

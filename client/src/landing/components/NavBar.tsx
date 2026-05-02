@@ -31,7 +31,7 @@ export function NavBar() {
     return () => window.removeEventListener('keydown', onKey)
   }, [menuOpen])
 
-  const label = isInstalled ? 'Open App' : canInstall ? 'Install App' : 'Open App'
+  const label = isInstalled ? 'Open App' : canInstall ? 'Install App' : 'Continue in browser'
 
   return (
     <header
@@ -128,7 +128,10 @@ export function NavBar() {
             type="button"
             className="landing-btn landing-btn--terra"
             style={{ width: '100%' }}
-            onClick={() => void install()}
+            onClick={() => {
+              setMenuOpen(false)
+              void install()
+            }}
             disabled={isInstalling}
             aria-describedby="pwa-install-explainer"
           >

@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { Link } from 'react-router-dom'
 import { BrandLogo } from '@/components/BrandLogo'
 
 export function Footer() {
@@ -60,12 +61,15 @@ export function Footer() {
             <a href="#install" style={linkStyle}>
               Install the app
             </a>
-            <a href="/signup" style={linkStyle}>
+            <Link to="/signup" style={linkStyle}>
               Sign up or log in
-            </a>
-            <a href="/signup" style={linkStyle}>
-              For health workers and admins
-            </a>
+            </Link>
+            <Link to="/signup?role=health_worker" style={linkStyle}>
+              For health workers
+            </Link>
+            <Link to="/signup?role=admin" style={linkStyle}>
+              For admins
+            </Link>
           </div>
           <div>
             <p

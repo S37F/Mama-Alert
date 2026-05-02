@@ -169,7 +169,7 @@ export function JoinTheNetwork() {
             or someone who wants to help?
           </p>
           <Link
-            to="/volunteer"
+            to="/signup?role=volunteer"
             className="landing-btn landing-btn--ghost landing-btn--install-cta"
             style={{ display: 'inline-flex' }}
           >

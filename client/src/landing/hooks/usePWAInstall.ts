@@ -17,22 +17,43 @@ export function usePWAInstall() {
 
   useEffect(() => {
     const sync = () => setInstallEvent(getInstallPrompt())
-    return subscribeInstallPrompt(sync)
+    const unsubscribe = subscribeInstallPrompt(sync)
+    const onAppInstalled = () => {
+      setIsInstalled(true)
+      clearInstallPrompt()
+      setInstallEvent(null)
+    }
+    const standaloneMedia =
+      typeof window !== 'undefined' ? window.matchMedia('(display-mode: standalone)') : null
+    const onDisplayModeChange = () => setIsInstalled(Boolean(standaloneMedia?.matches))
+
+    window.addEventListener('appinstalled', onAppInstalled)
+    standaloneMedia?.addEventListener('change', onDisplayModeChange)
+
+    return () => {
+      unsubscribe()
+      window.removeEventListener('appinstalled', onAppInstalled)
+      standaloneMedia?.removeEventListener('change', onDisplayModeChange)
+    }
   }, [])
 
   const install = useCallback(async () => {
     const ev = getInstallPrompt()
     if (!ev) {
-      window.location.href = '/sos'
+      window.location.assign(isInstalled ? '/sos' : '/signup')
       return
     }
     setIsInstalling(true)
-    await ev.prompt()
-    const { outcome } = await ev.userChoice
-    if (outcome === 'accepted') setIsInstalled(true)
-    setIsInstalling(false)
-    clearInstallPrompt()
-  }, [])
+    try {
+      await ev.prompt()
+      const { outcome } = await ev.userChoice
+      if (outcome === 'accepted') setIsInstalled(true)
+      clearInstallPrompt()
+      setInstallEvent(null)
+    } finally {
+      setIsInstalling(false)
+    }
+  }, [isInstalled])
 
   return { install, isInstalled, isInstalling, canInstall: !!installEvent }
 }
