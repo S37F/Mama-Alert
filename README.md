@@ -6,7 +6,7 @@ MamaAlert is a maternal emergency alert system with a React PWA client and an Ex
 
 - `client/` - React, Vite, Tailwind, PWA service worker, i18n locale files.
 - `server/` - Express API, Prisma schema/migrations, Twilio webhooks, delayed jobs.
-- `render.yaml` - Render web service deployment for the API. Railway/Procfile deployments run the same API start command from `server/`.
+- `server/Procfile` - Railway web process for the API when the Railway service root is `server/`.
 
 ## Local Setup
 
@@ -27,6 +27,8 @@ For Supabase on Railway, use the Supavisor pooler connection strings unless Rail
 - `DATABASE_URL`: Supavisor transaction pooler string, port `6543`, with `pgbouncer=true`.
 - `DIRECT_DATABASE_URL` or `MIGRATION_DATABASE_URL`: Supavisor session pooler string, port `5432`, for Prisma migrations.
 - `REQUIRE_DB_MIGRATIONS_ON_START=true`: optional; use only when the migration database URL is known reachable and startup should fail if migrations fail.
+
+For patient/volunteer signup on Railway, either allow browser location in the PWA or set `SELF_REG_FALLBACK_LAT` and `SELF_REG_FALLBACK_LNG` to coordinates inside your operating area. Without browser location or those fallback values, signup correctly returns a location-required error.
 
 ## Twilio Webhooks
 

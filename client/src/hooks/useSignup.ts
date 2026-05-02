@@ -53,6 +53,15 @@ async function tryCaptureLocation(): Promise<{ lat?: number; lng?: number }> {
   }
 }
 
+async function captureRequiredLocation(): Promise<{ lat: number; lng: number }> {
+  const location = await tryCaptureLocation()
+  if (typeof location.lat === 'number' && typeof location.lng === 'number') {
+    return { lat: location.lat, lng: location.lng }
+  }
+
+  throw new Error('Location is required. Allow browser location and try again.')
+}
+
 export function useSignup() {
   const navigate = useNavigate()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -98,7 +107,7 @@ export function useSignup() {
     setIsSubmitting(true)
     setError(null)
     try {
-      const location = options?.captureLocation ? await tryCaptureLocation() : {}
+      const location = options?.captureLocation ? await captureRequiredLocation() : {}
       const response = await postAuthSignup({
         ...body,
         ...location,

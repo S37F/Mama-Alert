@@ -5,6 +5,7 @@ import type { Prisma } from '@prisma/client'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { hashOtpCode } from '@/lib/otpHash'
 import { logAudit, logError } from '@/lib/logger'
+import { readSignupFallbackCoordinates } from '@/lib/mamaAuth'
 import { prisma } from '@/lib/prisma'
 import { normalizePhone } from '@/lib/phone'
 import { signSosPatientToken } from '@/lib/sosToken'
@@ -268,17 +269,16 @@ publicPatientAccessRouter.post(
     let lat = body.lat
     let lng = body.lng
     if (lat === undefined || lng === undefined) {
-      const fla = process.env.SELF_REG_FALLBACK_LAT
-      const flg = process.env.SELF_REG_FALLBACK_LNG
-      lat = Number.parseFloat(fla ?? '')
-      lng = Number.parseFloat(flg ?? '')
-      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      const fallback = readSignupFallbackCoordinates()
+      if (!fallback) {
         res.status(400).json({
           error:
             'Share your location on the form, or ask your host to set SELF_REG_FALLBACK_LAT and SELF_REG_FALLBACK_LNG.',
         })
         return
       }
+      lat = fallback.lat
+      lng = fallback.lng
     }
 
     const phonePrimary = body.phone_primary.trim()

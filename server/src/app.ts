@@ -19,7 +19,7 @@ import { workerPortalRouter } from '@/routes/workerPortal'
 import { validateTwilioUssdSignature } from '@/middleware/twilioValidate'
 import { csrfProtection } from '@/middleware/csrf'
 import { requestContextMiddleware } from '@/lib/requestContext'
-import { logError } from '@/lib/logger'
+import { logError, logWarn } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 
 function normalizeOrigin(value: string): string {
@@ -126,7 +126,6 @@ export function createApp(): express.Express {
   app.use('/api/status', statusRouter)
 
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-    logError('Unhandled error', { err: String(err) })
     const statusCode =
       err &&
       typeof err === 'object' &&
@@ -134,6 +133,11 @@ export function createApp(): express.Express {
       typeof (err as { statusCode: unknown }).statusCode === 'number'
         ? (err as { statusCode: number }).statusCode
         : 500
+    if (statusCode >= 400 && statusCode < 500) {
+      logWarn('Request rejected', { err: String(err), statusCode })
+    } else {
+      logError('Unhandled error', { err: String(err), statusCode })
+    }
     const message =
       statusCode >= 400 && statusCode < 500 && err instanceof Error ? err.message : 'Internal server error'
     res.status(statusCode).json({ error: message })

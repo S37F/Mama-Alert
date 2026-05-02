@@ -250,17 +250,26 @@ export function resolveSignupCoordinates(input?: {
     return { lat: input.lat, lng: input.lng }
   }
 
+  const fallback = readSignupFallbackCoordinates()
+  if (fallback) {
+    return fallback
+  }
+
+  logWarn('signup missing coordinates; set SELF_REG_FALLBACK_LAT/LNG only if browser location is unavailable')
+  throw Object.assign(
+    new Error('Location is required. Share browser location or configure SELF_REG_FALLBACK_LAT and SELF_REG_FALLBACK_LNG.'),
+    { statusCode: 400 },
+  )
+}
+
+export function readSignupFallbackCoordinates(): { lat: number; lng: number } | null {
   const envLat = Number.parseFloat(process.env.SELF_REG_FALLBACK_LAT ?? '')
   const envLng = Number.parseFloat(process.env.SELF_REG_FALLBACK_LNG ?? '')
   if (Number.isFinite(envLat) && Number.isFinite(envLng)) {
     return { lat: envLat, lng: envLng }
   }
 
-  logWarn('signup using zeroed fallback coordinates; set SELF_REG_FALLBACK_LAT/LNG to improve accuracy')
-  throw Object.assign(
-    new Error('Location is required. Share browser location or configure SELF_REG_FALLBACK_LAT and SELF_REG_FALLBACK_LNG.'),
-    { statusCode: 400 },
-  )
+  return null
 }
 
 export async function ensureAssignableHealthWorkerId(zoneId: string): Promise<string> {
