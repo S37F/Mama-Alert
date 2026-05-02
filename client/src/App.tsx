@@ -25,6 +25,9 @@ const FamilyStatus = lazy(() =>
 const HospitalInbox = lazy(() =>
   import('@/views/HospitalInbox').then((m) => ({ default: m.HospitalInbox })),
 )
+const ClinicSelfRegister = lazy(() =>
+  import('@/views/ClinicSelfRegister').then((m) => ({ default: m.ClinicSelfRegister })),
+)
 const PatientSelfRegister = lazy(() =>
   import('@/views/PatientSelfRegister').then((m) => ({ default: m.PatientSelfRegister })),
 )
@@ -63,6 +66,7 @@ export function App() {
             }
           />
           <Route path="/hospital" element={<HospitalInbox />} />
+          <Route path="/hospital/register" element={<ClinicSelfRegister />} />
           <Route path="/demo" element={<DemoFlow />} />
           <Route path="/status/:token" element={<FamilyStatus />} />
 

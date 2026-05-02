@@ -1,5 +1,5 @@
 import { Prisma } from '@prisma/client'
-import { extractFamilyPhones } from '@/lib/emergencyContacts'
+import { extractFamilyNotifyPhones } from '@/lib/emergencyContacts'
 import { logAudit, logError } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { recordAlertEvent } from '@/services/observability'
@@ -44,6 +44,8 @@ export async function resolveLatestOpenAlertForHospital(hospitalId: string): Pro
             language: true,
             statusToken: true,
             emergencyContacts: true,
+            phonePrimary: true,
+            phoneSecondary: true,
           },
         },
         nearestHospital: { select: { name: true } },
@@ -76,6 +78,8 @@ export async function resolveLatestOpenAlertForHospital(hospitalId: string): Pro
       patientLanguage: alert.patient.language ?? 'en',
       patientStatusToken: alert.patient.statusToken,
       patientEmergencyContacts: alert.patient.emergencyContacts,
+      patientPhonePrimary: alert.patient.phonePrimary,
+      patientPhoneSecondary: alert.patient.phoneSecondary,
       hospitalName: alert.nearestHospital?.name ?? 'clinic',
     }
   })
@@ -85,7 +89,11 @@ export async function resolveLatestOpenAlertForHospital(hospitalId: string): Pro
   }
 
   const firstName = resolved.patientName.split(/\s+/)[0] ?? resolved.patientName
-  const phones = extractFamilyPhones(resolved.patientEmergencyContacts)
+  const phones = extractFamilyNotifyPhones(
+    resolved.patientEmergencyContacts,
+    resolved.patientPhonePrimary,
+    resolved.patientPhoneSecondary,
+  )
   const famMsg = buildFamilyPatientArrivedSms(
     firstName,
     resolved.hospitalName,

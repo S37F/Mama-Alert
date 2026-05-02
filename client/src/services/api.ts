@@ -340,6 +340,28 @@ export async function postHospitalSession(token?: string): Promise<{ ok: boolean
   return response.data
 }
 
+export interface ClinicSelfRegisterPayload {
+  name: string
+  phone: string
+  type: 'clinic' | 'health_center' | 'hospital' | 'maternity_home'
+  lat: number
+  lng: number
+  zone_id?: string
+  services?: string[]
+  is_24hr?: boolean
+}
+
+export interface ClinicSelfRegisterResponse {
+  id: string
+  portal_token: string
+  name: string
+}
+
+export async function postClinicSelfRegister(body: ClinicSelfRegisterPayload): Promise<ClinicSelfRegisterResponse> {
+  const response = await api.post<ClinicSelfRegisterResponse>('/api/public/clinic-self-register', body)
+  return response.data
+}
+
 export async function getFamilyStatus(token: string): Promise<FamilyStatusPayload> {
   const response = await api.get<FamilyStatusPayload>(`/api/status/${encodeURIComponent(token)}`)
   return response.data

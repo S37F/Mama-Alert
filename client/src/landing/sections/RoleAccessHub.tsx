@@ -60,8 +60,11 @@ function buildRoleCards(): RoleCardDef[] {
     badge: 'Facility access',
     Icon: Building2,
     body: 'Receive maternity pre-alert SMS with patient summary, blood type, and ETA. Reply ARRIVED when the patient arrives to close the alert—or use the web inbox.',
-    actions: [{ to: '/hospital', label: 'Open Clinic Inbox', variant: 'terra' }],
-    pathHint: '/hospital',
+    actions: [
+      { to: '/hospital/register', label: 'Register Clinic', variant: 'terra' },
+      { to: '/hospital', label: 'Sign in', variant: 'ghost' },
+    ],
+    pathHint: '/hospital/register',
   },
 ]
 }

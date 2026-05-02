@@ -55,6 +55,15 @@ export const patientSelfRegisterRateLimit = rateLimit({
   legacyHeaders: false,
 })
 
+/** Clinic self-registration — keep strict to limit abuse. */
+export const clinicSelfRegisterRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 3,
+  message: { error: 'Too many registration attempts' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+
 /** Phone-only web login — tighter than general limit to slow account probing. */
 export const authPhoneLoginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,

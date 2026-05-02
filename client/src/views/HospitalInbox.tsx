@@ -153,6 +153,14 @@ export function HospitalInbox() {
             {t('common.save')}
           </Button>
         </div>
+        <div className="text-center">
+          <p className="text-muted-foreground text-sm">
+            New clinic?{' '}
+            <a href="/hospital/register" className="text-primary underline hover:no-underline">
+              Register your facility
+            </a>
+          </p>
+        </div>
       </main>
     )
   }

@@ -8,11 +8,12 @@ import { logAudit, logError } from '@/lib/logger'
 import { readSignupFallbackCoordinates } from '@/lib/mamaAuth'
 import { prisma } from '@/lib/prisma'
 import { normalizePhone } from '@/lib/phone'
+import { signHospitalPortalToken } from '@/lib/portalJwt'
 import { signSosPatientToken } from '@/lib/sosToken'
-import { patientOtpRequestRateLimit, patientSelfRegisterRateLimit } from '@/middleware/rateLimiter'
+import { clinicSelfRegisterRateLimit, patientOtpRequestRateLimit, patientSelfRegisterRateLimit } from '@/middleware/rateLimiter'
 import { getPublicAppUrl } from '@/config/publicUrl'
 import { verifySosPatientToken } from '@/lib/sosToken'
-import { insertPatientWithLocation } from '@/services/db/geoWrites'
+import { insertHospitalWithLocation, insertPatientWithLocation } from '@/services/db/geoWrites'
 import { getNearbyVolunteers } from '@/services/geo'
 import { sendFamilyWelcomeSmsIfEnabled } from '@/services/familyWelcomeOnRegister'
 import { fetchPatientForSosById } from '@/services/patientQueries'
@@ -356,6 +357,92 @@ publicPatientAccessRouter.post(
       })
     } catch (error) {
       logError('patient self-register failed', { error: String(error) })
+      res.status(400).json({ error: 'Could not complete registration', details: String(error) })
+    }
+  }),
+)
+
+const clinicSelfRegisterSchema = z.object({
+  name: z.string().min(2).max(120),
+  phone: z.string().min(8).max(24),
+  type: z.enum(['clinic', 'health_center', 'hospital', 'maternity_home']).default('clinic'),
+  lat: z.number().min(-90).max(90),
+  lng: z.number().min(-180).max(180),
+  zone_id: z.string().uuid().optional(),
+  services: z.array(z.string()).optional().default([]),
+  is_24hr: z.boolean().optional().default(false),
+})
+
+publicPatientAccessRouter.post(
+  '/clinic-self-register',
+  clinicSelfRegisterRateLimit,
+  asyncHandler(async (req, res) => {
+    const parsed = clinicSelfRegisterSchema.safeParse(req.body)
+    if (!parsed.success) {
+      res.status(400).json({ error: 'Invalid payload', details: parsed.error.flatten() })
+      return
+    }
+    const body = parsed.data
+
+    const zoneId = body.zone_id?.trim() || process.env.SELF_REG_DEFAULT_ZONE_ID?.trim()
+    if (!zoneId) {
+      res.status(400).json({
+        error: 'zone_id is required, or configure SELF_REG_DEFAULT_ZONE_ID.',
+      })
+      return
+    }
+
+    const zone = await prisma.zone.findUnique({
+      where: { id: zoneId },
+      select: { id: true },
+    })
+    if (!zone) {
+      res.status(400).json({ error: 'Unknown zone' })
+      return
+    }
+
+    const phoneNormalized = normalizePhone(body.phone)
+    const duplicate = await prisma.hospital.findFirst({
+      where: {
+        OR: [
+          { phoneMain: body.phone.trim() },
+          { phoneEmergency: body.phone.trim() },
+          { phoneMain: phoneNormalized },
+          { phoneEmergency: phoneNormalized },
+        ],
+      },
+      select: { id: true },
+    })
+    if (duplicate) {
+      res.status(409).json({ error: 'A clinic with this phone number is already registered.' })
+      return
+    }
+
+    try {
+      const data = await insertHospitalWithLocation({
+        zoneId,
+        name: body.name.trim(),
+        type: body.type,
+        lat: body.lat,
+        lng: body.lng,
+        phoneMain: body.phone.trim(),
+        phoneEmergency: null,
+        services: body.services,
+        is24hr: body.is_24hr,
+        receiveAlerts: true,
+        preAlertRadiusKm: null,
+      })
+
+      const portalToken = signHospitalPortalToken(data.id)
+      logAudit('clinic_self_registered', { hospitalId: data.id, zoneId })
+
+      res.status(201).json({
+        id: data.id,
+        portal_token: portalToken,
+        name: body.name.trim(),
+      })
+    } catch (error) {
+      logError('clinic self-register failed', { error: String(error) })
       res.status(400).json({ error: 'Could not complete registration', details: String(error) })
     }
   }),

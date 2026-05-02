@@ -1,5 +1,5 @@
 import type { Patient as PatientModel } from '@prisma/client'
-import { extractFamilyPhones } from '@/lib/emergencyContacts'
+import { extractFamilyNotifyPhones } from '@/lib/emergencyContacts'
 import { logAudit, logError, logWarn } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { rpcClaimAlertForVolunteer, rpcGetPatientForSos } from '@/services/db/rpc'
@@ -32,12 +32,13 @@ async function resolveHospitalForSos(
     const row = await prisma.hospital.findFirst({
       where: { id: preferredHospitalId, receiveAlerts: true },
     })
-    if (row?.phoneEmergency) {
+    const preAlertPhone = row?.phoneEmergency ?? row?.phoneMain ?? null
+    if (row && preAlertPhone) {
       const nearby = await getNearbyHospital(lat, lng).catch(() => null)
       const out: Hospital = {
         id: row.id,
         name: row.name,
-        phone_emergency: row.phoneEmergency,
+        phone_emergency: preAlertPhone,
         services: row.services,
         is_24hr: row.is24hr,
         pre_alert_radius_km: row.preAlertRadiusKm,
@@ -297,7 +298,7 @@ export async function applyVolunteerYes(
   }
 
   const contacts = patientRaw.emergency_contacts
-  const phones = extractFamilyPhones(contacts)
+  const phones = extractFamilyNotifyPhones(contacts, patient.phone_primary, patient.phone_secondary)
   const famMsg = buildFamilySMS(patient, vol.name, patient.status_token, patient.language)
   for (const ph of phones) {
     try {
@@ -307,7 +308,7 @@ export async function applyVolunteerYes(
     }
   }
 
-  if (hospital?.phone_emergency) {
+  if (hospital?.phone_emergency && hospital.phone_emergency.trim().length > 0) {
     try {
       const etaMinutes =
         typeof hospital.distance_m === 'number'

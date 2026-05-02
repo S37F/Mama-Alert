@@ -3,7 +3,7 @@
  */
 import { Prisma } from '@prisma/client'
 import { excludeUssdIncapacitation } from '@/config/incapacitationEnv'
-import { extractFamilyPhones } from '@/lib/emergencyContacts'
+import { extractFamilyNotifyPhones } from '@/lib/emergencyContacts'
 import { logError, logWarn } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { patientSosRowToPatient } from '@/services/patientMapper'
@@ -156,7 +156,7 @@ export async function runIncapacitationStep(alertId: string, patientId: string):
     return
   }
 
-  const phones = extractFamilyPhones(geoRow.emergency_contacts)
+  const phones = extractFamilyNotifyPhones(geoRow.emergency_contacts, geoRow.phone_primary, null)
   const famMsg = buildFamilyIncapacitationSMS(
     patientForFamily,
     patientForFamily.status_token,

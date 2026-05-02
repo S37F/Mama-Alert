@@ -7,6 +7,7 @@ const routeLabels: Record<string, string> = {
   '/signup': 'Access',
   '/volunteer': 'Volunteer',
   '/hospital': 'Clinic',
+  '/hospital/register': 'Clinic Registration',
   '/demo': 'Demo',
 }
 
