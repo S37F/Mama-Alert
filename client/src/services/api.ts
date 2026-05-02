@@ -200,13 +200,18 @@ export type EmergencyRelationship = 'husband' | 'mother' | 'sister' | 'neighbour
 export interface PatientSelfRegisterPayload {
   name: string
   phone_primary: string
-  zone_id?: string
-  lat?: number
-  lng?: number
+  zone_id: string
+  lat: number
+  lng: number
   language: string
-  weeks_pregnant?: number | null
-  village?: string
-  emergency_contacts?: { name: string; phone: string; relationship: EmergencyRelationship }[]
+  weeks_pregnant: number
+  village: string
+  landmark?: string | null
+  blood_type: string
+  /** Same keys as clinic / worker intake (snake_case). */
+  risk_flags: string[]
+  medication_name?: string | null
+  emergency_contacts: { name: string; phone: string; relationship: EmergencyRelationship }[]
 }
 
 export async function postPatientSelfRegister(

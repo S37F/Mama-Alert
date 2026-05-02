@@ -61,14 +61,11 @@ export function Footer() {
             <a href="#install" style={linkStyle}>
               Install the app
             </a>
+            <Link to="/sos/register" style={linkStyle}>
+              Patient registration
+            </Link>
             <Link to="/signup" style={linkStyle}>
-              Sign up or log in
-            </Link>
-            <Link to="/signup?role=health_worker" style={linkStyle}>
-              For health workers
-            </Link>
-            <Link to="/signup?role=admin" style={linkStyle}>
-              For admins
+              Volunteer sign up
             </Link>
           </div>
           <div>

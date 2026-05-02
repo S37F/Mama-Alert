@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -23,6 +24,19 @@ import { getPublicZones, postPatientSelfRegister, type PublicZoneRow } from '@/s
 const langs = ['en', 'hi', 'fr', 'sw', 'ar', 'pt'] as const
 const relationshipValues = ['husband', 'mother', 'sister', 'neighbour', 'other'] as const
 
+const riskKeys = [
+  'pre_eclampsia',
+  'placenta_previa',
+  'severe_anaemia',
+  'gestational_diabetes',
+  'multiple_pregnancy',
+  'obstructed_labour_history',
+  'hiv_positive',
+  'on_medication',
+] as const
+
+const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'unknown'] as const
+
 function normalizePhoneInput(value: string): string {
   const trimmed = value.replace(/[^\d+\s()-]/g, '')
   const withPlus = trimmed.startsWith('00') ? `+${trimmed.slice(2)}` : trimmed
@@ -33,18 +47,26 @@ export function PatientSelfRegister() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { lat, lng, error: geoErr, isLoading: geoLoading, capture: captureLocation } = useGeolocation()
-  const [regMode, setRegMode] = useState<'minimal' | 'full'>('minimal')
   const [zones, setZones] = useState<PublicZoneRow[]>([])
   const [zonesErr, setZonesErr] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [village, setVillage] = useState('')
+  const [landmark, setLandmark] = useState('')
   const [zoneId, setZoneId] = useState('')
   const [language, setLanguage] = useState<(typeof langs)[number]>('en')
   const [weeks, setWeeks] = useState('')
+  const [bloodType, setBloodType] = useState<(typeof BLOOD_TYPES)[number]>('O+')
+  const [risk, setRisk] = useState<Record<(typeof riskKeys)[number], boolean>>(() =>
+    Object.fromEntries(riskKeys.map((k) => [k, false])) as Record<(typeof riskKeys)[number], boolean>,
+  )
+  const [medicationName, setMedicationName] = useState('')
   const [c1Name, setC1Name] = useState('')
   const [c1Phone, setC1Phone] = useState('')
   const [c1Rel, setC1Rel] = useState<(typeof relationshipValues)[number]>('husband')
+  const [c2Name, setC2Name] = useState('')
+  const [c2Phone, setC2Phone] = useState('')
+  const [c2Rel, setC2Rel] = useState<(typeof relationshipValues)[number]>('mother')
   const [submitErr, setSubmitErr] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -72,7 +94,7 @@ export function PatientSelfRegister() {
     const n = name.trim()
     const p = normalizePhoneInput(phone).replace(/\s/g, '')
     const v = village.trim()
-    if (n.length < 1) {
+    if (n.length < 2) {
       setSubmitErr(t('register.validation.required'))
       return
     }
@@ -84,57 +106,58 @@ export function PatientSelfRegister() {
       setSubmitErr(t('sos.selfReg.pickZone'))
       return
     }
-
-    const wn = weeks.trim() ? Number(weeks) : null
-    const weeks_pregnant =
-      wn !== null && !Number.isNaN(wn) && wn >= 1 && wn <= 44 ? wn : null
-
-    if (regMode === 'minimal') {
-      if (v.length < 1) {
-        setSubmitErr(t('sos.selfReg.villageRequired'))
-        return
-      }
-      setSubmitting(true)
-      try {
-        const out = await postPatientSelfRegister({
-          name: n,
-          phone_primary: p,
-          zone_id: zoneId,
-          language,
-          weeks_pregnant,
-          village: v,
-          emergency_contacts: [],
-        })
-        try {
-          localStorage.setItem('mamaalert_sos_token', out.sos_token)
-          localStorage.setItem('mamaalert_patient_phone', p)
-          localStorage.setItem('mamaalert_patient_display_name', n.split(/\s+/)[0] ?? n)
-          if (weeks_pregnant !== null) {
-            localStorage.setItem('mamaalert_patient_weeks', String(weeks_pregnant))
-          }
-        } catch {
-          /* storage */
-        }
-        const u = new URL(`${window.location.origin}/sos`)
-        u.searchParams.set('token', out.sos_token)
-        u.searchParams.set('phone', p)
-        navigate(`${u.pathname}${u.search}`, { replace: true })
-      } catch (e) {
-        setSubmitErr(e instanceof Error ? e.message : t('common.error'))
-      } finally {
-        setSubmitting(false)
-      }
+    const wn = Number(weeks)
+    if (!Number.isFinite(wn) || wn < 1 || wn > 44) {
+      setSubmitErr(t('sos.selfReg.weeksRequired'))
       return
     }
-
     if (lat === null || lng === null) {
       setSubmitErr(t('register.locationRequired'))
+      return
+    }
+    if (v.length < 2) {
+      setSubmitErr(t('sos.selfReg.villageRequired'))
       return
     }
     if (!c1Name.trim() || c1Phone.trim().length < 8) {
       setSubmitErr(t('sos.selfReg.contactRequired'))
       return
     }
+    const c1Norm = normalizePhoneInput(c1Phone).replace(/\s/g, '')
+    if (!/^\+?[0-9]{8,20}$/.test(c1Norm)) {
+      setSubmitErr(t('worker.volunteerReg.phoneInvalid'))
+      return
+    }
+
+    const c2Nx = c2Name.trim()
+    const c2Px = normalizePhoneInput(c2Phone).replace(/\s/g, '')
+    const hasC2Partial = Boolean(c2Nx || c2Px)
+    if (hasC2Partial) {
+      if (!c2Nx) {
+        setSubmitErr(t('register.validation.required'))
+        return
+      }
+      if (c2Px.length < 8 || !/^\+?[0-9]{8,20}$/.test(c2Px)) {
+        setSubmitErr(t('worker.volunteerReg.phoneInvalid'))
+        return
+      }
+    }
+
+    const risk_flags = riskKeys.filter((k) => risk[k])
+    if (risk.on_medication) {
+      const med = medicationName.trim()
+      if (med.length < 1) {
+        setSubmitErr(t('register.validation.required'))
+        return
+      }
+    }
+
+    const emergency_contacts = [
+      { name: c1Name.trim(), phone: c1Norm, relationship: c1Rel },
+      ...(hasC2Partial ? [{ name: c2Nx, phone: c2Px, relationship: c2Rel }] : []),
+    ]
+
+    const landmarkTrim = landmark.trim()
 
     setSubmitting(true)
     try {
@@ -145,17 +168,19 @@ export function PatientSelfRegister() {
         lat,
         lng,
         language,
-        weeks_pregnant,
-        emergency_contacts: [{ name: c1Name.trim(), phone: c1Phone.trim(), relationship: c1Rel }],
-        ...(v.length > 0 ? { village: v } : {}),
+        weeks_pregnant: wn,
+        village: v,
+        landmark: landmarkTrim.length > 0 ? landmarkTrim : null,
+        blood_type: bloodType,
+        risk_flags,
+        medication_name: risk.on_medication ? medicationName.trim() : null,
+        emergency_contacts,
       })
       try {
         localStorage.setItem('mamaalert_sos_token', out.sos_token)
         localStorage.setItem('mamaalert_patient_phone', p)
         localStorage.setItem('mamaalert_patient_display_name', n.split(/\s+/)[0] ?? n)
-        if (weeks_pregnant !== null) {
-          localStorage.setItem('mamaalert_patient_weeks', String(weeks_pregnant))
-        }
+        localStorage.setItem('mamaalert_patient_weeks', String(wn))
       } catch {
         /* storage */
       }
@@ -169,16 +194,22 @@ export function PatientSelfRegister() {
       setSubmitting(false)
     }
   }, [
+    bloodType,
     c1Name,
     c1Phone,
     c1Rel,
+    c2Name,
+    c2Phone,
+    c2Rel,
+    landmark,
     lat,
     lng,
     language,
+    medicationName,
     name,
     navigate,
     phone,
-    regMode,
+    risk,
     t,
     village,
     weeks,
@@ -196,31 +227,6 @@ export function PatientSelfRegister() {
         </Link>
       </div>
       <p className="text-muted-foreground text-sm">{t('sos.selfReg.subtitle')}</p>
-
-      <div className="space-y-2 rounded-lg border border-border p-4">
-        <p className="text-sm font-medium">{t('sos.selfReg.registrationType')}</p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant={regMode === 'minimal' ? 'default' : 'outline'}
-            onClick={() => setRegMode('minimal')}
-          >
-            {t('sos.selfReg.modeMinimal')}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={regMode === 'full' ? 'default' : 'outline'}
-            onClick={() => setRegMode('full')}
-          >
-            {t('sos.selfReg.modeFull')}
-          </Button>
-        </div>
-        {regMode === 'minimal' ? (
-          <p className="text-muted-foreground text-xs">{t('sos.selfReg.minimalHint')}</p>
-        ) : null}
-      </div>
 
       {zonesErr ? <ErrorMessage message={zonesErr} onRetry={() => window.location.reload()} /> : null}
       {submitErr ? <ErrorMessage message={submitErr} onRetry={() => setSubmitErr(null)} /> : null}
@@ -275,11 +281,26 @@ export function PatientSelfRegister() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sr-weeks">{t('register.fields.weeksPregnant')}</Label>
+            <Label htmlFor="sr-weeks">{t('register.fields.weeksPregnant')} *</Label>
             <Input id="sr-weeks" type="number" min={1} max={44} value={weeks} onChange={(e) => setWeeks(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sr-village">{t('sos.selfReg.villageLabel')}</Label>
+            <Label htmlFor="sr-blood">{t('register.fields.bloodType')}</Label>
+            <Select value={bloodType} onValueChange={(v) => setBloodType(v as (typeof BLOOD_TYPES)[number])}>
+              <SelectTrigger id="sr-blood" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {BLOOD_TYPES.map((bt) => (
+                  <SelectItem key={bt} value={bt}>
+                    {bt === 'unknown' ? t('sos.selfReg.bloodUnknown') : bt}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="sr-village">{t('sos.selfReg.villageLabel')} *</Label>
             <Input
               id="sr-village"
               value={village}
@@ -288,51 +309,24 @@ export function PatientSelfRegister() {
               autoComplete="address-level3"
             />
           </div>
-        </CardContent>
-      </Card>
-
-      {regMode === 'full' ? (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('register.sections.contacts')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-muted-foreground text-xs">{t('sos.selfReg.contactHint')}</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="sr-c1n">{t('register.fields.contactName')}</Label>
-              <Input id="sr-c1n" value={c1Name} onChange={(e) => setC1Name(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sr-c1p">{t('register.fields.contactPhone')}</Label>
-              <Input id="sr-c1p" type="tel" value={c1Phone} onChange={(e) => setC1Phone(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('register.fields.relationship')}</Label>
-              <Select value={c1Rel} onValueChange={(v) => setC1Rel(v as (typeof relationshipValues)[number])}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {relationshipValues.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {t(`register.relationship.${r}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="sr-landmark">{t('register.fields.landmark')}</Label>
+            <Input
+              id="sr-landmark"
+              value={landmark}
+              onChange={(e) => setLandmark(e.target.value)}
+              placeholder={t('sos.selfReg.landmarkPlaceholder')}
+            />
           </div>
         </CardContent>
       </Card>
-      ) : null}
 
-      {regMode === 'full' ? (
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t('register.sections.location')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <p className="text-muted-foreground text-xs">{t('sos.selfReg.locationHint')}</p>
           <Button type="button" variant="secondary" disabled={geoLoading} onClick={captureLocation}>
             {geoLoading ? t('common.loading') : t('register.captureLocation')}
           </Button>
@@ -352,9 +346,117 @@ export function PatientSelfRegister() {
           ) : null}
         </CardContent>
       </Card>
-      ) : null}
 
-      <Button type="button" className="w-full" size="lg" disabled={submitting || zones.length === 0} onClick={() => void submit()}>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('register.sections.risks')}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2">
+          {riskKeys.map((k) => (
+            <div key={k} className="flex items-center gap-2">
+              <Checkbox
+                id={`sr-risk-${k}`}
+                checked={risk[k]}
+                onCheckedChange={(c) => setRisk((prev) => ({ ...prev, [k]: c === true }))}
+              />
+              <Label htmlFor={`sr-risk-${k}`} className="font-normal">
+                {t(`register.risks.${k}`)}
+              </Label>
+            </div>
+          ))}
+          {risk.on_medication ? (
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="sr-med">{t('register.fields.medicationName')}</Label>
+              <Input id="sr-med" value={medicationName} onChange={(e) => setMedicationName(e.target.value)} />
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t('register.sections.contacts')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <p className="text-muted-foreground text-xs">{t('sos.selfReg.contactHint')}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>{t('register.contact.n', { n: 1 })}</Label>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="sr-c1n">{t('register.fields.contactName')}</Label>
+              <Input id="sr-c1n" value={c1Name} onChange={(e) => setC1Name(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sr-c1p">{t('register.fields.contactPhone')}</Label>
+              <Input
+                id="sr-c1p"
+                type="tel"
+                value={c1Phone}
+                onChange={(e) => setC1Phone(normalizePhoneInput(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('register.fields.relationship')}</Label>
+              <Select value={c1Rel} onValueChange={(v) => setC1Rel(v as (typeof relationshipValues)[number])}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {relationshipValues.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {t(`register.relationship.${r}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>
+                {t('register.contact.n', { n: 2 })} {t('register.contact.optional')}
+              </Label>
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="sr-c2n">{t('register.fields.contactName')}</Label>
+              <Input id="sr-c2n" value={c2Name} onChange={(e) => setC2Name(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sr-c2p">{t('register.fields.contactPhone')}</Label>
+              <Input
+                id="sr-c2p"
+                type="tel"
+                value={c2Phone}
+                onChange={(e) => setC2Phone(normalizePhoneInput(e.target.value))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{t('register.fields.relationship')}</Label>
+              <Select value={c2Rel} onValueChange={(v) => setC2Rel(v as (typeof relationshipValues)[number])}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {relationshipValues.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {t(`register.relationship.${r}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button
+        type="button"
+        className="w-full"
+        size="lg"
+        disabled={submitting || zones.length === 0}
+        onClick={() => void submit()}
+      >
         {submitting ? t('common.loading') : t('sos.selfReg.submit')}
       </Button>
     </main>

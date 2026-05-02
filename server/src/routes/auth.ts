@@ -3,7 +3,6 @@ import { z } from 'zod'
 import { asyncHandler } from '@/lib/asyncHandler'
 import {
   type AuthSessionResponse,
-  ensureAssignableHealthWorkerId,
   isPhoneRegistered,
   lookupSessionByPhone,
   resolveCommunityZoneId,
@@ -11,21 +10,9 @@ import {
 } from '@/lib/mamaAuth'
 import { clearAuthCookies, setMamaSessionCookie, setVolunteerPortalCookie } from '@/lib/httpCookies'
 import { authPhoneLoginRateLimit } from '@/middleware/rateLimiter'
-import { insertPatientWithLocation, insertVolunteerWithLocation } from '@/services/db/geoWrites'
+import { insertVolunteerWithLocation } from '@/services/db/geoWrites'
 
 export const authRouter = Router()
-
-const patientSignupSchema = z.object({
-  role: z.literal('patient'),
-  name: z.string().min(2),
-  phone: z.string().min(10),
-  weeksPregnant: z.number().int().min(1).max(44),
-  village: z.string().min(2),
-  landmark: z.string().optional(),
-  language: z.string().default('en'),
-  lat: z.number().min(-90).max(90).optional(),
-  lng: z.number().min(-180).max(180).optional(),
-})
 
 const volunteerSignupSchema = z.object({
   role: z.literal('volunteer'),
@@ -40,10 +27,7 @@ const volunteerSignupSchema = z.object({
   lng: z.number().min(-180).max(180).optional(),
 })
 
-const signupSchema = z.discriminatedUnion('role', [
-  patientSignupSchema,
-  volunteerSignupSchema,
-])
+const signupSchema = volunteerSignupSchema
 
 const loginSchema = z.object({
   phone: z.string().min(10),
@@ -71,90 +55,37 @@ authRouter.post(
       return
     }
 
-    if (body.role === 'patient') {
-      const zoneId = await resolveCommunityZoneId(body.village)
-      const healthWorkerId = await ensureAssignableHealthWorkerId(zoneId)
-      const coords = resolveSignupCoordinates({
-        ...(body.lat !== undefined ? { lat: body.lat } : {}),
-        ...(body.lng !== undefined ? { lng: body.lng } : {}),
-      })
-      const patient = await insertPatientWithLocation({
-        healthWorkerId,
-        zoneId,
-        name: body.name.trim(),
-        age: null,
-        phonePrimary: body.phone.trim(),
-        phoneSecondary: null,
-        village: body.village.trim(),
-        landmark: body.landmark?.trim() || null,
-        lat: coords.lat,
-        lng: coords.lng,
-        weeksPregnant: body.weeksPregnant,
-        dueDate: null,
-        prevPregnancies: null,
-        prevBirths: null,
-        prevCsection: false,
-        lastAncDate: null,
-        bloodType: null,
-        language: body.language,
-        riskFlags: [],
-        medicationName: null,
-        emergencyContacts: [],
-        registrationVerified: false,
-        registrationSource: 'self',
-      })
-      const session = await lookupSessionByPhone(body.phone)
-      if (!session) {
-        res.status(500).json({ error: 'Could not create account' })
-        return
-      }
-      setAuthCookiesForSession(res, session)
-      res.status(201).json({
-        success: true,
-        role: 'patient',
-        name: body.name.trim(),
-        profileId: patient.id,
-        session,
-      })
+    const zoneId = await resolveCommunityZoneId(body.village)
+    const coords = resolveSignupCoordinates({
+      ...(body.lat !== undefined ? { lat: body.lat } : {}),
+      ...(body.lng !== undefined ? { lng: body.lng } : {}),
+    })
+    const volunteer = await insertVolunteerWithLocation({
+      zoneId,
+      name: body.name.trim(),
+      phone: body.phone.trim(),
+      lat: coords.lat,
+      lng: coords.lng,
+      village: body.village.trim(),
+      availabilityHours: body.availableHours,
+      skills: body.skills,
+      vehicle: body.vehicle,
+      maxRadiusKm: body.maxRadiusKm,
+      language: 'en',
+    })
+    const session = await lookupSessionByPhone(body.phone)
+    if (!session) {
+      res.status(500).json({ error: 'Could not create account' })
       return
     }
-
-    if (body.role === 'volunteer') {
-      const zoneId = await resolveCommunityZoneId(body.village)
-      const coords = resolveSignupCoordinates({
-        ...(body.lat !== undefined ? { lat: body.lat } : {}),
-        ...(body.lng !== undefined ? { lng: body.lng } : {}),
-      })
-      const volunteer = await insertVolunteerWithLocation({
-        zoneId,
-        name: body.name.trim(),
-        phone: body.phone.trim(),
-        lat: coords.lat,
-        lng: coords.lng,
-        village: body.village.trim(),
-        availabilityHours: body.availableHours,
-        skills: body.skills,
-        vehicle: body.vehicle,
-        maxRadiusKm: body.maxRadiusKm,
-        language: 'en',
-      })
-      const session = await lookupSessionByPhone(body.phone)
-      if (!session) {
-        res.status(500).json({ error: 'Could not create account' })
-        return
-      }
-      setAuthCookiesForSession(res, session)
-      res.status(201).json({
-        success: true,
-        role: 'volunteer',
-        name: body.name.trim(),
-        profileId: volunteer.id,
-        session,
-      })
-      return
-    }
-
-    res.status(400).json({ error: 'Invalid role' })
+    setAuthCookiesForSession(res, session)
+    res.status(201).json({
+      success: true,
+      role: 'volunteer',
+      name: body.name.trim(),
+      profileId: volunteer.id,
+      session,
+    })
   }),
 )
 

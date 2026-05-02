@@ -1,24 +1,25 @@
-import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { BrandLogo } from '@/components/BrandLogo'
 import { useAuth } from '@/hooks/useAuth'
-import { redirectForRole, type MamaAlertRole } from '@/lib/mamaSession'
+import { redirectForRole } from '@/lib/mamaSession'
 import { LoginForm } from '@/views/signup/LoginForm'
-import { PatientSignupForm } from '@/views/signup/PatientSignupForm'
-import { RolePicker } from '@/views/signup/RolePicker'
 import { VolunteerSignupForm } from '@/views/signup/VolunteerSignupForm'
 
 type AuthMode = 'signup' | 'login'
-const SIGNUP_ROLES: MamaAlertRole[] = ['patient', 'volunteer']
 
 export function SignupLogin() {
   const { session } = useAuth()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const mode: AuthMode = searchParams.get('mode') === 'login' ? 'login' : 'signup'
-  const roleParam = searchParams.get('role') as MamaAlertRole | null
-  const initialRole = mode === 'signup' && roleParam && SIGNUP_ROLES.includes(roleParam) ? roleParam : null
-  const [selectedRole, setSelectedRole] = useState<MamaAlertRole | null>(initialRole)
-  const [step, setStep] = useState<1 | 2>(initialRole ? 2 : 1)
+  const roleParam = searchParams.get('role')
+
+  useEffect(() => {
+    if (mode === 'signup' && roleParam === 'patient') {
+      navigate('/sos/register', { replace: true })
+    }
+  }, [mode, roleParam, navigate])
 
   useEffect(() => {
     if (session) {
@@ -27,8 +28,6 @@ export function SignupLogin() {
   }, [session])
 
   const switchMode = (nextMode: AuthMode) => {
-    setSelectedRole(null)
-    setStep(1)
     const next = new URLSearchParams(searchParams)
     next.delete('role')
     if (nextMode === 'login') {
@@ -37,38 +36,6 @@ export function SignupLogin() {
       next.delete('mode')
     }
     setSearchParams(next, { replace: true })
-  }
-
-  const backToRolePicker = () => {
-    setStep(1)
-    setSelectedRole(null)
-    const next = new URLSearchParams(searchParams)
-    next.delete('role')
-    setSearchParams(next, { replace: true })
-  }
-
-  const renderSignupStep = () => {
-    if (step === 1) {
-      return (
-        <RolePicker
-          selectedRole={selectedRole}
-          onSelect={setSelectedRole}
-          onContinue={() => {
-            if (selectedRole) {
-              setStep(2)
-            }
-          }}
-        />
-      )
-    }
-
-    if (selectedRole === 'patient') {
-      return <PatientSignupForm onBack={backToRolePicker} />
-    }
-    if (selectedRole === 'volunteer') {
-      return <VolunteerSignupForm onBack={backToRolePicker} />
-    }
-    return null
   }
 
   return (
@@ -90,17 +57,19 @@ export function SignupLogin() {
                   One route for every role.
                 </h1>
                 <p className="max-w-md text-base leading-7 text-[var(--mama-sand-dark)]">
-                  Sign up or log in with a phone number, then go straight where you need to be. Patients reach SOS.
-                  Volunteers see live alerts. Clinics use their portal token.
+                  Patients register once on SOS with full details for volunteers and clinics. Volunteers join here by
+                  phone. Clinics use their portal token.
                 </p>
               </div>
             </div>
 
             <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-6">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--mama-terra-light)]">What changed</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--mama-terra-light)]">
+                Patients
+              </p>
               <p className="text-sm leading-7 text-[var(--mama-sand)]">
-                Phone-only access replaces the old split flows. Choose a role once, fill the matching form, and the
-                app takes you the rest of the way.
+                New patients should use <span className="font-medium">Register myself</span> from the SOS screen — not
+                this page.
               </p>
             </div>
           </section>
@@ -134,7 +103,11 @@ export function SignupLogin() {
                 </div>
               </div>
 
-              {mode === 'signup' ? renderSignupStep() : <LoginForm />}
+              {mode === 'signup' ? (
+                <VolunteerSignupForm onBack={() => navigate('/')} />
+              ) : (
+                <LoginForm />
+              )}
             </div>
           </section>
         </div>

@@ -5,13 +5,12 @@ import type { Prisma } from '@prisma/client'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { hashOtpCode } from '@/lib/otpHash'
 import { logAudit, logError } from '@/lib/logger'
-import { ensureAssignableHealthWorkerId, readSignupFallbackCoordinates } from '@/lib/mamaAuth'
+import { ensureAssignableHealthWorkerId } from '@/lib/mamaAuth'
 import { prisma } from '@/lib/prisma'
 import { normalizePhone } from '@/lib/phone'
 import { signHospitalPortalToken } from '@/lib/portalJwt'
 import { signSosPatientToken } from '@/lib/sosToken'
 import { clinicSelfRegisterRateLimit, patientOtpRequestRateLimit, patientSelfRegisterRateLimit } from '@/middleware/rateLimiter'
-import { getPublicAppUrl } from '@/config/publicUrl'
 import { verifySosPatientToken } from '@/lib/sosToken'
 import { insertHospitalWithLocation, insertPatientWithLocation } from '@/services/db/geoWrites'
 import { getNearbyVolunteers } from '@/services/geo'
@@ -27,45 +26,51 @@ const relationshipEnum = z.enum(['husband', 'mother', 'sister', 'neighbour', 'ot
 
 const emergencyContactSchema = z.object({
   name: z.string().min(1),
-  phone: z.string().min(8),
+  phone: z
+    .string()
+    .min(1)
+    .transform((s) => s.replace(/[\s-]/g, ''))
+    .pipe(z.string().regex(/^\+?[0-9]{8,20}$/, 'Valid contact phone required')),
   relationship: relationshipEnum,
 })
 
+const riskFlagEnum = z.enum([
+  'pre_eclampsia',
+  'placenta_previa',
+  'severe_anaemia',
+  'gestational_diabetes',
+  'multiple_pregnancy',
+  'obstructed_labour_history',
+  'hiv_positive',
+  'on_medication',
+])
+
 const selfRegisterSchema = z
   .object({
-    name: z.string().min(1),
+    name: z.string().min(2),
     phone_primary: z.string().min(8).max(20).regex(/^\+?[0-9]{8,20}$/),
-    zone_id: z.string().uuid().optional(),
-    lat: z.number().min(-90).max(90).optional(),
-    lng: z.number().min(-180).max(180).optional(),
+    zone_id: z.string().uuid(),
+    lat: z.number().min(-90).max(90),
+    lng: z.number().min(-180).max(180),
     language: z.string().min(2).max(8),
-    weeks_pregnant: z.number().int().min(1).max(44).optional().nullable(),
-    village: z.string().optional(),
-    emergency_contacts: z.array(emergencyContactSchema).max(4).optional().default([]),
+    weeks_pregnant: z.number().int().min(1).max(44),
+    village: z.string().min(2),
+    landmark: z.string().max(200).optional().nullable(),
+    blood_type: z.string().min(1).max(16),
+    risk_flags: z.array(riskFlagEnum).max(20).optional().default([]),
+    medication_name: z.string().max(200).optional().nullable(),
+    emergency_contacts: z.array(emergencyContactSchema).min(1).max(4),
   })
   .superRefine((val, ctx) => {
-    const contacts = val.emergency_contacts ?? []
-    const hasContacts = contacts.length >= 1
-    if (contacts.length > 4) {
-      ctx.addIssue({ code: 'custom', message: 'Too many emergency contacts', path: ['emergency_contacts'] })
-    }
-    if (hasContacts) {
-      if (!val.zone_id) {
-        ctx.addIssue({ code: 'custom', message: 'zone_id required', path: ['zone_id'] })
+    if (val.risk_flags.includes('on_medication')) {
+      const m = val.medication_name?.trim() ?? ''
+      if (m.length < 1) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'medication_name required when on_medication is selected',
+          path: ['medication_name'],
+        })
       }
-      if (val.lat === undefined || val.lng === undefined) {
-        ctx.addIssue({ code: 'custom', message: 'lat and lng required', path: ['lat'] })
-      }
-    } else {
-      const v = val.village?.trim() ?? ''
-      if (v.length < 1) {
-        ctx.addIssue({ code: 'custom', message: 'village required for minimal registration', path: ['village'] })
-      }
-    }
-    const hasLat = val.lat !== undefined
-    const hasLng = val.lng !== undefined
-    if (hasLat !== hasLng) {
-      ctx.addIssue({ code: 'custom', message: 'lat and lng must be provided together', path: ['lng'] })
     }
   })
 
@@ -246,16 +251,9 @@ publicPatientAccessRouter.post(
       return
     }
     const body = parsed.data
-    const contacts = body.emergency_contacts ?? []
-    const hasContacts = contacts.length >= 1
+    const contacts = body.emergency_contacts
 
-    const zoneId = body.zone_id?.trim() || process.env.SELF_REG_DEFAULT_ZONE_ID?.trim()
-    if (!zoneId) {
-      res.status(400).json({
-        error: 'zone_id is required, or configure SELF_REG_DEFAULT_ZONE_ID for minimal self-registration.',
-      })
-      return
-    }
+    const zoneId = body.zone_id.trim()
 
     const zone = await prisma.zone.findUnique({
       where: { id: zoneId },
@@ -266,20 +264,8 @@ publicPatientAccessRouter.post(
       return
     }
 
-    let lat = body.lat
-    let lng = body.lng
-    if (lat === undefined || lng === undefined) {
-      const fallback = readSignupFallbackCoordinates()
-      if (!fallback) {
-        res.status(400).json({
-          error:
-            'Share your location on the form, or ask your host to set SELF_REG_FALLBACK_LAT and SELF_REG_FALLBACK_LNG.',
-        })
-        return
-      }
-      lat = fallback.lat
-      lng = fallback.lng
-    }
+    const lat = body.lat
+    const lng = body.lng
 
     const phonePrimary = body.phone_primary.trim()
     const phoneE164 = normalizePhone(phonePrimary)
@@ -294,10 +280,16 @@ publicPatientAccessRouter.post(
 
     const healthWorkerId = await ensureAssignableHealthWorkerId(zoneId)
 
-    const emergencyContactsJson = contacts as Prisma.InputJsonValue
-    const villageTrim = hasContacts ? (body.village?.trim() || null) : (body.village ?? '').trim()
-    const registrationVerified = hasContacts
-    const registrationSource = 'self'
+    const contactsForDb = contacts.map((c) => ({
+      name: c.name.trim(),
+      phone: c.phone,
+      relationship: c.relationship,
+    }))
+    const emergencyContactsJson = contactsForDb as Prisma.InputJsonValue
+    const villageTrim = body.village.trim()
+    const riskFlagsList = [...body.risk_flags]
+    const onMed = riskFlagsList.includes('on_medication')
+    const medicationName = onMed ? (body.medication_name?.trim() || null) : null
 
     try {
       const data = await insertPatientWithLocation({
@@ -308,44 +300,31 @@ publicPatientAccessRouter.post(
         phonePrimary,
         phoneSecondary: null,
         village: villageTrim || null,
-        landmark: null,
+        landmark: body.landmark?.trim() || null,
         lat,
         lng,
-        weeksPregnant: body.weeks_pregnant ?? null,
+        weeksPregnant: body.weeks_pregnant,
         dueDate: null,
         prevPregnancies: null,
         prevBirths: null,
         prevCsection: false,
         lastAncDate: null,
-        bloodType: null,
+        bloodType: body.blood_type.trim(),
         language: body.language,
-        riskFlags: [],
-        medicationName: null,
+        riskFlags: riskFlagsList,
+        medicationName,
         emergencyContacts: emergencyContactsJson,
-        registrationVerified,
-        registrationSource,
+        registrationVerified: true,
+        registrationSource: 'self',
       })
       const sos_token = signSosPatientToken(data.id, SOS_TOKEN_TTL_SEC)
-      logAudit('patient_self_registered', { patientId: data.id, zoneId, minimal: !hasContacts })
-      if (hasContacts) {
-        void sendFamilyWelcomeSmsIfEnabled(body.name.trim(), contacts, data.status_token, body.language)
-      } else {
-        const hw = await prisma.healthWorker.findUnique({
-          where: { userId: healthWorkerId },
-          select: { phone: true },
-        })
-        if (hw?.phone) {
-          const base = getPublicAppUrl()
-          const dash = base ? `${base}/` : 'MamaAlert'
-          const msg = `MamaAlert: ${body.name.trim()} self-registered (${villageTrim}). Details: ${dash}`
-          void sendSMS(hw.phone, msg.slice(0, 480))
-        }
-      }
+      logAudit('patient_self_registered', { patientId: data.id, zoneId, minimal: false })
+      void sendFamilyWelcomeSmsIfEnabled(body.name.trim(), contactsForDb, data.status_token, body.language)
       res.status(201).json({
         id: data.id,
         status_token: data.status_token,
         sos_token,
-        registration_verified: registrationVerified,
+        registration_verified: true,
       })
     } catch (error) {
       logError('patient self-register failed', { error: String(error) })

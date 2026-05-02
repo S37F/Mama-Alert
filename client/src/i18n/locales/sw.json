@@ -51,7 +51,7 @@
     },
     "selfReg": {
       "title": "Kujisajili",
-      "subtitle": "Jisajili ili kupata kitufe chako cha SOS. Mtu wa kuaminika atapokea kiungo cha hali kwa SMS ikiwa imewezeshwa.",
+      "subtitle": "Usajili mmoja hukusanya kinachohitajika kwa wahamasishaji na kliniki wakati wa tahadhari — eneo, mawasiliano, wiki, damu na hatari.",
       "back": "Rudi SOS",
       "zoneLabel": "Eneo/programu yako",
       "zonePlaceholder": "Chagua eneo lako",
@@ -60,10 +60,10 @@
       "contactHint": "Mtu huyu anaweza kupokea kiungo salama cha hali wakati wa tahadhari.",
       "zonesError": "Haikuweza kupakia maeneo. Angalia muunganisho na ujaribu tena.",
       "submit": "Kamilisha usajili",
-      "registrationType": "Aina ya usajili",
-      "modeFull": "Usajili kamili",
-      "modeMinimal": "Usajili wa haraka",
-      "minimalHint": "Maelezo ya msingi tu. Mhudumu wako wa afya atakamilisha wasifu.",
+      "weeksRequired": "Weka wiki za ujauzito (1–44).",
+      "bloodUnknown": "Unknown",
+      "landmarkPlaceholder": "mf. karibu msikiti au mti wa mango…",
+      "locationHint": "Nasa GPS ili watu wakusaidie wakutafute kabla hutuma — lazima.",
       "villageLabel": "Kijiji au jamii",
       "villagePlaceholder": "mf. jina la kijiji",
       "villageRequired": "Weka kijiji au jamii yako."
