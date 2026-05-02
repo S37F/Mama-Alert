@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -159,6 +159,7 @@ function OnboardingVolunteerStep({ sosToken, t }: { sosToken: string; t: TFuncti
 export function PatientSOS() {
   const { t, i18n } = useTranslation()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const { addToQueue, processPending } = useOfflineQueue()
 
   const [manualPhone, setManualPhone] = useState('')
@@ -239,6 +240,12 @@ export function PatientSOS() {
 
   const missingToken = sosToken.length < 24
   const phoneOnlyShortLink = Boolean(shortLinkPhone && missingToken)
+
+  useEffect(() => {
+    if (missingToken && !shortLinkPhone) {
+      navigate('/sos/register', { replace: true })
+    }
+  }, [missingToken, shortLinkPhone, navigate])
 
   useEffect(() => {
     if (missingToken || effectivePhone.length < 8) {

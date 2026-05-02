@@ -8,14 +8,15 @@ function isExemptPath(path: string): boolean {
     path === '/api/auth/logout' ||
     path === '/api/auth/login' ||
     path === '/api/auth/signup' ||
-    path === '/api/hospital/session' ||
     path.startsWith('/api/health') ||
+    path.startsWith('/api/hospital') ||
     path.startsWith('/api/public') ||
     path.startsWith('/api/sos') ||
     path.startsWith('/api/sms-reply') ||
     path.startsWith('/api/sms-status') ||
     path.startsWith('/api/status') ||
-    path.startsWith('/api/ussd')
+    path.startsWith('/api/ussd') ||
+    path.startsWith('/api/volunteer')
   )
 }
 

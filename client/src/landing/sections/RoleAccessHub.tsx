@@ -44,10 +44,10 @@ function buildRoleCards(): RoleCardDef[] {
     title: 'Patient SOS',
     badge: 'Phone access',
     Icon: HeartPulse,
-    body: 'One tap raises an alert with location so responders and facilities can act immediately—no password. Sign in with your phone (SMS code), self-register where your program allows it, or open the private link from your health worker.',
+    body: 'One tap raises an alert with location so responders and facilities can act immediately—no password. Sign in with your registered phone number or self-register to get your personal SOS button.',
     actions: [
-      { to: '/sos', label: 'Open SOS', variant: 'terra' },
-      { to: '/sos/register', label: 'Register myself', variant: 'ghost' },
+      { to: '/sos/register', label: 'Get Started', variant: 'terra' },
+      { to: '/sos', label: 'Sign in', variant: 'ghost' },
     ],
     pathHint: '/sos/register',
   },
