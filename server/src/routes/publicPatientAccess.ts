@@ -5,7 +5,7 @@ import type { Prisma } from '@prisma/client'
 import { asyncHandler } from '@/lib/asyncHandler'
 import { hashOtpCode } from '@/lib/otpHash'
 import { logAudit, logError } from '@/lib/logger'
-import { readSignupFallbackCoordinates } from '@/lib/mamaAuth'
+import { ensureAssignableHealthWorkerId, readSignupFallbackCoordinates } from '@/lib/mamaAuth'
 import { prisma } from '@/lib/prisma'
 import { normalizePhone } from '@/lib/phone'
 import { signHospitalPortalToken } from '@/lib/portalJwt'
@@ -17,7 +17,6 @@ import { insertHospitalWithLocation, insertPatientWithLocation } from '@/service
 import { getNearbyVolunteers } from '@/services/geo'
 import { sendFamilyWelcomeSmsIfEnabled } from '@/services/familyWelcomeOnRegister'
 import { fetchPatientForSosById } from '@/services/patientQueries'
-import { resolveSelfRegHealthWorkerId } from '@/services/selfRegHealthWorker'
 import { sendSMS } from '@/services/twilio'
 
 export const publicPatientAccessRouter = Router()
@@ -293,14 +292,7 @@ publicPatientAccessRouter.post(
       return
     }
 
-    const healthWorkerId = await resolveSelfRegHealthWorkerId(zoneId)
-    if (!healthWorkerId) {
-      res.status(503).json({
-        error:
-          'Self-registration is not available for this area yet. Please contact your health worker or set SELF_REG_DEFAULT_HEALTH_WORKER_ID.',
-      })
-      return
-    }
+    const healthWorkerId = await ensureAssignableHealthWorkerId(zoneId)
 
     const emergencyContactsJson = contacts as Prisma.InputJsonValue
     const villageTrim = hasContacts ? (body.village?.trim() || null) : (body.village ?? '').trim()
@@ -344,8 +336,8 @@ publicPatientAccessRouter.post(
         })
         if (hw?.phone) {
           const base = getPublicAppUrl()
-          const dash = base ? `${base}/dashboard` : 'your MamaAlert dashboard'
-          const msg = `MamaAlert: ${body.name.trim()} self-registered (${villageTrim}). Complete their profile: ${dash}`
+          const dash = base ? `${base}/` : 'MamaAlert'
+          const msg = `MamaAlert: ${body.name.trim()} self-registered (${villageTrim}). Details: ${dash}`
           void sendSMS(hw.phone, msg.slice(0, 480))
         }
       }
