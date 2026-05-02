@@ -161,7 +161,7 @@ export function ClinicSelfRegister() {
       tabIndex={-1}
       className="mama-page flex min-h-screen flex-col items-center px-4 py-8 outline-none"
     >
-      <NetworkOfflineBanner />
+      <NetworkOfflineBanner variant="formSubmit" />
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <BrandLogo tone="light" size="md" className="justify-center" />
@@ -223,7 +223,7 @@ export function ClinicSelfRegister() {
               {zonesErr ? (
                 <p className="text-sm text-destructive">{zonesErr}</p>
               ) : (
-                <Select value={zoneId} onValueChange={setZoneId}>
+                <Select value={zoneId} onValueChange={(v) => setZoneId(v ?? '')}>
                   <SelectTrigger id="clinic-zone" className="w-full">
                     <SelectValue placeholder="Select zone" />
                   </SelectTrigger>
@@ -251,8 +251,18 @@ export function ClinicSelfRegister() {
 
             <div className="space-y-2">
               <Label>Location *</Label>
-              <div className="h-48 overflow-hidden rounded-lg border">
-                <MapView lat={lat ?? 0} lng={lng ?? 0} zoom={lat ? 14 : 2} markerLabel="Clinic" />
+              <div className="overflow-hidden rounded-lg border">
+                <MapView
+                  className="h-48 w-full rounded-md"
+                  center={[lat ?? 0, lng ?? 0]}
+                  zoom={lat !== null && lng !== null ? 14 : 2}
+                  patients={
+                    lat !== null && lng !== null
+                      ? [{ id: 'clinic-reg', name: 'Clinic', lat, lng }]
+                      : []
+                  }
+                  scrollWheelZoom={false}
+                />
               </div>
               {geoErr ? (
                 <p className="text-sm text-destructive">{geoErr}</p>
