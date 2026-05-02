@@ -136,10 +136,10 @@ export function HospitalInbox() {
         <NetworkOfflineBanner variant="liveData" />
         <h1 className="text-2xl font-bold">{t('hospital.title')}</h1>
         <p className="text-muted-foreground text-sm">
-          Paste the hospital portal token issued by your zone admin (Admin dashboard → hospital row, or POST /api/admin/hospitals/:id/portal-token).
+          {t('hospital.portalTokenHelp')}
         </p>
         <div className="space-y-3 rounded-lg border p-4">
-          <Label htmlFor="hosp-token">Portal token</Label>
+          <Label htmlFor="hosp-token">{t('hospital.portalTokenLabel')}</Label>
           <Input
             id="hosp-token"
             value={tokenInput}
@@ -175,7 +175,7 @@ export function HospitalInbox() {
               void postAuthLogout()
             }}
           >
-            Sign out
+            {t('auth.signOut')}
           </Button>
         </div>
       </div>

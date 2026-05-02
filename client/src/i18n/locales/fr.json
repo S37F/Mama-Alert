@@ -3,41 +3,41 @@
     "title": "MamaAlert",
     "greeting": "Bonjour, {{name}}",
     "weeks": "{{n}} semaines de grossesse",
-    "button": "Appuyer pour l'aide d'urgence",
-    "sending": "Envoi de l'alerte...",
-    "sent": "L'aide arrive",
+    "button": "Appuyer pour une aide d’urgence",
+    "sending": "Envoi de l’alerte...",
+    "sent": "L’aide arrive",
     "helpMessage": "{{volunteerName}} est en route vers vous",
-    "offline": "Pas de signal — votre alerte est en file",
-    "offlineSubtext": "Elle partira automatiquement dès le retour du signal",
-    "language": "Language",
+    "offline": "Pas de signal - votre alerte est en attente",
+    "offlineSubtext": "Elle sera envoyée automatiquement au retour du signal",
+    "language": "Langue",
     "needPhone": "Add your phone number below so we can find your record.",
     "phoneLabel": "Your phone number",
     "phonePlaceholder": "e.g. +15551230000",
-    "savePhone": "Save",
+    "savePhone": "Enregistrer",
     "sentDetail": "Volunteers and your clinic are being notified.",
     "duplicateDetail": "Une alerte a déjà été envoyée récemment. L’aide est déjà en cours.",
     "interactionHint": "Si vous pouvez répondre sur ce téléphone, appuyez ci-dessous — cela peut retarder les SMS urgents à la famille.",
     "interactionCta": "Je peux répondre ici",
     "reset": "Nouvelle alerte",
-    "error": "Could not send. Try again.",
+    "error": "Envoi impossible. Réessayez.",
     "networkOfflineHint": "Vous êtes hors ligne — les alertes seront mises en file d'attente jusqu'au retour du réseau.",
     "phoneHint": "Include country code. Example starts with {{dialCode}}.",
     "helpCall": "Call help",
-    "helpHow": "How it works",
+    "helpHow": "Fonctionnement",
     "howItWorks": "Tap SOS once to send an emergency alert. If network is weak, your alert is saved and sent automatically when signal returns.",
     "access": {
       "intro": "Sign in with the phone number on your record, register yourself if your program allows it, or open the SOS link your health worker sent you.",
-      "signInPhone": "Sign in with phone number",
-      "selfRegister": "Register myself",
-      "haveLink": "Have a link? Open it on this device — it contains a private token. You can also ask your health worker to resend it.",
+      "signInPhone": "Se connecter avec le téléphone",
+      "selfRegister": "M’inscrire",
+      "haveLink": "Vous avez un lien ? Ouvrez-le sur cet appareil. Il contient un jeton privé. Vous pouvez aussi demander à votre agent de santé de le renvoyer.",
       "phoneHelp": "We will text a code to this number. Use the same number you gave when you registered (include country code, e.g. {{dialCode}}).",
-      "sendCode": "Send code",
-      "codeLabel": "Code from SMS",
-      "verify": "Verify and continue",
+      "sendCode": "Envoyer le code",
+      "codeLabel": "Code reçu par SMS",
+      "verify": "Vérifier et continuer",
       "useDifferentNumber": "Use a different number",
-      "back": "Back",
-      "phoneInvalid": "Enter a valid phone number with country code.",
-      "codeInvalid": "Enter the code from your SMS.",
+      "back": "Retour",
+      "phoneInvalid": "Entrez un numéro valide avec l’indicatif du pays.",
+      "codeInvalid": "Entrez le code reçu par SMS.",
       "sendCodeFailed": "Could not send the code. Try again later.",
       "verifyFailed": "Invalid or expired code. Request a new code and try again."
     },
@@ -47,19 +47,19 @@
       "signInCta": "Sign in with this phone number"
     },
     "selfReg": {
-      "title": "Self-registration",
+      "title": "Auto-inscription",
       "subtitle": "If your area allows it, you can enroll without a link from a health worker. One trusted contact will get the read-only status link by SMS when enabled on the server.",
-      "back": "Back to SOS",
+      "back": "Retour à SOS",
       "zoneLabel": "Your area / program",
       "zonePlaceholder": "Choose your area",
       "pickZone": "Choose your area.",
-      "contactRequired": "Add at least one family or trusted contact with a valid phone number.",
+      "contactRequired": "Ajoutez au moins un contact de confiance avec un numéro valide.",
       "contactHint": "This person can receive the secure status link during an alert (and a welcome SMS when your server enables it).",
       "zonesError": "Could not load areas. Check your connection and try again.",
-      "submit": "Complete registration",
+      "submit": "Terminer l’inscription",
       "registrationType": "Registration type",
       "modeFull": "Full registration",
-      "modeMinimal": "Quick registration",
+      "modeMinimal": "Inscription rapide",
       "minimalHint": "Only basic details. Your health worker will be notified to finish your profile.",
       "villageLabel": "Village or community",
       "villagePlaceholder": "e.g. Village name",
@@ -110,7 +110,9 @@
     "volunteerTransport": "Volunteer: {{name}}",
     "awaitingVolunteer": "Awaiting volunteer assignment",
     "markResolved": "Mark case resolved",
-    "markResolvedHint": "Use when care is complete. Field health workers cannot close alerts from their dashboard."
+    "markResolvedHint": "Use when care is complete. Field health workers cannot close alerts from their dashboard.",
+    "portalTokenHelp": "Paste the hospital portal token issued by your zone admin from the Admin dashboard hospital row.",
+    "portalTokenLabel": "Portal token"
   },
   "register": {
     "title": "Enregistrer une patiente",
@@ -169,7 +171,8 @@
       "other": "Other"
     },
     "contact": {
-      "n": "Contact {{n}}"
+      "n": "Contact {{n}}",
+      "optional": "(optional)"
     }
   },
   "family": {
@@ -179,13 +182,13 @@
     "atFacility": "Arrivée à {{hospital}}",
     "arrivedBeingCaredFor": "Arrived at {{hospital}} — being cared for",
     "enRouteToHospital": "On the way to {{hospital}}",
-    "resolved": "Tout va bien",
+    "resolved": "Tout est en sécurité",
     "lastUpdate": "Dernière mise à jour il y a {{time}}",
-    "findingHelp": "Finding help...",
+    "findingHelp": "Recherche d’aide...",
     "enRouteClinic": "En route to clinic (waiting...)",
     "carePending": "Care in progress or pending",
-    "invalidToken": "Missing status link.",
-    "notFound": "We could not load this status page."
+    "invalidToken": "Lien de statut manquant.",
+    "notFound": "Impossible de charger cette page de statut."
   },
   "admin": {
     "title": "Admin zone",
@@ -238,7 +241,11 @@
     "unresolvedAge": "Open for",
     "delivery": "Delivery",
     "timeline": "Timeline",
-    "operationalSummary": "{{overdue}} ANC overdue · {{unresolved}} unresolved alerts"
+    "operationalSummary": "{{overdue}} ANC overdue · {{unresolved}} unresolved alerts",
+    "volunteerConfirmLabel": "Volunteer confirm",
+    "resolvedLabel": "Resolved",
+    "portal": "Portal",
+    "copyPortalToken": "Copy portal token"
   },
   "demo": {
     "title": "Parcours démo",
@@ -254,7 +261,9 @@
     "autoAdvance": "Auto-advance every 4 seconds",
     "sosPreviewTitle": "Aperçu : écran SOS patient",
     "triggerReal": "Trigger real demo SOS",
-    "seedHint": "Uses seed patient phone {{phone}} (Supabase seed + API must be running)."
+    "seedHint": "Uses seed patient phone {{phone}} (Supabase seed + API must be running).",
+    "missingToken": "Set VITE_DEMO_SOS_TOKEN in client .env to the sos_token from registering a demo patient.",
+    "tokenHint": "Demo SOS requires VITE_DEMO_SOS_TOKEN from the worker patient registration response."
   },
   "auth": {
     "required": "Connexion requise",
@@ -288,7 +297,7 @@
   },
   "common": {
     "loading": "Chargement...",
-    "error": "Une erreur s'est produite",
+    "error": "Une erreur est survenue",
     "retry": "Réessayer",
     "save": "Enregistrer",
     "cancel": "Annuler"
@@ -335,9 +344,9 @@
     "draftKept": "Your draft is still saved on this device."
   },
   "network": {
-    "offlineLiveData": "You’re offline. Live updates and dashboards need internet.",
+    "offlineLiveData": "Vous êtes hors ligne. Les mises à jour en direct nécessitent Internet.",
     "offlineSmsAlertsHint": "SMS still works on cellular: reply YES or NO to alert texts; pre-alerts and ARRIVED use SMS too.",
-    "offlineCannotSubmit": "You’re offline. Saving this form needs internet — try again when you have signal.",
-    "offlineStatusPage": "You’re offline. This page can’t load fresh status until you’re back online."
+    "offlineCannotSubmit": "Vous êtes hors ligne. Ce formulaire nécessite Internet.",
+    "offlineStatusPage": "Vous êtes hors ligne. Cette page ne peut pas charger le statut récent."
   }
 }

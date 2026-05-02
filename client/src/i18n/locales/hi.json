@@ -2,44 +2,44 @@
   "sos": {
     "title": "MamaAlert",
     "greeting": "नमस्ते, {{name}}",
-    "weeks": "{{n}} सप्ताह की गर्भावस्था",
-    "button": "आपातकालीन सहायता के लिए दबाएँ",
+    "weeks": "{{n}} सप्ताह गर्भवती",
+    "button": "आपात मदद के लिए दबाएँ",
     "sending": "अलर्ट भेजा जा रहा है...",
     "sent": "मदद आ रही है",
     "helpMessage": "{{volunteerName}} आपकी ओर आ रहे हैं",
-    "offline": "कोई सिग्नल नहीं — आपका अलर्ट कतार में है",
-    "offlineSubtext": "जब सिग्नल मिलेगा तो यह स्वतः भेजा जाएगा",
-    "language": "Language",
-    "needPhone": "Add your phone number below so we can find your record.",
-    "phoneLabel": "Your phone number",
+    "offline": "सिग्नल नहीं - आपका अलर्ट कतार में है",
+    "offlineSubtext": "सिग्नल आते ही यह अपने-आप भेजा जाएगा",
+    "language": "भाषा",
+    "needPhone": "अपना फोन नंबर डालें ताकि हम आपका रिकॉर्ड ढूँढ सकें.",
+    "phoneLabel": "आपका फोन नंबर",
     "phonePlaceholder": "e.g. +15551230000",
-    "savePhone": "Save",
-    "sentDetail": "Volunteers and your clinic are being notified.",
-    "duplicateDetail": "हाल ही में पहले से अलर्ट भेजा गया। मदद पहले से की जा रही है।",
-    "interactionHint": "यदि आप इस फोन पर जवाब दे सकती हैं, तो नीचे टैप करें — इससे ज़रूरी परिवार संदेश टल सकते हैं।",
+    "savePhone": "सहेजें",
+    "sentDetail": "स्वयंसेवकों और आपके क्लिनिक को सूचित किया जा रहा है.",
+    "duplicateDetail": "एक अलर्ट हाल ही में भेजा गया था. मदद की व्यवस्था हो रही है.",
+    "interactionHint": "If you can respond on this phone, tap below so we know you are okay — this can delay urgent family messages.",
     "interactionCta": "मैं यहाँ जवाब दे सकती हूँ",
     "reset": "नया अलर्ट",
-    "error": "Could not send. Try again.",
-    "networkOfflineHint": "आप ऑफ़लाइन हैं — नेटवर्क वापस आने तक अलर्ट कतार में रहेंगे।",
-    "phoneHint": "Include country code. Example starts with {{dialCode}}.",
-    "helpCall": "Call help",
-    "helpHow": "How it works",
+    "error": "भेजा नहीं जा सका. फिर कोशिश करें.",
+    "networkOfflineHint": "आप ऑफलाइन हैं - अलर्ट सिग्नल आने तक कतार में रहेगा.",
+    "phoneHint": "देश कोड शामिल करें. उदाहरण {{dialCode}} से शुरू होता है.",
+    "helpCall": "मदद को कॉल करें",
+    "helpHow": "यह कैसे काम करता है",
     "howItWorks": "Tap SOS once to send an emergency alert. If network is weak, your alert is saved and sent automatically when signal returns.",
     "access": {
       "intro": "Sign in with the phone number on your record, register yourself if your program allows it, or open the SOS link your health worker sent you.",
-      "signInPhone": "Sign in with phone number",
-      "selfRegister": "Register myself",
-      "haveLink": "Have a link? Open it on this device — it contains a private token. You can also ask your health worker to resend it.",
+      "signInPhone": "फोन नंबर से साइन इन करें",
+      "selfRegister": "खुद पंजीकरण करें",
+      "haveLink": "लिंक है? इसे इस डिवाइस पर खोलें. इसमें आपका निजी टोकन है. आप अपने हेल्थ वर्कर से इसे फिर भेजने को कह सकते हैं.",
       "phoneHelp": "We will text a code to this number. Use the same number you gave when you registered (include country code, e.g. {{dialCode}}).",
-      "sendCode": "Send code",
-      "codeLabel": "Code from SMS",
-      "verify": "Verify and continue",
+      "sendCode": "कोड भेजें",
+      "codeLabel": "SMS से आया कोड",
+      "verify": "सत्यापित करें और जारी रखें",
       "useDifferentNumber": "Use a different number",
-      "back": "Back",
-      "phoneInvalid": "Enter a valid phone number with country code.",
-      "codeInvalid": "Enter the code from your SMS.",
-      "sendCodeFailed": "Could not send the code. Try again later.",
-      "verifyFailed": "Invalid or expired code. Request a new code and try again."
+      "back": "वापस",
+      "phoneInvalid": "देश कोड के साथ सही फोन नंबर डालें.",
+      "codeInvalid": "SMS का कोड डालें.",
+      "sendCodeFailed": "कोड नहीं भेज सके. बाद में फिर कोशिश करें.",
+      "verifyFailed": "कोड गलत या समाप्त है. नया कोड मांगें और फिर कोशिश करें."
     },
     "shortLink": {
       "title": "Use your full SOS link or sign in",
@@ -47,23 +47,23 @@
       "signInCta": "Sign in with this phone number"
     },
     "selfReg": {
-      "title": "Self-registration",
+      "title": "स्व-पंजीकरण",
       "subtitle": "If your area allows it, you can enroll without a link from a health worker. One trusted contact will get the read-only status link by SMS when enabled on the server.",
-      "back": "Back to SOS",
-      "zoneLabel": "Your area / program",
+      "back": "SOS पर वापस",
+      "zoneLabel": "आपका क्षेत्र / प्रोग्राम",
       "zonePlaceholder": "Choose your area",
-      "pickZone": "Choose your area.",
-      "contactRequired": "Add at least one family or trusted contact with a valid phone number.",
+      "pickZone": "अपना क्षेत्र चुनें.",
+      "contactRequired": "कम से कम एक परिवार या भरोसेमंद संपर्क का सही फोन नंबर जोड़ें.",
       "contactHint": "This person can receive the secure status link during an alert (and a welcome SMS when your server enables it).",
       "zonesError": "Could not load areas. Check your connection and try again.",
-      "submit": "Complete registration",
+      "submit": "पंजीकरण पूरा करें",
       "registrationType": "Registration type",
-      "modeFull": "Full registration",
-      "modeMinimal": "Quick registration",
+      "modeFull": "पूर्ण पंजीकरण",
+      "modeMinimal": "त्वरित पंजीकरण",
       "minimalHint": "Only basic details. Your health worker will be notified to finish your profile.",
-      "villageLabel": "Village or community",
+      "villageLabel": "गाँव या समुदाय",
       "villagePlaceholder": "e.g. Village name",
-      "villageRequired": "Enter your village or community."
+      "villageRequired": "अपना गाँव या समुदाय डालें."
     },
     "onboarding": {
       "stepCounter": "Step {{current}} of {{total}}",
@@ -110,7 +110,9 @@
     "volunteerTransport": "Volunteer: {{name}}",
     "awaitingVolunteer": "Awaiting volunteer assignment",
     "markResolved": "Mark case resolved",
-    "markResolvedHint": "Use when care is complete. Field health workers cannot close alerts from their dashboard."
+    "markResolvedHint": "Use when care is complete. Field health workers cannot close alerts from their dashboard.",
+    "portalTokenHelp": "Paste the hospital portal token issued by your zone admin from the Admin dashboard hospital row.",
+    "portalTokenLabel": "Portal token"
   },
   "register": {
     "title": "मरीज़ पंजीकरण",
@@ -169,23 +171,24 @@
       "other": "Other"
     },
     "contact": {
-      "n": "Contact {{n}}"
+      "n": "Contact {{n}}",
+      "optional": "(optional)"
     }
   },
   "family": {
-    "title": "MamaAlert स्थिति",
-    "alertReceived": "अलर्ट प्राप्त",
+    "title": "MamaAlert स्टेटस",
+    "alertReceived": "अलर्ट मिल गया",
     "volunteerResponding": "{{name}} रास्ते में हैं",
-    "atFacility": "{{hospital}} पहुँचे",
+    "atFacility": "{{hospital}} पर पहुँच गए",
     "arrivedBeingCaredFor": "Arrived at {{hospital}} — being cared for",
     "enRouteToHospital": "On the way to {{hospital}}",
     "resolved": "सब सुरक्षित",
-    "lastUpdate": "अंतिम अपडेट {{time}} पहले",
-    "findingHelp": "Finding help...",
+    "lastUpdate": "Last updated {{time}} ago",
+    "findingHelp": "मदद ढूँढी जा रही है...",
     "enRouteClinic": "En route to clinic (waiting...)",
     "carePending": "Care in progress or pending",
-    "invalidToken": "Missing status link.",
-    "notFound": "We could not load this status page."
+    "invalidToken": "स्टेटस लिंक नहीं है.",
+    "notFound": "हम यह स्टेटस पेज लोड नहीं कर सके."
   },
   "admin": {
     "title": "ज़ोन प्रशासक",
@@ -238,7 +241,11 @@
     "unresolvedAge": "Open for",
     "delivery": "Delivery",
     "timeline": "Timeline",
-    "operationalSummary": "{{overdue}} ANC overdue · {{unresolved}} unresolved alerts"
+    "operationalSummary": "{{overdue}} ANC overdue · {{unresolved}} unresolved alerts",
+    "volunteerConfirmLabel": "Volunteer confirm",
+    "resolvedLabel": "Resolved",
+    "portal": "Portal",
+    "copyPortalToken": "Copy portal token"
   },
   "demo": {
     "title": "डेमो प्रवाह",
@@ -254,7 +261,9 @@
     "autoAdvance": "Auto-advance every 4 seconds",
     "sosPreviewTitle": "लाइव पूर्वावलोकन: मरीज़ SOS होम स्क्रीन",
     "triggerReal": "Trigger real demo SOS",
-    "seedHint": "Uses seed patient phone {{phone}} (Supabase seed + API must be running)."
+    "seedHint": "Uses seed patient phone {{phone}} (Supabase seed + API must be running).",
+    "missingToken": "Set VITE_DEMO_SOS_TOKEN in client .env to the sos_token from registering a demo patient.",
+    "tokenHint": "Demo SOS requires VITE_DEMO_SOS_TOKEN from the worker patient registration response."
   },
   "auth": {
     "required": "साइन इन आवश्यक",
@@ -288,7 +297,7 @@
   },
   "common": {
     "loading": "लोड हो रहा है...",
-    "error": "कुछ गलत हुआ",
+    "error": "कुछ गलत हो गया",
     "retry": "फिर कोशिश करें",
     "save": "सहेजें",
     "cancel": "रद्द करें"
@@ -335,9 +344,9 @@
     "draftKept": "Your draft is still saved on this device."
   },
   "network": {
-    "offlineLiveData": "You’re offline. Live updates and dashboards need internet.",
-    "offlineSmsAlertsHint": "SMS still works on cellular: reply YES or NO to alert texts; pre-alerts and ARRIVED use SMS too.",
-    "offlineCannotSubmit": "You’re offline. Saving this form needs internet — try again when you have signal.",
-    "offlineStatusPage": "You’re offline. This page can’t load fresh status until you’re back online."
+    "offlineLiveData": "आप ऑफलाइन हैं. लाइव अपडेट और डैशबोर्ड के लिए इंटरनेट चाहिए.",
+    "offlineSmsAlertsHint": "सेलुलर नेटवर्क पर SMS चलता रहेगा: अलर्ट SMS का YES या NO जवाब दें.",
+    "offlineCannotSubmit": "आप ऑफलाइन हैं. फॉर्म सहेजने के लिए इंटरनेट चाहिए.",
+    "offlineStatusPage": "आप ऑफलाइन हैं. स्टेटस पेज नया अपडेट नहीं लोड कर सकता."
   }
 }

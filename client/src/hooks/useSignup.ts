@@ -28,6 +28,9 @@ function syncLegacyRoleState(session: MamaAlertSession, extras?: { weeksPregnant
 
   if (session.role === 'volunteer') {
     localStorage.setItem('mamaalert_volunteer_phone', session.phone)
+    if (session.volunteerPortalToken) {
+      localStorage.setItem('mamaalert_volunteer_portal_token', session.volunteerPortalToken)
+    }
   }
 }
 

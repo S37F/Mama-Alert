@@ -17,11 +17,12 @@ export function useAlertsRealtimeRefresh(
   }, [onRefresh])
 
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !supabase) {
       return
     }
+    const client = supabase
     const channelName = zoneId ? `worker-alerts:${zoneId}` : 'worker-alerts'
-    const channel = supabase
+    const channel = client
       .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'alerts' }, () => {
         onRefreshRef.current()
@@ -29,7 +30,7 @@ export function useAlertsRealtimeRefresh(
       .subscribe()
 
     return () => {
-      void supabase.removeChannel(channel)
+      void client.removeChannel(channel)
     }
   }, [enabled, zoneId])
 }

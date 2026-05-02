@@ -9,6 +9,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "i18n:check": "node scripts/check-i18n.cjs",
+    "session:check": "node scripts/check-session-persistence.cjs",
+    "assets:check": "node scripts/check-pwa-assets.cjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

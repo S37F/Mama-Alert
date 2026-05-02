@@ -455,7 +455,8 @@ export function AdminZone() {
           <div className="flex flex-wrap items-center justify-between gap-2">
             {avgVolunteerMin !== null || avgResolveMin !== null ? (
               <p className="text-muted-foreground text-sm">
-                Volunteer confirms: {avgVolunteerMin !== null ? `${avgVolunteerMin} min avg` : '—'} · Resolved:{' '}
+                {t('admin.volunteerConfirmLabel')}: {avgVolunteerMin !== null ? `${avgVolunteerMin} min avg` : '—'} ·{' '}
+                {t('admin.resolvedLabel')}:{' '}
                 {avgResolveMin !== null ? `${avgResolveMin} min avg` : '—'}
               </p>
             ) : (
@@ -471,8 +472,8 @@ export function AdminZone() {
                 <TableRow>
                   <TableHead>{t('register.fields.name')}</TableHead>
                   <TableHead>{t('admin.triggeredAt')}</TableHead>
-                  <TableHead>Volunteer confirm</TableHead>
-                  <TableHead>Resolved</TableHead>
+                  <TableHead>{t('admin.volunteerConfirmLabel')}</TableHead>
+                  <TableHead>{t('admin.resolvedLabel')}</TableHead>
                   <TableHead>{t('admin.volunteer')}</TableHead>
                   <TableHead>{t('admin.unresolvedAge')}</TableHead>
                   <TableHead>{t('admin.delivery')}</TableHead>
@@ -527,7 +528,7 @@ export function AdminZone() {
                   <TableRow>
                     <TableHead>{t('admin.hospitalName')}</TableHead>
                     <TableHead>{t('admin.receiveAlerts')}</TableHead>
-                    <TableHead>Portal</TableHead>
+                    <TableHead>{t('admin.portal')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -545,7 +546,7 @@ export function AdminZone() {
                       </TableCell>
                       <TableCell>
                         <Button type="button" size="sm" variant="outline" onClick={() => void copyHospitalPortalToken(h.id)}>
-                          Copy portal token
+                          {t('admin.copyPortalToken')}
                         </Button>
                       </TableCell>
                     </TableRow>

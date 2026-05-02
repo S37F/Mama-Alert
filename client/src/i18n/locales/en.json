@@ -110,7 +110,9 @@
     "volunteerTransport": "Volunteer: {{name}}",
     "awaitingVolunteer": "Awaiting volunteer assignment",
     "markResolved": "Mark case resolved",
-    "markResolvedHint": "Use when care is complete. Field health workers cannot close alerts from their dashboard."
+    "markResolvedHint": "Use when care is complete. Field health workers cannot close alerts from their dashboard.",
+    "portalTokenHelp": "Paste the hospital portal token issued by your zone admin from the Admin dashboard hospital row.",
+    "portalTokenLabel": "Portal token"
   },
   "register": {
     "title": "Register Patient",
@@ -169,7 +171,8 @@
       "other": "Other"
     },
     "contact": {
-      "n": "Contact {{n}}"
+      "n": "Contact {{n}}",
+      "optional": "(optional)"
     }
   },
   "family": {
@@ -279,7 +282,11 @@
     "unresolvedAge": "Open for",
     "delivery": "Delivery",
     "timeline": "Timeline",
-    "operationalSummary": "{{overdue}} ANC overdue · {{unresolved}} unresolved alerts"
+    "operationalSummary": "{{overdue}} ANC overdue · {{unresolved}} unresolved alerts",
+    "volunteerConfirmLabel": "Volunteer confirm",
+    "resolvedLabel": "Resolved",
+    "portal": "Portal",
+    "copyPortalToken": "Copy portal token"
   },
   "demo": {
     "title": "Demo flow",
@@ -295,7 +302,9 @@
     "autoAdvance": "Auto-advance every 4 seconds",
     "sosPreviewTitle": "Live preview: patient SOS home screen",
     "triggerReal": "Trigger real demo SOS",
-    "seedHint": "Uses seed patient phone {{phone}} (Supabase seed + API must be running)."
+    "seedHint": "Uses seed patient phone {{phone}} (Supabase seed + API must be running).",
+    "missingToken": "Set VITE_DEMO_SOS_TOKEN in client .env to the sos_token from registering a demo patient.",
+    "tokenHint": "Demo SOS requires VITE_DEMO_SOS_TOKEN from the worker patient registration response."
   },
   "auth": {
     "required": "Sign in required",

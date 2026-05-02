@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { BrandLogo } from '@/components/BrandLogo'
 import { useAuth } from '@/hooks/useAuth'
 import { redirectForRole, type MamaAlertRole } from '@/lib/mamaSession'
 import { AdminSignupForm } from '@/views/signup/AdminSignupForm'
@@ -76,10 +77,7 @@ export function SignupLogin() {
         <div className="mama-panel grid w-full max-w-4xl overflow-hidden lg:grid-cols-[0.9fr_1.1fr]">
           <section className="hidden bg-[var(--mama-brown)] px-10 py-12 text-[var(--mama-cream)] lg:flex lg:flex-col lg:justify-between">
             <div className="space-y-5">
-              <div className="inline-flex items-center gap-3">
-                <span className="h-3 w-3 rounded-full bg-primary" />
-                <span className="mama-heading text-2xl text-[var(--mama-cream)]">MamaAlert</span>
-              </div>
+              <BrandLogo tone="dark" size="md" animated />
               <div className="space-y-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--mama-terra-light)]">
                   Community maternal emergency network
@@ -127,7 +125,7 @@ export function SignupLogin() {
                   </button>
                 </div>
                 <div className="lg:hidden">
-                  <h1 className="mama-heading text-4xl">MamaAlert</h1>
+                  <BrandLogo tone="light" size="lg" stacked animated className="justify-center" />
                   <p className="mama-copy mt-2 text-sm">Community maternal emergency network</p>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { BrandLogo } from '@/components/BrandLogo'
 
 export function Footer() {
   const linkStyle: CSSProperties = {
@@ -29,17 +30,7 @@ export function Footer() {
           className="landing-footer-grid"
         >
           <div>
-            <p
-              style={{
-                fontFamily: 'var(--font-display)',
-                fontSize: 'var(--text-2xl)',
-                fontWeight: 700,
-                color: 'var(--color-terra-light)',
-                margin: '0 0 12px',
-              }}
-            >
-              MamaAlert
-            </p>
+            <BrandLogo tone="dark" size="md" animated style={{ marginBottom: 12 }} />
             <p
               style={{
                 fontFamily: 'var(--font-body)',
@@ -103,7 +94,7 @@ export function Footer() {
             textAlign: 'center',
           }}
         >
-          © 2026 MamaAlert · Open Source · Built for the women who need it most
+          (c) 2026 MamaAlert - Open Source - Built for the women who need it most
         </div>
       </div>
       <style>{`

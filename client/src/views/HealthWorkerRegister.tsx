@@ -60,9 +60,22 @@ const formSchema = z
     c1_name: z.string().min(1),
     c1_phone: z.string().min(8),
     c1_rel: z.enum(relationshipValues),
-    c2_name: z.string().min(1),
-    c2_phone: z.string().min(8).regex(/^\+?[0-9]{8,20}$/),
+    c2_name: z.string().optional(),
+    c2_phone: z.string().optional(),
     c2_rel: z.enum(relationshipValues),
+  })
+  .superRefine((val, ctx) => {
+    const c2Name = val.c2_name?.trim() ?? ''
+    const c2Phone = val.c2_phone?.trim() ?? ''
+    if (!c2Name && !c2Phone) {
+      return
+    }
+    if (!c2Name) {
+      ctx.addIssue({ code: 'custom', message: 'Contact name required', path: ['c2_name'] })
+    }
+    if (!/^\+?[0-9]{8,20}$/.test(c2Phone)) {
+      ctx.addIssue({ code: 'custom', message: 'Valid contact phone required', path: ['c2_phone'] })
+    }
   })
 
 type FormValues = z.infer<typeof formSchema>
@@ -207,9 +220,13 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
 
     const risk_flags = riskKeys.filter((k) => risk[k])
     const emergency_contacts = [
-      { name: values.c1_name, phone: values.c1_phone, relationship: values.c1_rel },
-      { name: values.c2_name, phone: values.c2_phone, relationship: values.c2_rel },
+      { name: values.c1_name.trim(), phone: values.c1_phone.trim(), relationship: values.c1_rel },
     ]
+    const c2Name = values.c2_name?.trim() ?? ''
+    const c2Phone = values.c2_phone?.trim() ?? ''
+    if (c2Name && c2Phone) {
+      emergency_contacts.push({ name: c2Name, phone: c2Phone, relationship: values.c2_rel })
+    }
 
     try {
       const out = await postRegisterPatient({
@@ -503,15 +520,19 @@ export function HealthWorkerRegister({ embedded = false }: HealthWorkerRegisterP
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
-              <Label>{t('register.contact.n', { n: 2 })}</Label>
+              <Label>
+                {t('register.contact.n', { n: 2 })} {t('register.contact.optional')}
+              </Label>
             </div>
             <div className="space-y-2">
               <Label htmlFor="c2n">{t('register.fields.contactName')}</Label>
               <Input id="c2n" {...register('c2_name')} />
+              {errors.c2_name ? <p className="text-destructive text-xs">{t('register.validation.required')}</p> : null}
             </div>
             <div className="space-y-2">
               <Label htmlFor="c2p">{t('register.fields.contactPhone')}</Label>
               <Input id="c2p" type="tel" {...register('c2_phone')} />
+              {errors.c2_phone ? <p className="text-destructive text-xs">{t('worker.volunteerReg.phoneInvalid')}</p> : null}
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label>{t('register.fields.relationship')}</Label>

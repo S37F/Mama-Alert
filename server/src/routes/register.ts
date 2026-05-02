@@ -55,7 +55,7 @@ const patientSchema = z.object({
   zone_id: z.string().uuid().optional().nullable(),
   risk_flags: z.array(z.string()).optional(),
   medication_name: z.string().optional().nullable(),
-  emergency_contacts: z.array(emergencyContactSchema).length(2),
+  emergency_contacts: z.array(emergencyContactSchema).min(1).max(4),
 })
 
 const volunteerSchema = z.object({

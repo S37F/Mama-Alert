@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { BrandLogo } from '@/components/BrandLogo'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -485,6 +486,9 @@ export function PatientSOS() {
     return (
     <main id="main-content" tabIndex={-1} className="mama-page flex min-h-[100dvh] flex-col px-4 py-12 outline-none">
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-6">
+          <div className="flex justify-center">
+            <BrandLogo size="sm" tone="light" animated />
+          </div>
           <p className="text-muted-foreground text-center text-sm">
             {t('sos.onboarding.stepCounter', { current: onboardingStep, total: ONBOARDING_STEP_COUNT })}
           </p>
@@ -533,6 +537,7 @@ export function PatientSOS() {
         {statusAnnouncement}
       </div>
       <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-20 pt-16 text-base">
+        <BrandLogo size="md" tone="light" animated />
         <div className="text-center">
           <h1 className="mama-heading text-3xl md:text-4xl">
             {t('sos.greeting', { name: displayName })}
@@ -569,7 +574,7 @@ export function PatientSOS() {
                     {t('sos.shortLink.signInCta')}
                   </Button>
                   <Link
-                    to="/signup"
+                    to="/sos/register"
                     className={cn(buttonVariants({ variant: 'secondary' }), 'inline-flex w-full items-center justify-center')}
                   >
                     {t('sos.access.selfRegister')}
@@ -587,7 +592,7 @@ export function PatientSOS() {
                     {t('sos.access.signInPhone')}
                   </Button>
                   <Link
-                    to="/signup"
+                    to="/sos/register"
                     className={cn(buttonVariants({ variant: 'secondary' }), 'inline-flex w-full items-center justify-center')}
                   >
                     {t('sos.access.selfRegister')}

@@ -31,7 +31,7 @@ export function DemoFlow() {
     setDemoBusy(true)
     try {
       if (DEMO_SOS_TOKEN.length < 24) {
-        setDemoErr('Set VITE_DEMO_SOS_TOKEN in client .env to the sos_token from registering a demo patient.')
+        setDemoErr(t('demo.missingToken'))
         return
       }
       await postSos({ sosToken: DEMO_SOS_TOKEN, triggerMethod: 'pwa' })
@@ -63,7 +63,7 @@ export function DemoFlow() {
       {step === 0 ? (
         <div className="mama-panel-compact overflow-hidden">
           <p className="text-muted-foreground bg-muted px-2 py-1 text-xs">{t('demo.sosPreviewTitle')}</p>
-          <iframe title={t('demo.sosPreviewTitle')} src="/" className="h-64 w-full border-0 bg-background" />
+          <iframe title={t('demo.sosPreviewTitle')} src="/sos" className="h-64 w-full border-0 bg-background" />
         </div>
       ) : null}
 
@@ -107,7 +107,7 @@ export function DemoFlow() {
       {demoErr ? <ErrorMessage message={demoErr} /> : null}
 
       <p className="text-muted-foreground text-xs">
-        Demo SOS requires VITE_DEMO_SOS_TOKEN (from worker patient registration response).
+        {t('demo.tokenHint')}
       </p>
     </main>
   )

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { Menu, X } from 'lucide-react'
+import { BrandLogo } from '@/components/BrandLogo'
 import { usePWAInstall } from '@/landing/hooks/usePWAInstall'
 
 export function NavBar() {
@@ -64,26 +66,7 @@ export function NavBar() {
             color: 'inherit',
           }}
         >
-          <span
-            style={{
-              width: 12,
-              height: 12,
-              borderRadius: '50%',
-              background: 'var(--color-terra)',
-              flexShrink: 0,
-              animation: 'landing-nav-pulse 2s ease-in-out infinite',
-            }}
-          />
-          <span
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              fontSize: 'var(--text-xl)',
-              color: 'var(--color-charcoal)',
-            }}
-          >
-            MamaAlert
-          </span>
+          <BrandLogo size="sm" tone="light" animated />
         </a>
 
         <nav
@@ -91,10 +74,7 @@ export function NavBar() {
           style={{ display: 'flex', alignItems: 'center', gap: 12 }}
           className="landing-nav-desktop"
         >
-          <Link
-            to="/signup"
-            className="landing-btn landing-btn--ghost"
-          >
+          <Link to="/signup" className="landing-btn landing-btn--ghost">
             Sign Up
           </Link>
           <button
@@ -104,7 +84,7 @@ export function NavBar() {
             disabled={isInstalling}
             aria-describedby="pwa-install-explainer"
           >
-            {isInstalling ? '…' : label}
+            {isInstalling ? '...' : label}
           </button>
         </nav>
 
@@ -117,7 +97,7 @@ export function NavBar() {
           onClick={() => setMenuOpen((o) => !o)}
           style={{ padding: '0 14px', minWidth: 44 }}
         >
-          <span style={{ fontSize: 22, lineHeight: 1 }}>{menuOpen ? '×' : '☰'}</span>
+          {menuOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
         </button>
       </div>
 
@@ -152,21 +132,12 @@ export function NavBar() {
             disabled={isInstalling}
             aria-describedby="pwa-install-explainer"
           >
-            {isInstalling ? '…' : label}
+            {isInstalling ? '...' : label}
           </button>
         </div>
       ) : null}
 
       <style>{`
-        @keyframes landing-nav-pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.75; transform: scale(1.15); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          @keyframes landing-nav-pulse {
-            0%, 100% { opacity: 1; transform: none; }
-          }
-        }
         .landing-nav-burger { display: none; }
         .landing-nav-desktop { display: flex; }
         @media (max-width: 767px) {

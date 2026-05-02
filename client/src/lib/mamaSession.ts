@@ -72,8 +72,10 @@ export function writeMamaAlertSession(session: MamaAlertSession): void {
     profileId: session.profileId,
     name: session.name,
     signedInAt: session.signedInAt,
+    ...(session.sessionToken ? { sessionToken: session.sessionToken } : {}),
     ...(session.zoneId !== undefined ? { zoneId: session.zoneId } : {}),
     ...(session.sosToken ? { sosToken: session.sosToken } : {}),
+    ...(session.volunteerPortalToken ? { volunteerPortalToken: session.volunteerPortalToken } : {}),
   }
   window.localStorage.setItem(MAMA_ALERT_SESSION_KEY, JSON.stringify(safeSession))
   dispatchSessionEvent()

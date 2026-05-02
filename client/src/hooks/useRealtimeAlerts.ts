@@ -92,6 +92,11 @@ export function useRealtimeAlerts(zone?: string): {
   const load = useCallback(async () => {
     setIsLoading(true)
     setError(null)
+    if (!supabase) {
+      setAlerts([])
+      setIsLoading(false)
+      return
+    }
     try {
       const res = zone
         ? await supabase
@@ -135,7 +140,11 @@ export function useRealtimeAlerts(zone?: string): {
   }, [load])
 
   useEffect(() => {
-    const channel = supabase
+    if (!supabase) {
+      return
+    }
+    const client = supabase
+    const channel = client
       .channel(zone ? `alerts:${zone}` : 'alerts:all')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'alerts' }, () => {
         void load()
@@ -143,7 +152,7 @@ export function useRealtimeAlerts(zone?: string): {
       .subscribe()
 
     return () => {
-      void supabase.removeChannel(channel)
+      void client.removeChannel(channel)
     }
   }, [zone, load])
 

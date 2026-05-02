@@ -22,6 +22,8 @@ Core values: `DATABASE_URL`, `DIRECT_DATABASE_URL`, `CLIENT_URL`, `SOS_SIGNING_S
 
 Production also needs `SERVER_PUBLIC_URL` so Twilio signature validation and delivery callbacks use the public API URL. For real SMS, set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_NUMBER`.
 
+Railway should use `server/Procfile` as the API web process when the Railway service root is `server/`. Set `CLIENT_URL` to the deployed PWA origin and, when needed, add extra comma-separated origins in `CLIENT_ORIGINS`.
+
 For Supabase on Railway, use the Supavisor pooler connection strings unless Railway has IPv6 access to the direct database host. A typical setup is:
 
 - `DATABASE_URL`: Supavisor transaction pooler string, port `6543`, with `pgbouncer=true`.
@@ -29,6 +31,15 @@ For Supabase on Railway, use the Supavisor pooler connection strings unless Rail
 - `REQUIRE_DB_MIGRATIONS_ON_START=true`: optional; use only when the migration database URL is known reachable and startup should fail if migrations fail.
 
 For patient/volunteer signup on Railway, either allow browser location in the PWA or set `SELF_REG_FALLBACK_LAT` and `SELF_REG_FALLBACK_LNG` to coordinates inside your operating area. Without browser location or those fallback values, signup correctly returns a location-required error.
+
+## Required Client Environment
+
+Set these on the deployed PWA service:
+
+- `VITE_API_URL`: public Railway API URL, for example `https://your-api.up.railway.app`.
+- `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`: optional for realtime dashboard updates. If omitted, the client keeps working through API refreshes without realtime subscriptions.
+- `VITE_HELP_PHONE`: phone number shown in patient-facing help paths.
+- `VITE_DEMO_SOS_TOKEN` and `VITE_DEMO_STATUS_TOKEN`: optional demo tokens used by the demo flow.
 
 ## Twilio Webhooks
 

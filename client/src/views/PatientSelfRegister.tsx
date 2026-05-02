@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { BrandLogo } from '@/components/BrandLogo'
 import { MapView } from '@/components/MapView'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { NetworkOfflineBanner } from '@/components/NetworkOfflineBanner'
@@ -187,6 +188,7 @@ export function PatientSelfRegister() {
   return (
     <main id="main-content" tabIndex={-1} className="mx-auto max-w-lg space-y-6 p-6 pb-24 outline-none">
       <NetworkOfflineBanner variant="formSubmit" />
+      <BrandLogo size="sm" tone="light" animated />
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-bold">{t('sos.selfReg.title')}</h1>
         <Link to="/sos" className={cn(buttonVariants({ variant: 'ghost', size: 'sm' }))}>
