@@ -200,7 +200,8 @@ export type EmergencyRelationship = 'husband' | 'mother' | 'sister' | 'neighbour
 export interface PatientSelfRegisterPayload {
   name: string
   phone_primary: string
-  zone_id: string
+  zone_id?: string
+  zone_name?: string
   lat: number
   lng: number
   language: string
@@ -352,6 +353,7 @@ export interface ClinicSelfRegisterPayload {
   lat: number
   lng: number
   zone_id?: string
+  zone_name?: string
   services?: string[]
   is_24hr?: boolean
 }

@@ -48,7 +48,8 @@ export function ClinicSelfRegister() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [clinicType, setClinicType] = useState<ClinicType>('clinic')
-  const [zoneId, setZoneId] = useState('')
+  const [pickedZoneId, setPickedZoneId] = useState('')
+  const [zoneName, setZoneName] = useState('')
   const [is24hr, setIs24hr] = useState(false)
 
   const [submitErr, setSubmitErr] = useState<string | null>(null)
@@ -87,8 +88,9 @@ export function ClinicSelfRegister() {
       setSubmitErr('Please enter a valid phone number')
       return
     }
-    if (!zoneId) {
-      setSubmitErr('Please select a zone/area')
+    const areaName = zoneName.trim()
+    if (!pickedZoneId && areaName.length === 1) {
+      setSubmitErr('Program / area name is too short. Use at least two characters, pick from the list, or leave blank if your coordinator set a server default.')
       return
     }
     if (lat === null || lng === null) {
@@ -104,7 +106,11 @@ export function ClinicSelfRegister() {
         type: clinicType,
         lat,
         lng,
-        zone_id: zoneId,
+        ...(pickedZoneId
+          ? { zone_id: pickedZoneId }
+          : areaName.length >= 2
+            ? { zone_name: areaName }
+            : {}),
         is_24hr: is24hr,
       })
 
@@ -117,7 +123,7 @@ export function ClinicSelfRegister() {
     } finally {
       setSubmitting(false)
     }
-  }, [name, phone, clinicType, zoneId, lat, lng, is24hr])
+  }, [name, phone, clinicType, pickedZoneId, zoneName, lat, lng, is24hr])
 
   if (success) {
     return (
@@ -219,23 +225,46 @@ export function ClinicSelfRegister() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="clinic-zone">Zone / Area *</Label>
-              {zonesErr ? (
-                <p className="text-sm text-destructive">{zonesErr}</p>
-              ) : (
-                <Select value={zoneId} onValueChange={(v) => setZoneId(v ?? '')}>
-                  <SelectTrigger id="clinic-zone" className="w-full">
-                    <SelectValue placeholder="Select zone" />
-                  </SelectTrigger>
-                  <SelectContent>
+              {zonesErr ? <p className="text-sm text-destructive">{zonesErr}</p> : null}
+              {zones.length > 0 && !zonesErr ? (
+                <>
+                  <Label htmlFor="clinic-zone-pick">Choose your area if listed</Label>
+                  <select
+                    id="clinic-zone-pick"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    value={pickedZoneId}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setPickedZoneId(v)
+                      if (v) {
+                        const row = zones.find((z) => z.id === v)
+                        setZoneName(row?.name ?? '')
+                      }
+                    }}
+                  >
+                    <option value="">— Select, or type the name below —</option>
                     {zones.map((z) => (
-                      <SelectItem key={z.id} value={z.id}>
+                      <option key={z.id} value={z.id}>
                         {z.name}
-                      </SelectItem>
+                      </option>
                     ))}
-                  </SelectContent>
-                </Select>
-              )}
+                  </select>
+                </>
+              ) : null}
+              <Label htmlFor="clinic-zone-name">Program / area name</Label>
+              <Input
+                id="clinic-zone-name"
+                value={zoneName}
+                onChange={(e) => setZoneName(e.target.value)}
+                placeholder="e.g. North District MamaAlert"
+                autoComplete="off"
+                disabled={Boolean(pickedZoneId)}
+                readOnly={Boolean(pickedZoneId)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Type the name your coordinator saved in MamaAlert. You do not need a visible dropdown — typing is
+                enough.
+              </p>
             </div>
 
             <div className="flex items-center space-x-2">

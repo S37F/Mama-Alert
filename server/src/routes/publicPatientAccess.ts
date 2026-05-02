@@ -6,6 +6,7 @@ import { asyncHandler } from '@/lib/asyncHandler'
 import { hashOtpCode } from '@/lib/otpHash'
 import { logAudit, logError } from '@/lib/logger'
 import { ensureAssignableHealthWorkerId } from '@/lib/mamaAuth'
+import { resolvePublicRegistrationZoneId } from '@/lib/selfRegZone'
 import { prisma } from '@/lib/prisma'
 import { normalizePhone } from '@/lib/phone'
 import { signHospitalPortalToken } from '@/lib/portalJwt'
@@ -49,7 +50,8 @@ const selfRegisterSchema = z
   .object({
     name: z.string().min(2),
     phone_primary: z.string().min(8).max(20).regex(/^\+?[0-9]{8,20}$/),
-    zone_id: z.string().uuid(),
+    zone_id: z.string().uuid().optional(),
+    zone_name: z.string().min(2).max(120).optional(),
     lat: z.number().min(-90).max(90),
     lng: z.number().min(-180).max(180),
     language: z.string().min(2).max(8),
@@ -253,16 +255,15 @@ publicPatientAccessRouter.post(
     const body = parsed.data
     const contacts = body.emergency_contacts
 
-    const zoneId = body.zone_id.trim()
-
-    const zone = await prisma.zone.findUnique({
-      where: { id: zoneId },
-      select: { id: true },
+    const zoneResolved = await resolvePublicRegistrationZoneId({
+      zone_id: body.zone_id,
+      zone_name: body.zone_name,
     })
-    if (!zone) {
-      res.status(400).json({ error: 'Unknown zone' })
+    if (!zoneResolved.ok) {
+      res.status(400).json({ error: zoneResolved.error })
       return
     }
+    const zoneId = zoneResolved.zoneId
 
     const lat = body.lat
     const lng = body.lng
@@ -340,6 +341,7 @@ const clinicSelfRegisterSchema = z.object({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
   zone_id: z.string().uuid().optional(),
+  zone_name: z.string().min(2).max(120).optional(),
   services: z.array(z.string()).optional().default([]),
   is_24hr: z.boolean().optional().default(false),
 })
@@ -355,22 +357,15 @@ publicPatientAccessRouter.post(
     }
     const body = parsed.data
 
-    const zoneId = body.zone_id?.trim() || process.env.SELF_REG_DEFAULT_ZONE_ID?.trim()
-    if (!zoneId) {
-      res.status(400).json({
-        error: 'zone_id is required, or configure SELF_REG_DEFAULT_ZONE_ID.',
-      })
-      return
-    }
-
-    const zone = await prisma.zone.findUnique({
-      where: { id: zoneId },
-      select: { id: true },
+    const zoneResolved = await resolvePublicRegistrationZoneId({
+      zone_id: body.zone_id,
+      zone_name: body.zone_name,
     })
-    if (!zone) {
-      res.status(400).json({ error: 'Unknown zone' })
+    if (!zoneResolved.ok) {
+      res.status(400).json({ error: zoneResolved.error })
       return
     }
+    const zoneId = zoneResolved.zoneId
 
     const phoneNormalized = normalizePhone(body.phone)
     const duplicate = await prisma.hospital.findFirst({

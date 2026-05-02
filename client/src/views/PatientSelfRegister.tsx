@@ -53,7 +53,8 @@ export function PatientSelfRegister() {
   const [phone, setPhone] = useState('')
   const [village, setVillage] = useState('')
   const [landmark, setLandmark] = useState('')
-  const [zoneId, setZoneId] = useState('')
+  const [pickedZoneId, setPickedZoneId] = useState('')
+  const [zoneName, setZoneName] = useState('')
   const [language, setLanguage] = useState<(typeof langs)[number]>('en')
   const [weeks, setWeeks] = useState('')
   const [bloodType, setBloodType] = useState<(typeof BLOOD_TYPES)[number]>('O+')
@@ -102,8 +103,9 @@ export function PatientSelfRegister() {
       setSubmitErr(t('worker.volunteerReg.phoneInvalid'))
       return
     }
-    if (!zoneId) {
-      setSubmitErr(t('sos.selfReg.pickZone'))
+    const areaName = zoneName.trim()
+    if (!pickedZoneId && areaName.length === 1) {
+      setSubmitErr(t('sos.selfReg.zoneNameRequired'))
       return
     }
     const wn = Number(weeks)
@@ -164,7 +166,11 @@ export function PatientSelfRegister() {
       const out = await postPatientSelfRegister({
         name: n,
         phone_primary: p,
-        zone_id: zoneId,
+        ...(pickedZoneId
+          ? { zone_id: pickedZoneId }
+          : areaName.length >= 2
+            ? { zone_name: areaName }
+            : {}),
         lat,
         lng,
         language,
@@ -212,8 +218,9 @@ export function PatientSelfRegister() {
     risk,
     t,
     village,
+    pickedZoneId,
     weeks,
-    zoneId,
+    zoneName,
   ])
 
   return (
@@ -251,19 +258,42 @@ export function PatientSelfRegister() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sr-zone">{t('sos.selfReg.zoneLabel')}</Label>
-            <Select value={zoneId} onValueChange={(v) => setZoneId(v ?? '')}>
-              <SelectTrigger id="sr-zone" className="w-full">
-                <SelectValue placeholder={t('sos.selfReg.zonePlaceholder')} />
-              </SelectTrigger>
-              <SelectContent>
-                {zones.map((z) => (
-                  <SelectItem key={z.id} value={z.id}>
-                    {z.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {zones.length > 0 ? (
+              <>
+                <Label htmlFor="sr-zone-pick">{t('sos.selfReg.zonePickLabel')}</Label>
+                <select
+                  id="sr-zone-pick"
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  value={pickedZoneId}
+                  onChange={(e) => {
+                    const v = e.target.value
+                    setPickedZoneId(v)
+                    if (v) {
+                      const z = zones.find((row) => row.id === v)
+                      setZoneName(z?.name ?? '')
+                    }
+                  }}
+                >
+                  <option value="">{t('sos.selfReg.zonePickPlaceholder')}</option>
+                  {zones.map((z) => (
+                    <option key={z.id} value={z.id}>
+                      {z.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : null}
+            <Label htmlFor="sr-zone-name">{t('sos.selfReg.zoneLabel')}</Label>
+            <Input
+              id="sr-zone-name"
+              value={zoneName}
+              onChange={(e) => setZoneName(e.target.value)}
+              placeholder={t('sos.selfReg.zonePlaceholder')}
+              autoComplete="off"
+              disabled={Boolean(pickedZoneId)}
+              readOnly={Boolean(pickedZoneId)}
+            />
+            <p className="text-muted-foreground text-xs">{t('sos.selfReg.zoneNameHint')}</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="sr-lang">{t('register.fields.language')}</Label>
@@ -454,7 +484,7 @@ export function PatientSelfRegister() {
         type="button"
         className="w-full"
         size="lg"
-        disabled={submitting || zones.length === 0}
+        disabled={submitting}
         onClick={() => void submit()}
       >
         {submitting ? t('common.loading') : t('sos.selfReg.submit')}
