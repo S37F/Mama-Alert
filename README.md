@@ -49,7 +49,7 @@ flowchart LR
 | `client/` | Vite SPA/PWA: Tailwind UI, locales, service worker scoped to `/sos/` |
 | `server/` | Express entry `src/index.ts`, `createApp()` in `src/app.ts`, Prisma schema + migrations |
 | `server/Procfile` | Railway web process when the service root is `server/` |
-| `docs/screenshots/` | Product screenshots referenced below |
+| `client/src/assets/screenshots/` | Product screenshots (landing + readme) |
 
 Core server routes (see `server/src/app.ts`):
 
@@ -184,17 +184,17 @@ Captured from the live PWA — same alert, three points of view.
 
 | Sending alert | Help is coming |
 | --- | --- |
-| ![Patient sending alert](docs/screenshots/patient-sending.jpeg) | ![Patient — help is coming](docs/screenshots/patient-help-coming.jpeg) |
+| ![Patient sending alert](client/src/assets/screenshots/patient-sending.jpeg) | ![Patient — help is coming](client/src/assets/screenshots/patient-help-coming.jpeg) |
 
 ### Volunteer
 
 | Active alert | After responding |
 | --- | --- |
-| ![Volunteer active alert](docs/screenshots/volunteer-active-alert.jpeg) | ![Volunteer responding](docs/screenshots/volunteer-responding.jpeg) |
+| ![Volunteer active alert](client/src/assets/screenshots/volunteer-active-alert.jpeg) | ![Volunteer responding](client/src/assets/screenshots/volunteer-responding.jpeg) |
 
 ### Clinic
 
-![Clinic incoming alert inbox](docs/screenshots/clinic-inbox.jpeg)
+![Clinic incoming alert inbox](client/src/assets/screenshots/clinic-inbox.jpeg)
 
 ## Verification (manual)
 
