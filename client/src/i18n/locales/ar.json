@@ -357,5 +357,17 @@
     "offlineSmsAlertsHint": "SMS still works on cellular: reply YES or NO to alert texts; pre-alerts and ARRIVED use SMS too.",
     "offlineCannotSubmit": "أنت غير متصلة. حفظ هذا النموذج يحتاج إلى إنترنت.",
     "offlineStatusPage": "أنت غير متصلة. لا يمكن تحميل حالة جديدة حتى يعود الاتصال."
+  },
+  "nav": {
+    "ariaApp": "التطبيق",
+    "brand": "MamaAlert",
+    "sectionAccess": "الوصول",
+    "sectionVolunteer": "التطوع",
+    "sectionClinic": "العيادة",
+    "sectionClinicRegistration": "تسجيل العيادة",
+    "sectionDemo": "تجربة",
+    "sectionFamilyStatus": "حالة العائلة",
+    "linkSos": "SOS",
+    "linkSignUp": "إنشاء حساب"
   }
 }

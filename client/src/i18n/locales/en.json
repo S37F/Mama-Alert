@@ -351,6 +351,18 @@
     "offlineCannotSubmit": "You’re offline. Saving this form needs internet — try again when you have signal.",
     "offlineStatusPage": "You’re offline. This page can’t load fresh status until you’re back online."
   },
+  "nav": {
+    "ariaApp": "App",
+    "brand": "MamaAlert",
+    "sectionAccess": "Access",
+    "sectionVolunteer": "Volunteer",
+    "sectionClinic": "Clinic",
+    "sectionClinicRegistration": "Clinic registration",
+    "sectionDemo": "Demo",
+    "sectionFamilyStatus": "Family status",
+    "linkSos": "SOS",
+    "linkSignUp": "Sign up"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Something went wrong",

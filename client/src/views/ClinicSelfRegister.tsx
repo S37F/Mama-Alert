@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -38,7 +37,6 @@ function normalizePhoneInput(value: string): string {
 }
 
 export function ClinicSelfRegister() {
-  const { t } = useTranslation()
   const navigate = useNavigate()
   const { lat, lng, error: geoErr, isLoading: geoLoading, capture: captureLocation } = useGeolocation()
 

@@ -357,5 +357,17 @@
     "offlineSmsAlertsHint": "SMS bado inafanya kazi kwenye simu: jibu YES au NO kwa ujumbe wa tahadhari.",
     "offlineCannotSubmit": "Huna intaneti. Kuhifadhi fomu hii kunahitaji intaneti.",
     "offlineStatusPage": "Huna intaneti. Ukurasa huu hauwezi kupakia hali mpya."
+  },
+  "nav": {
+    "ariaApp": "Programu",
+    "brand": "MamaAlert",
+    "sectionAccess": "Ingia",
+    "sectionVolunteer": "Wahamasishaji",
+    "sectionClinic": "Kliniki",
+    "sectionClinicRegistration": "Usajili wa kliniki",
+    "sectionDemo": "Onyesho",
+    "sectionFamilyStatus": "Hali ya familia",
+    "linkSos": "SOS",
+    "linkSignUp": "Jisajili"
   }
 }

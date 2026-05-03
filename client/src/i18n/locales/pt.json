@@ -357,5 +357,17 @@
     "offlineSmsAlertsHint": "SMS still works on cellular: reply YES or NO to alert texts; pre-alerts and ARRIVED use SMS too.",
     "offlineCannotSubmit": "Está offline. Guardar este formulário precisa de internet.",
     "offlineStatusPage": "Está offline. Esta página não consegue carregar o estado atualizado."
+  },
+  "nav": {
+    "ariaApp": "Aplicação",
+    "brand": "MamaAlert",
+    "sectionAccess": "Acesso",
+    "sectionVolunteer": "Voluntário",
+    "sectionClinic": "Clínica",
+    "sectionClinicRegistration": "Registo na clínica",
+    "sectionDemo": "Demonstração",
+    "sectionFamilyStatus": "Estado da família",
+    "linkSos": "SOS",
+    "linkSignUp": "Inscrever-se"
   }
 }

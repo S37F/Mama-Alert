@@ -357,5 +357,17 @@
     "offlineSmsAlertsHint": "सेलुलर नेटवर्क पर SMS चलता रहेगा: अलर्ट SMS का YES या NO जवाब दें.",
     "offlineCannotSubmit": "आप ऑफलाइन हैं. फॉर्म सहेजने के लिए इंटरनेट चाहिए.",
     "offlineStatusPage": "आप ऑफलाइन हैं. स्टेटस पेज नया अपडेट नहीं लोड कर सकता."
+  },
+  "nav": {
+    "ariaApp": "ऐप",
+    "brand": "MamaAlert",
+    "sectionAccess": "पहुंच",
+    "sectionVolunteer": "स्वयंसेवक",
+    "sectionClinic": "क्लिनिक",
+    "sectionClinicRegistration": "क्लिनिक पंजीकरण",
+    "sectionDemo": "डेमो",
+    "sectionFamilyStatus": "परिवार की स्थिति",
+    "linkSos": "SOS",
+    "linkSignUp": "साइन अप करें"
   }
 }

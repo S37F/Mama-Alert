@@ -625,13 +625,17 @@ export function PatientSOS() {
         ) : null}
 
         {!missingToken && effectivePhone.length < 8 ? (
-          <p className="text-muted-foreground max-w-sm text-center text-sm">
-            Add your phone number so we can reach you if needed.
-          </p>
+          <p className="text-muted-foreground max-w-sm text-center text-sm leading-relaxed">{t('sos.needPhone')}</p>
         ) : null}
 
         {status === 'offline' ? (
           <p className="max-w-sm text-center text-sm font-medium text-foreground/85">{t('sos.offlineSubtext')}</p>
+        ) : null}
+
+        {status === 'error' ? (
+          <p className="text-destructive max-w-sm text-center text-sm font-medium leading-relaxed" role="alert">
+            {t('sos.error')}
+          </p>
         ) : null}
 
         {status === 'sent' ? (
